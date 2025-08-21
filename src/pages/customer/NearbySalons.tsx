@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Star, Clock, Users } from "lucide-react";
+import { Search, MapPin, Star, Clock, Users, ChevronDown, Mic } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Mock data
 const mockSalons = [
@@ -38,6 +39,7 @@ const mockSalons = [
 
 const NearbySalons = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
   const navigate = useNavigate();
 
   const filteredSalons = mockSalons.filter(salon =>
@@ -47,21 +49,48 @@ const NearbySalons = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-hero p-6 text-white">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold mb-2">Nylour</h1>
-          <p className="text-white/90">Find and book nearby salons</p>
+      <div className="bg-gradient-hero p-4 text-white">
+        {/* Top Section with Location and Profile */}
+        <div className="flex items-center justify-between mb-4">
+          {/* Location Selector */}
+          <div className="flex-1">
+            <div 
+              className="flex items-center cursor-pointer"
+              onClick={() => setIsLocationOpen(!isLocationOpen)}
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              <div className="flex-1">
+                <div className="flex items-center">
+                  <span className="font-semibold">Kankarbagh</span>
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                </div>
+                <p className="text-xs text-white/80">Patna, Bihar 800020</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Profile */}
+          <Avatar className="h-8 w-8">
+            <AvatarImage src="/placeholder.svg" />
+            <AvatarFallback>U</AvatarFallback>
+          </Avatar>
+        </div>
+
+        {/* Nylour Title */}
+        <div className="text-center mb-4">
+          <h1 className="text-2xl font-bold">Nylour</h1>
         </div>
         
-        {/* Search */}
+        {/* Search Bar */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
-            placeholder="Search salons..."
+            placeholder="Search for salon, service or more..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-white/20 border-white/20 text-white placeholder:text-white/70"
+            className="pl-10 pr-12 bg-white/20 border-white/20 text-white placeholder:text-white/70"
           />
+          <Mic className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70 h-4 w-4 cursor-pointer" />
         </div>
       </div>
 
