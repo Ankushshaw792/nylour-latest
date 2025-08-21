@@ -1,31 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Clock, CreditCard, Scissors, Sparkles } from "lucide-react";
+import { ArrowLeft, Clock, CreditCard, Smartphone, Bell, Users, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-
-const services = [
-  { id: "haircut", name: "Haircut", price: 299, duration: "30 min", icon: Scissors },
-  { id: "beard", name: "Beard Trim", price: 149, duration: "15 min", icon: Sparkles },
-  { id: "wash", name: "Hair Wash", price: 99, duration: "20 min", icon: Sparkles },
-];
-
-const timeSlots = [
-  "Now", "10:00 AM", "10:30 AM", "11:00 AM", 
-  "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM"
-];
+import { useCart } from "@/contexts/CartContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const BookingScreen = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, loading } = useRequireAuth();
-  const [selectedService, setSelectedService] = useState("haircut");
-  const [selectedTime, setSelectedTime] = useState("Now");
+  const { items, totalPrice } = useCart();
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [paymentOption, setPaymentOption] = useState("now"); // "now" or "salon"
+  const [paymentMethod, setPaymentMethod] = useState("upi"); // "upi", "card", "wallet"
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Fetch user profile to get mobile number
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        setUserProfile(data);
+      }
+    };
+    fetchUserProfile();
+  }, [user]);
 
   if (loading) {
     return (
@@ -35,9 +43,9 @@ const BookingScreen = () => {
     );
   }
 
-  const selectedServiceData = services.find(s => s.id === selectedService);
-  const bookingFee = 10; // ₹10 booking fee
-  const totalAmount = (selectedServiceData?.price || 0) + bookingFee;
+  const bookingFee = 25; // ₹25 booking fee as shown in image
+  const serviceTotal = totalPrice;
+  const finalAmount = paymentOption === "now" ? serviceTotal + bookingFee : bookingFee;
 
   const handleBooking = async () => {
     setIsProcessingPayment(true);
@@ -71,92 +79,183 @@ const BookingScreen = () => {
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
-        {/* Service Selection */}
+      <div className="p-4 space-y-4">
+        {/* 1. Booking Summary Section */}
         <Card>
           <CardContent className="p-4">
-            <h3 className="font-semibold mb-4">Select Service</h3>
-            <RadioGroup value={selectedService} onValueChange={setSelectedService}>
-              {services.map((service) => (
-                <div key={service.id} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-muted/50">
-                  <RadioGroupItem value={service.id} id={service.id} />
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
-                      <service.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <Label htmlFor={service.id} className="font-medium cursor-pointer">
-                        {service.name}
-                      </Label>
-                      <p className="text-sm text-muted-foreground">{service.duration}</p>
-                    </div>
-                    <span className="font-bold text-primary">₹{service.price}</span>
+            <h3 className="font-semibold text-lg mb-4">Booking Summary</h3>
+            
+            {/* Services List */}
+            <div className="space-y-3 mb-4">
+              {items.map((item) => (
+                <div key={item.id} className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">{item.duration} • Qty: {item.quantity}</p>
                   </div>
+                  <span className="font-medium">₹{item.price * item.quantity}</span>
                 </div>
               ))}
+            </div>
+
+            <Separator className="my-4" />
+            
+            {/* Live Position and Wait Time */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                    <Users className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Your current live position</p>
+                    <p className="text-2xl font-bold text-blue-600">#3 in queue</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-muted-foreground">Estimated wait time</p>
+                  <p className="text-2xl font-bold text-green-600">25 min</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 2. Your Details Section */}
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="font-semibold text-lg mb-4">Your Details</h3>
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <Smartphone className="h-5 w-5 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Mobile Number</p>
+                <p className="font-medium">{userProfile?.phone || "+91 98765 43210"}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 3. Payment Details Section */}
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="font-semibold text-lg mb-4">Payment Details</h3>
+            
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Service Price</span>
+                <span className="font-medium">₹{serviceTotal}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Booking Fee</span>
+                <span className="font-medium">₹{bookingFee}</span>
+              </div>
+            </div>
+
+            {/* Pay Now vs Pay at Salon */}
+            <div className="space-y-3">
+              <div 
+                className={`p-3 border rounded-lg cursor-pointer transition-all ${paymentOption === "now" ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-border"}`}
+                onClick={() => setPaymentOption("now")}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Pay Now</p>
+                    <p className="text-sm text-muted-foreground">Pay full amount online</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-lg">₹{serviceTotal + bookingFee}</p>
+                    {paymentOption === "now" && <CheckCircle className="h-5 w-5 text-blue-500 ml-auto mt-1" />}
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                className={`p-3 border rounded-lg cursor-pointer transition-all ${paymentOption === "salon" ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-border"}`}
+                onClick={() => setPaymentOption("salon")}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Pay at Salon</p>
+                    <p className="text-sm text-muted-foreground">Pay booking fee now, rest at salon</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-lg">₹{bookingFee}</p>
+                    {paymentOption === "salon" && <CheckCircle className="h-5 w-5 text-blue-500 ml-auto mt-1" />}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Booking Fee Policy */}
+            <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <p className="text-sm text-orange-700 dark:text-orange-300">
+                <strong>Booking Fee Policy:</strong> Non-refundable booking fee to secure your slot. 
+                {paymentOption === "salon" && " Remaining amount to be paid at the salon."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4. Payment Method Section */}
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="font-semibold text-lg mb-4">Payment Method</h3>
+            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50">
+                  <RadioGroupItem value="upi" id="upi" />
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                      <span className="text-xs font-bold text-purple-600">UPI</span>
+                    </div>
+                    <Label htmlFor="upi" className="font-medium cursor-pointer">UPI</Label>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50">
+                  <RadioGroupItem value="card" id="card" />
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                      <CreditCard className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <Label htmlFor="card" className="font-medium cursor-pointer">Credit / Debit Card</Label>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50">
+                  <RadioGroupItem value="wallet" id="wallet" />
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                      <span className="text-xs font-bold text-green-600">₹</span>
+                    </div>
+                    <Label htmlFor="wallet" className="font-medium cursor-pointer">Digital Wallet</Label>
+                  </div>
+                </div>
+              </div>
             </RadioGroup>
           </CardContent>
         </Card>
 
-        {/* Time Selection */}
+        {/* 5. Notification Reminder Section */}
         <Card>
           <CardContent className="p-4">
-            <h3 className="font-semibold mb-4">Select Time</h3>
-            <div className="grid grid-cols-4 gap-2">
-              {timeSlots.map((time) => (
-                <Button
-                  key={time}
-                  variant={selectedTime === time ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedTime(time)}
-                  className="text-xs"
-                >
-                  {time}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Booking Summary */}
-        <Card>
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-4">Booking Summary</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span>{selectedServiceData?.name}</span>
-                <span>₹{selectedServiceData?.price}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm text-muted-foreground">
-                <span>Booking Fee</span>
-                <span>₹{bookingFee}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between items-center font-semibold text-lg">
-                <span>Total</span>
-                <span className="text-primary">₹{totalAmount}</span>
+            <h3 className="font-semibold text-lg mb-4">Notification Reminder</h3>
+            <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Bell className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-blue-900 dark:text-blue-100">SMS Alerts</p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    You'll receive SMS updates about your queue position and a 15-minute alert before your turn.
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Wait Time Info */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-primary" />
-              <div>
-                <p className="font-medium">Expected Wait Time</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedTime === "Now" ? "15 minutes" : `Available at ${selectedTime}`}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Payment Button */}
-        <div className="space-y-3">
+        {/* 6. Pay Now Button */}
+        <div className="pt-2 pb-4">
           <Button
             variant="gradient"
             size="xl"
@@ -172,14 +271,10 @@ const BookingScreen = () => {
             ) : (
               <div className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
-                Pay ₹{totalAmount} & Book
+                Pay ₹{finalAmount} Now
               </div>
             )}
           </Button>
-          
-          <p className="text-xs text-muted-foreground text-center">
-            You'll receive SMS updates about your booking
-          </p>
         </div>
       </div>
     </div>
