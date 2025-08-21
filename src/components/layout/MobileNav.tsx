@@ -1,11 +1,12 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, Clock, Settings, Users } from "lucide-react";
+import { Home, Calendar, Clock, Settings, Users, MapPin, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const customerNavItems = [
-  { icon: Home, label: "Home", path: "/" },
-  { icon: Users, label: "Salons", path: "/customer" },
-  { icon: Calendar, label: "Bookings", path: "/queue-status" },
+  { icon: MapPin, label: "Nearby", path: "/customer" },
+  { icon: Calendar, label: "Bookings", path: "/bookings" },
+  { icon: Clock, label: "Queue", path: "/queue-status" },
+  { icon: User, label: "Profile", path: "/profile" },
 ];
 
 const salonNavItems = [
