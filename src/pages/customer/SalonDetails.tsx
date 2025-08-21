@@ -110,6 +110,26 @@ const SalonDetails = () => {
       </div>
 
       <div className="p-4 space-y-6">
+        {/* Wait Time Section */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-center flex-1">
+                <p className="text-2xl font-bold text-purple-500">25 min</p>
+                <p className="text-sm text-muted-foreground">Wait Time</p>
+              </div>
+              <div className="text-center flex-1">
+                <p className="text-2xl font-bold">{salon.queueCount}</p>
+                <p className="text-sm text-muted-foreground">In Queue</p>
+              </div>
+              <div className="text-center flex-1">
+                <p className="text-2xl font-bold text-green-500">Open</p>
+                <p className="text-sm text-muted-foreground">Until 9 PM</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Salon Details Section */}
         <Card>
           <CardContent className="p-4">
@@ -122,27 +142,6 @@ const SalonDetails = () => {
               <div className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-primary" />
                 <span className="text-foreground">{salon.phone}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Wait Time & Live Queue Section */}
-        <Card className="bg-gradient-card">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold">Current Wait Time</p>
-                  <p className="text-2xl font-bold text-primary">{salon.waitTime}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">People in queue</p>
-                <p className="text-lg font-bold">{salon.queueCount}</p>
               </div>
             </div>
           </CardContent>
