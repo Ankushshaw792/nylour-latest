@@ -3,11 +3,13 @@ import { Home, Calendar, Clock, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const customerNavItems = [
-  { icon: Home, label: "Salons", path: "/" },
+  { icon: Home, label: "Home", path: "/" },
+  { icon: Users, label: "Salons", path: "/customer" },
   { icon: Calendar, label: "Bookings", path: "/queue-status" },
 ];
 
 const salonNavItems = [
+  { icon: Home, label: "Home", path: "/" },
   { icon: Users, label: "Queue", path: "/salon-dashboard" },
   { icon: Calendar, label: "Bookings", path: "/salon-dashboard/bookings" },
   { icon: Clock, label: "Check-in", path: "/salon-dashboard/checkin" },
