@@ -1,37 +1,138 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { User, MapPin, Phone, Mail, Settings, Heart, CreditCard, Bell, LogOut } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const ProfilePage = () => {
+  const { user, loading } = useRequireAuth();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
+
   const profileMenuItems = [
     {
       icon: Settings,
       label: "Account Settings",
       description: "Update your personal information",
-      action: () => console.log("Account settings")
+      action: () => setIsEditDialogOpen(true)
     },
     {
       icon: CreditCard,
       label: "Payment Methods",
       description: "Manage your payment options",
-      action: () => console.log("Payment methods")
+      action: () => toast.info("Payment methods coming soon")
     },
     {
       icon: Bell,
       label: "Notifications",
       description: "Customize your notification preferences",
-      action: () => console.log("Notifications")
+      action: () => toast.info("Notification settings coming soon")
     },
     {
       icon: Heart,
       label: "Favorite Salons",
       description: "View your saved salons",
-      action: () => console.log("Favorites")
+      action: () => toast.info("Favorites coming soon")
     }
   ];
+
+  // Fetch profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error("Error fetching profile:", error);
+          toast.error("Failed to load profile");
+        } else {
+          setProfile(data);
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
+
+  const handleProfileUpdate = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error refetching profile:", error);
+      } else {
+        setProfile(data);
+      }
+    } catch (error) {
+      console.error("Error refetching profile:", error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  };
+
+  const getDisplayName = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
+    }
+    if (profile?.first_name) {
+      return profile.first_name;
+    }
+    return user?.email?.split('@')[0] || "User";
+  };
+
+  const getInitials = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+    }
+    if (profile?.first_name) {
+      return profile.first_name[0].toUpperCase();
+    }
+    return user?.email?.[0]?.toUpperCase() || "U";
+  };
+
+  if (loading || profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,20 +142,24 @@ const ProfilePage = () => {
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src="/placeholder.svg" alt="Profile" />
+                <AvatarImage src={profile?.avatar_url} alt="Profile" />
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  SA
+                  {getInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-foreground">Sarah Anderson</h2>
-                <p className="text-muted-foreground">Member since Jan 2024</p>
-                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>New York, NY</span>
-                </div>
+                <h2 className="text-xl font-bold text-foreground">{getDisplayName()}</h2>
+                <p className="text-muted-foreground">
+                  Member since {new Date(profile?.created_at || user?.created_at || '').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                </p>
+                {profile?.phone && (
+                  <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                    <Phone className="h-4 w-4" />
+                    <span>{profile.phone}</span>
+                  </div>
+                )}
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
                 Edit
               </Button>
             </div>
@@ -92,18 +197,22 @@ const ProfilePage = () => {
             <div className="flex items-center gap-3">
               <Mail className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-foreground">sarah.anderson@email.com</p>
+                <p className="text-foreground">{user?.email}</p>
                 <p className="text-sm text-muted-foreground">Primary email address</p>
               </div>
             </div>
-            <Separator />
-            <div className="flex items-center gap-3">
-              <Phone className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-foreground">+1 (555) 123-4567</p>
-                <p className="text-sm text-muted-foreground">Mobile number</p>
-              </div>
-            </div>
+            {profile?.phone && (
+              <>
+                <Separator />
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-foreground">{profile.phone}</p>
+                    <p className="text-sm text-muted-foreground">Mobile number</p>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -168,10 +277,21 @@ const ProfilePage = () => {
         <Button 
           variant="outline" 
           className="w-full text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+          onClick={handleSignOut}
         >
           <LogOut className="h-4 w-4 mr-2" />
           Sign Out
         </Button>
+
+        {/* Profile Edit Dialog */}
+        {profile && (
+          <ProfileEditDialog
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            profile={profile}
+            onProfileUpdate={handleProfileUpdate}
+          />
+        )}
       </div>
     </div>
   );

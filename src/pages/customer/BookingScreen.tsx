@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const services = [
   { id: "haircut", name: "Haircut", price: 299, duration: "30 min", icon: Scissors },
@@ -21,9 +22,18 @@ const timeSlots = [
 const BookingScreen = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, loading } = useRequireAuth();
   const [selectedService, setSelectedService] = useState("haircut");
   const [selectedTime, setSelectedTime] = useState("Now");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   const selectedServiceData = services.find(s => s.id === selectedService);
   const bookingFee = 10; // ₹10 booking fee

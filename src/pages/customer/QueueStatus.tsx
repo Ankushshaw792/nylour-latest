@@ -5,11 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const QueueStatus = () => {
   const navigate = useNavigate();
+  const { user, loading } = useRequireAuth();
   const [position, setPosition] = useState(2);
   const [estimatedTime, setEstimatedTime] = useState(20);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   // Simulate live updates
   useEffect(() => {

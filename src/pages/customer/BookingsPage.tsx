@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const mockBookings = [
   {
@@ -41,6 +42,15 @@ const mockBookings = [
 ];
 
 const BookingsPage = () => {
+  const { user, loading } = useRequireAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
   const getStatusColor = (status: string) => {
     switch (status) {
       case "confirmed":

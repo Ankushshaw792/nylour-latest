@@ -55,6 +55,14 @@ const NearbySalons = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
+  const handleAvatarClick = () => {
+    if (user) {
+      navigate('/profile');
+    } else {
+      setAuthSheetOpen(true);
+    }
+  };
+
   const filteredSalons = mockSalons.filter(salon =>
     salon.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -85,7 +93,7 @@ const NearbySalons = () => {
           {/* Profile */}
           <Avatar 
             className="h-8 w-8 cursor-pointer ring-2 ring-white/20 hover:ring-white/40 transition-all"
-            onClick={() => setAuthSheetOpen(true)}
+            onClick={handleAvatarClick}
           >
             <AvatarImage src={user?.user_metadata?.avatar_url} />
             <AvatarFallback className="bg-white/20 text-white font-medium">
@@ -125,8 +133,14 @@ const NearbySalons = () => {
         {filteredSalons.map((salon) => (
           <Card
             key={salon.id}
-            className="overflow-hidden rounded-xl shadow-sm hover:shadow-lg transition-all duration-300"
-            onClick={() => navigate(`/salon/${salon.id}`)}
+            className="overflow-hidden rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+            onClick={() => {
+              if (user) {
+                navigate(`/salon/${salon.id}`);
+              } else {
+                setAuthSheetOpen(true);
+              }
+            }}
           >
             <CardContent className="p-0">
               {/* Hero Image Section */}

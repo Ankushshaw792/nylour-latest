@@ -3,10 +3,20 @@ import { CheckCircle2, Clock, MapPin, Phone, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const BookingConfirmation = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, loading } = useRequireAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   // Mock booking data
   const booking = {

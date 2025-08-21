@@ -3,6 +3,7 @@ import { ArrowLeft, Star, MapPin, Clock, Users, Phone, Scissors, Sparkles } from
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 // Mock data
 const mockSalonData: Record<string, any> = {
@@ -28,8 +29,17 @@ const mockSalonData: Record<string, any> = {
 const SalonDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, loading } = useRequireAuth();
   
   const salon = mockSalonData[id || "1"];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   if (!salon) {
     return <div>Salon not found</div>;
