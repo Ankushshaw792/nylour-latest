@@ -13,15 +13,7 @@ const QueueStatus = () => {
   const [position, setPosition] = useState(2);
   const [estimatedTime, setEstimatedTime] = useState(20);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  // Simulate live updates
+  // Simulate live updates - MUST be before any early returns
   useEffect(() => {
     const interval = setInterval(() => {
       // Randomly update position (simulate queue movement)
@@ -33,6 +25,14 @@ const QueueStatus = () => {
 
     return () => clearInterval(interval);
   }, [position]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   // Mock booking data
   const booking = {
