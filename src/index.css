@@ -2,110 +2,110 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Nylour Design System - Modern salon platform with Gen-Z appeal */
+/* Apple-inspired Design System - Modern, clean, premium */
 
 @layer base {
   :root {
-    /* Brand Colors */
-    --background: 248 250 252;
-    --foreground: 222.2 84% 4.9%;
+    /* Pure whites and subtle grays */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
 
     /* Cards & Surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --card-hover: 248 250 252;
+    --card-foreground: 0 0% 9%;
+    --card-hover: 0 0% 98%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 0 0% 9%;
 
-    /* Nylour Brand Purple */
-    --primary: 262 83% 58%;
+    /* Apple-like accent blue for interactive elements */
+    --primary: 213 94% 68%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 262 83% 68%;
-    --primary-dark: 262 83% 48%;
+    --primary-light: 213 94% 78%;
+    --primary-dark: 213 94% 58%;
 
-    /* Coral/Pink Accents */
-    --secondary: 351 83% 74%;
-    --secondary-foreground: 0 0% 100%;
-    --secondary-light: 351 83% 84%;
-    --secondary-dark: 351 83% 64%;
+    /* Subtle gray variants */
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --secondary-light: 0 0% 98%;
+    --secondary-dark: 0 0% 94%;
 
     /* Neutral Grays */
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 8.9% 46.1%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 8.9% 46.1%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 45%;
 
-    /* Status Colors */
+    /* Status Colors - minimal and clean */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 0 0% 45%;
     --warning-foreground: 0 0% 100%;
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     /* UI Elements */
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 262 83% 58%;
+    --border: 0 0% 90%;
+    --input: 0 0% 96%;
+    --ring: 213 94% 68%;
 
-    /* Design tokens */
-    --radius: 12px;
-    --radius-lg: 16px;
-    --radius-sm: 8px;
+    /* Design tokens - Apple-like rounded corners */
+    --radius: 8px;
+    --radius-lg: 12px;
+    --radius-sm: 6px;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(262 83% 68%));
-    --gradient-secondary: linear-gradient(135deg, hsl(351 83% 74%), hsl(351 83% 84%));
-    --gradient-hero: linear-gradient(135deg, hsl(262 83% 58%), hsl(351 83% 74%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(248 250 252));
+    /* Clean gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(0 0% 100%), hsl(0 0% 98%));
+    --gradient-secondary: linear-gradient(135deg, hsl(0 0% 98%), hsl(0 0% 96%));
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 100%), hsl(0 0% 97%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(0 0% 98%));
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    /* Apple-like shadows */
+    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.1);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
     --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
-    --shadow-glow: 0 0 20px hsl(262 83% 58% / 0.3);
+    --shadow-glow: 0 0 15px hsl(213 94% 68% / 0.15);
 
-    /* Animations */
+    /* Clean transitions */
     --transition-fast: all 0.15s ease;
     --transition-normal: all 0.3s ease;
     --transition-slow: all 0.5s ease;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 9%;
+    --foreground: 0 0% 98%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --card-hover: 217.2 32.6% 17.5%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 98%;
+    --card-hover: 0 0% 14%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 262 83% 68%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --primary-light: 262 83% 78%;
-    --primary-dark: 262 83% 58%;
+    --primary: 213 94% 68%;
+    --primary-foreground: 0 0% 9%;
+    --primary-light: 213 94% 78%;
+    --primary-dark: 213 94% 58%;
 
-    --secondary: 351 83% 74%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --secondary-light: 351 83% 84%;
-    --secondary-dark: 351 83% 64%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 98%;
+    --secondary-light: 0 0% 18%;
+    --secondary-dark: 0 0% 10%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 64%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 0 0% 14%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 262 83% 68%;
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
+    --ring: 213 94% 68%;
   }
 }
 
