@@ -34,27 +34,27 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-        <Routes>
-          {/* Landing Page */}
-          <Route path="/" element={<Home />} />
-          
-          {/* Customer App Routes */}
-          <Route path="/customer" element={<MobileLayout><NearbySalons /></MobileLayout>} />
-          <Route path="/salon/:id" element={<MobileLayout><SalonDetails /></MobileLayout>} />
-          <Route path="/book/:id" element={<MobileLayout><BookingScreen /></MobileLayout>} />
-          <Route path="/booking-confirmation/:id" element={<MobileLayout><BookingConfirmation /></MobileLayout>} />
-          <Route path="/queue-status" element={<MobileLayout><QueueStatus /></MobileLayout>} />
-          <Route path="/bookings" element={<MobileLayout><BookingsPage /></MobileLayout>} />
-          <Route path="/profile" element={<MobileLayout><ProfilePage /></MobileLayout>} />
-          
-          {/* Salon Dashboard Routes */}
-          <Route path="/salon-dashboard" element={<MobileLayout><QueueManagement /></MobileLayout>} />
-          <Route path="/salon-dashboard/bookings" element={<MobileLayout><BookingsOverview /></MobileLayout>} />
-          <Route path="/salon-dashboard/checkin" element={<MobileLayout><CheckInUpdate /></MobileLayout>} />
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+          <Routes>
+            {/* Landing Page */}
+            <Route path="/" element={<Home />} />
+            
+            {/* Customer App Routes */}
+            <Route path="/customer" element={<MobileLayout><NearbySalons /></MobileLayout>} />
+            <Route path="/salon/:id" element={<MobileLayout><SalonDetails /></MobileLayout>} />
+            <Route path="/book/:id" element={<MobileLayout><BookingScreen /></MobileLayout>} />
+            <Route path="/booking-confirmation/:id" element={<MobileLayout><BookingConfirmation /></MobileLayout>} />
+            <Route path="/queue-status" element={<MobileLayout><QueueStatus /></MobileLayout>} />
+            <Route path="/bookings" element={<MobileLayout><BookingsPage /></MobileLayout>} />
+            <Route path="/profile" element={<MobileLayout><ProfilePage /></MobileLayout>} />
+            
+            {/* Salon Dashboard Routes */}
+            <Route path="/salon-dashboard" element={<MobileLayout><QueueManagement /></MobileLayout>} />
+            <Route path="/salon-dashboard/bookings" element={<MobileLayout><BookingsOverview /></MobileLayout>} />
+            <Route path="/salon-dashboard/checkin" element={<MobileLayout><CheckInUpdate /></MobileLayout>} />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
