@@ -110,6 +110,60 @@ const QueueStatus = () => {
           </CardContent>
         </Card>
 
+        {/* Live Queue Section */}
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="font-semibold mb-4">Live Queue</h3>
+            <div className="space-y-3">
+              {[
+                { position: 1, name: "Rajesh Kumar", service: "Haircut", status: "active", isCurrentUser: false },
+                { position: 2, name: "You", service: "Haircut", status: "waiting", isCurrentUser: position === 2 },
+                { position: 3, name: "Amit Singh", service: "Beard Trim", status: "waiting", isCurrentUser: position === 3 },
+                { position: 4, name: "Priya Sharma", service: "Hair Wash", status: "waiting", isCurrentUser: position === 4 },
+                { position: 5, name: "Vikash Yadav", service: "Haircut", status: "waiting", isCurrentUser: position === 5 }
+              ].map((customer) => (
+                <div
+                  key={customer.position}
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    customer.isCurrentUser 
+                      ? 'bg-primary/10 border border-primary/20' 
+                      : customer.position === 1 
+                        ? 'bg-amber-50 border border-amber-200' 
+                        : 'bg-muted/30 border border-border'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        customer.isCurrentUser 
+                          ? 'bg-primary text-primary-foreground' 
+                          : customer.position === 1 
+                            ? 'bg-amber-500 text-white' 
+                            : 'bg-muted-foreground/20 text-foreground'
+                      }`}
+                    >
+                      {customer.position}
+                    </div>
+                    <div>
+                      <p className={`font-medium ${customer.isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
+                        {customer.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{customer.service}</p>
+                    </div>
+                  </div>
+                  <div 
+                    className={`w-3 h-3 rounded-full ${
+                      customer.status === 'active' 
+                        ? 'bg-amber-500' 
+                        : 'bg-muted-foreground/40'
+                    }`}
+                  />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* SMS Alert Status */}
         <Card className="bg-success/10 border-success/20">
           <CardContent className="p-4">
