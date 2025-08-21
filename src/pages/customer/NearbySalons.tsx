@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AuthSheet } from "@/components/auth/AuthSheet";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Mock data
 const mockSalons = [
@@ -49,7 +51,9 @@ const mockSalons = [
 const NearbySalons = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const [authSheetOpen, setAuthSheetOpen] = useState(false);
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
   const filteredSalons = mockSalons.filter(salon =>
     salon.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -79,9 +83,17 @@ const NearbySalons = () => {
           </div>
 
           {/* Profile */}
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="/placeholder.svg" />
-            <AvatarFallback>U</AvatarFallback>
+          <Avatar 
+            className="h-8 w-8 cursor-pointer ring-2 ring-white/20 hover:ring-white/40 transition-all"
+            onClick={() => setAuthSheetOpen(true)}
+          >
+            <AvatarImage src={user?.user_metadata?.avatar_url} />
+            <AvatarFallback className="bg-white/20 text-white font-medium">
+              {user ? 
+                `${user.user_metadata?.first_name?.[0] || ''}${user.user_metadata?.last_name?.[0] || ''}`.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'
+                : 'U'
+              }
+            </AvatarFallback>
           </Avatar>
         </div>
 
@@ -181,6 +193,12 @@ const NearbySalons = () => {
           </div>
         )}
       </div>
+
+      {/* Auth Sheet */}
+      <AuthSheet 
+        open={authSheetOpen} 
+        onOpenChange={setAuthSheetOpen} 
+      />
     </div>
   );
 };
