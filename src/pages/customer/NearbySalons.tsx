@@ -151,11 +151,11 @@ const NearbySalons = () => {
         </div>
 
         {/* Salon Cards */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {filteredSalons.map((salon) => (
             <Card
               key={salon.id}
-              className="overflow-hidden rounded-xl border border-border hover:shadow-md transition-all duration-300 cursor-pointer bg-white"
+              className="overflow-hidden rounded-xl border border-border hover:shadow-lg transition-all duration-300 cursor-pointer bg-white card-hover"
               onClick={() => {
                 if (user) {
                   navigate(`/salon/${salon.id}`);
@@ -164,49 +164,59 @@ const NearbySalons = () => {
                 }
               }}
             >
-              <CardContent className="p-4">
-                <div className="flex gap-3">
-                  {/* Salon Image */}
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                    <img
-                      src={salon.image}
-                      alt={salon.name}
-                      className="w-full h-full object-cover"
-                    />
+              <CardContent className="p-0">
+                {/* Salon Image */}
+                <div className="relative h-48 bg-muted">
+                  <img
+                    src={salon.image}
+                    alt={salon.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span className="text-sm font-medium">{salon.rating}</span>
+                  </div>
+                  <Badge 
+                    variant="secondary" 
+                    className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-foreground font-medium"
+                  >
+                    {salon.queueCount} in queue
+                  </Badge>
+                </div>
+
+                {/* Salon Info */}
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground mb-1">{salon.name}</h3>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        {salon.address}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Salon Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-1">
-                      <h3 className="font-semibold text-foreground text-sm leading-tight">{salon.name}</h3>
-                      <div className="flex items-center gap-1 bg-green-50 px-1.5 py-0.5 rounded">
-                        <Star className="h-3 w-3 fill-green-600 text-green-600" />
-                        <span className="text-xs font-medium text-green-700">{salon.rating}</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1 text-sm">
+                        <Clock className="h-4 w-4 text-primary" />
+                        <span className="text-primary font-medium">{salon.waitTime}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span>{salon.distance}</span>
                       </div>
                     </div>
+                  </div>
 
-                    <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{salon.address}</p>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-xs">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3 text-primary" />
-                          <span className="text-primary font-medium">{salon.waitTime}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-muted-foreground">{salon.distance}</span>
-                        </div>
-                      </div>
-                      <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                        {salon.queueCount} queue
-                      </Badge>
+                  <div className="flex items-center justify-between pt-3 border-t border-border">
+                    <div>
+                      <p className="text-sm text-muted-foreground">{salon.primaryService}</p>
+                      <p className="text-lg font-semibold text-primary">{salon.servicePrice}</p>
                     </div>
-
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-muted-foreground">{salon.primaryService}</span>
-                      <span className="text-sm font-semibold text-primary">{salon.servicePrice}</span>
-                    </div>
+                    <Button size="sm" className="ml-4">
+                      Book Now
+                    </Button>
                   </div>
                 </div>
               </CardContent>
