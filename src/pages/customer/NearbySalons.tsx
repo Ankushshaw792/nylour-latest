@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Star, Clock, ChevronDown, Mic, Bookmark, Bell } from "lucide-react";
+import { Search, MapPin, Star, Clock, ChevronDown, Mic, Filter, SlidersHorizontal } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { AuthSheet } from "@/components/auth/AuthSheet";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -52,8 +53,11 @@ const NearbySalons = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [authSheetOpen, setAuthSheetOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("All");
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+
+  const filterTabs = ["All", "Open Now", "Nearby", "Quick Service"];
 
   const handleAvatarClick = () => {
     if (user) {
@@ -70,7 +74,7 @@ const NearbySalons = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-hero p-4 text-white">
+      <div className="bg-white border-b border-border p-4">
         {/* Top Section with Location and Profile */}
         <div className="flex items-center justify-between mb-4">
           {/* Location Selector */}
@@ -79,24 +83,24 @@ const NearbySalons = () => {
               className="flex items-center cursor-pointer"
               onClick={() => setIsLocationOpen(!isLocationOpen)}
             >
-              <MapPin className="h-4 w-4 mr-2" />
+              <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
               <div className="flex-1">
                 <div className="flex items-center">
-                  <span className="font-semibold">Kankarbagh</span>
-                  <ChevronDown className="h-4 w-4 ml-1" />
+                  <span className="font-semibold text-foreground">Kankarbagh</span>
+                  <ChevronDown className="h-4 w-4 ml-1 text-muted-foreground" />
                 </div>
-                <p className="text-xs text-white/80">Patna, Bihar 800020</p>
+                <p className="text-xs text-muted-foreground">Patna, Bihar 800020</p>
               </div>
             </div>
           </div>
 
           {/* Profile */}
           <Avatar 
-            className="h-8 w-8 cursor-pointer ring-2 ring-white/20 hover:ring-white/40 transition-all"
+            className="h-8 w-8 cursor-pointer ring-2 ring-border hover:ring-primary transition-all"
             onClick={handleAvatarClick}
           >
             <AvatarImage src={user?.user_metadata?.avatar_url} />
-            <AvatarFallback className="bg-white/20 text-white font-medium">
+            <AvatarFallback className="bg-primary text-primary-foreground font-medium">
               {user ? 
                 `${user.user_metadata?.first_name?.[0] || ''}${user.user_metadata?.last_name?.[0] || ''}`.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'
                 : 'U'
@@ -105,100 +109,110 @@ const NearbySalons = () => {
           </Avatar>
         </div>
 
-        {/* Nylour Title */}
-        <div className="text-center mb-4">
-          <h1 className="text-2xl font-bold">Nylour</h1>
-        </div>
-        
         {/* Search Bar */}
-        <div className="relative">
+        <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search for salon, service or more..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-12 bg-white/20 border-white/20 text-white placeholder:text-white/70"
+            className="pl-10 pr-12 bg-muted/30 border-border"
           />
-          <Mic className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70 h-4 w-4 cursor-pointer" />
+          <Mic className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 cursor-pointer" />
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+          {filterTabs.map((tab) => (
+            <Button
+              key={tab}
+              variant={activeFilter === tab ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveFilter(tab)}
+              className="whitespace-nowrap"
+            >
+              {tab}
+            </Button>
+          ))}
         </div>
       </div>
 
-      {/* Salons List */}
-      <div className="p-4 space-y-4">
-        <div className="flex items-center gap-2 mb-4">
-          <MapPin className="h-4 w-4 text-primary" />
-          <span className="text-sm text-muted-foreground">Nearby Salons</span>
+      {/* Results Section */}
+      <div className="p-4">
+        {/* Results Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">{filteredSalons.length} salons found</span>
+          </div>
+          <Button variant="ghost" size="sm" className="gap-2">
+            <SlidersHorizontal className="h-4 w-4" />
+            Sort
+          </Button>
         </div>
 
-        {filteredSalons.map((salon) => (
-          <Card
-            key={salon.id}
-            className="overflow-hidden rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
-            onClick={() => {
-              if (user) {
-                navigate(`/salon/${salon.id}`);
-              } else {
-                setAuthSheetOpen(true);
-              }
-            }}
-          >
-            <CardContent className="p-0">
-              {/* Hero Image Section */}
-              <div className="relative">
-                <img
-                  src={salon.image}
-                  alt={salon.name}
-                  className="w-full h-48 object-cover"
-                />
-                
-                {/* Service & Price Badge */}
-                <div className="absolute top-3 left-3">
-                  <Badge className="bg-white/90 text-foreground font-medium">
-                    {salon.primaryService} • {salon.servicePrice}
-                  </Badge>
-                </div>
-                
-                {/* Action Icons */}
-                <div className="absolute top-3 right-3 flex gap-2">
-                  <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center cursor-pointer hover:bg-white transition-colors">
-                    <Bookmark className="h-4 w-4 text-foreground" />
+        {/* Salon Cards */}
+        <div className="space-y-3">
+          {filteredSalons.map((salon) => (
+            <Card
+              key={salon.id}
+              className="overflow-hidden rounded-xl border border-border hover:shadow-md transition-all duration-300 cursor-pointer bg-white"
+              onClick={() => {
+                if (user) {
+                  navigate(`/salon/${salon.id}`);
+                } else {
+                  setAuthSheetOpen(true);
+                }
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex gap-3">
+                  {/* Salon Image */}
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                    <img
+                      src={salon.image}
+                      alt={salon.name}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center cursor-pointer hover:bg-white transition-colors">
-                    <Bell className="h-4 w-4 text-foreground" />
-                  </div>
-                </div>
-              </div>
 
-              {/* Content Section */}
-              <div className="p-4">
-                {/* Salon Name and Rating */}
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-lg font-bold text-foreground">{salon.name}</h3>
-                  <div className="flex items-center gap-1 bg-green-100 px-2 py-1 rounded-full">
-                    <Star className="h-3 w-3 fill-green-600 text-green-600" />
-                    <span className="text-xs font-bold text-green-700">{salon.rating}</span>
+                  {/* Salon Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-1">
+                      <h3 className="font-semibold text-foreground text-sm leading-tight">{salon.name}</h3>
+                      <div className="flex items-center gap-1 bg-green-50 px-1.5 py-0.5 rounded">
+                        <Star className="h-3 w-3 fill-green-600 text-green-600" />
+                        <span className="text-xs font-medium text-green-700">{salon.rating}</span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{salon.address}</p>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 text-xs">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-primary" />
+                          <span className="text-primary font-medium">{salon.waitTime}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">{salon.distance}</span>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                        {salon.queueCount} queue
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs text-muted-foreground">{salon.primaryService}</span>
+                      <span className="text-sm font-semibold text-primary">{salon.servicePrice}</span>
+                    </div>
                   </div>
                 </div>
-
-                {/* Address */}
-                <p className="text-sm text-muted-foreground mb-3">{salon.address}</p>
-
-                {/* Time, Distance and Queue */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium text-primary">
-                      {salon.waitTime} • {salon.distance}
-                    </span>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {salon.queueCount} in queue
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
         {filteredSalons.length === 0 && (
           <div className="text-center py-12">

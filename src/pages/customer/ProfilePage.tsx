@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, MapPin, Phone, Mail, Settings, Heart, CreditCard, Bell, LogOut } from "lucide-react";
+import { User, MapPin, Phone, Mail, Settings, Heart, CreditCard, Bell, LogOut, Edit, Calendar, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
@@ -20,30 +19,21 @@ const ProfilePage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
 
-  const profileMenuItems = [
+  const quickActions = [
     {
-      icon: Settings,
-      label: "Account Settings",
-      description: "Update your personal information",
-      action: () => setIsEditDialogOpen(true)
-    },
-    {
-      icon: CreditCard,
-      label: "Payment Methods",
-      description: "Manage your payment options",
-      action: () => toast.info("Payment methods coming soon")
-    },
-    {
-      icon: Bell,
-      label: "Notifications",
-      description: "Customize your notification preferences",
-      action: () => toast.info("Notification settings coming soon")
+      icon: Calendar,
+      label: "Booking History",
+      action: () => navigate("/bookings")
     },
     {
       icon: Heart,
       label: "Favorite Salons",
-      description: "View your saved salons",
       action: () => toast.info("Favorites coming soon")
+    },
+    {
+      icon: Bell,
+      label: "Notifications",
+      action: () => toast.info("Notifications coming soon")
     }
   ];
 
@@ -137,150 +127,132 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="p-4 pb-20">
-        {/* Profile Header */}
-        <Card className="glass mb-6">
+        {/* User Info Header */}
+        <Card className="border border-border bg-white mb-6">
           <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
+            <div className="flex items-center gap-4 mb-4">
+              <Avatar className="h-20 w-20">
                 <AvatarImage src={profile?.avatar_url} alt="Profile" />
-                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xl">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-foreground">{getDisplayName()}</h2>
-                <p className="text-muted-foreground">
-                  Member since {new Date(profile?.created_at || user?.created_at || '').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                </p>
-                {profile?.phone && (
-                  <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    <span>{profile.phone}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-xl font-bold text-foreground">{getDisplayName()}</h2>
+                  <Badge variant="secondary" className="text-xs">Premium Member</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
-                Edit
+              <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)} className="gap-2">
+                <Edit className="h-4 w-4" />
+                Edit Profile
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Quick Stats */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card className="glass">
+          <Card className="border border-border bg-white">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">12</div>
-              <div className="text-sm text-muted-foreground">Bookings</div>
+              <div className="text-2xl font-bold text-foreground">15</div>
+              <div className="text-xs text-muted-foreground">Total Visits</div>
             </CardContent>
           </Card>
-          <Card className="glass">
+          <Card className="border border-border bg-white">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">8</div>
-              <div className="text-sm text-muted-foreground">Favorites</div>
+              <div className="text-2xl font-bold text-foreground">4.8</div>
+              <div className="text-xs text-muted-foreground">Avg Rating</div>
             </CardContent>
           </Card>
-          <Card className="glass">
+          <Card className="border border-border bg-white">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">4.9</div>
-              <div className="text-sm text-muted-foreground">Rating</div>
+              <div className="text-2xl font-bold text-foreground">₹2,500</div>
+              <div className="text-xs text-muted-foreground">Total Spent</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Contact Information */}
-        <Card className="glass mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Contact Information</CardTitle>
+        {/* Personal Information */}
+        <Card className="border border-border bg-white mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-foreground">Personal Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-foreground">{user?.email}</p>
-                <p className="text-sm text-muted-foreground">Primary email address</p>
-              </div>
-            </div>
-            {profile?.phone && (
-              <>
-                <Separator />
-                <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-foreground">{profile.phone}</p>
-                    <p className="text-sm text-muted-foreground">Mobile number</p>
-                  </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Phone className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-foreground">{profile?.phone || "Add phone number"}</p>
+                  <p className="text-xs text-muted-foreground">Phone Number</p>
                 </div>
-              </>
-            )}
+              </div>
+              <Edit className="h-4 w-4 text-muted-foreground cursor-pointer" />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MapPin className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-foreground">Kankarbagh, Patna</p>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                </div>
+              </div>
+              <Edit className="h-4 w-4 text-muted-foreground cursor-pointer" />
+            </div>
           </CardContent>
         </Card>
 
-        {/* Settings Menu */}
-        <Card className="glass mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Settings</CardTitle>
+        {/* Preferences */}
+        <Card className="border border-border bg-white mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-foreground">Preferences</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {profileMenuItems.map((item, index) => (
-              <div key={index}>
-                <div 
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={item.action}
-                >
-                  <item.icon className="h-5 w-5 text-muted-foreground" />
-                  <div className="flex-1">
-                    <p className="text-foreground font-medium">{item.label}</p>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                  </div>
-                  <div className="text-muted-foreground">›</div>
-                </div>
-                {index < profileMenuItems.length - 1 && <Separator className="my-2" />}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-foreground">Favorite Services</p>
+                <p className="text-xs text-muted-foreground">Hair Cut, Beard Trim</p>
+              </div>
+              <Edit className="h-4 w-4 text-muted-foreground cursor-pointer" />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-foreground">Preferred Time</p>
+                <p className="text-xs text-muted-foreground">2:00 PM - 4:00 PM</p>
+              </div>
+              <Edit className="h-4 w-4 text-muted-foreground cursor-pointer" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card className="border border-border bg-white mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-foreground">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {quickActions.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 cursor-pointer transition-colors"
+                onClick={item.action}
+              >
+                <item.icon className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm text-foreground">{item.label}</span>
               </div>
             ))}
           </CardContent>
         </Card>
 
-        {/* Preferences */}
-        <Card className="glass mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Preferences</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-foreground font-medium">Push Notifications</p>
-                <p className="text-sm text-muted-foreground">Get notified about bookings</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-foreground font-medium">SMS Alerts</p>
-                <p className="text-sm text-muted-foreground">Receive SMS reminders</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-foreground font-medium">Email Marketing</p>
-                <p className="text-sm text-muted-foreground">Special offers and updates</p>
-              </div>
-              <Switch />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sign Out */}
+        {/* Logout */}
         <Button 
           variant="outline" 
-          className="w-full text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+          className="w-full text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground gap-2"
           onClick={handleSignOut}
         >
-          <LogOut className="h-4 w-4 mr-2" />
-          Sign Out
+          <LogOut className="h-4 w-4" />
+          Logout
         </Button>
 
         {/* Profile Edit Dialog */}
