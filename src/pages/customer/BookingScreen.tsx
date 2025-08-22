@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const BookingScreen = () => {
   const { id } = useParams();
@@ -48,13 +49,66 @@ const BookingScreen = () => {
   const finalAmount = paymentOption === "now" ? serviceTotal + bookingFee : bookingFee;
 
   const handleBooking = async () => {
+    if (!user || items.length === 0) return;
+    
     setIsProcessingPayment(true);
     
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      // Create booking record
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('bookings')
+        .insert({
+          customer_id: user.id,
+          salon_id: id,
+          service_id: items[0].id, // Primary service for now
+          booking_date: new Date().toISOString().split('T')[0],
+          booking_time: new Date().toTimeString().split(' ')[0],
+          duration: items.reduce((total, item) => total + (parseInt(item.duration) * item.quantity), 0),
+          total_price: finalAmount,
+          status: 'confirmed',
+          payment_status: paymentOption === 'now' ? 'completed' : 'pending'
+        })
+        .select()
+        .single();
+
+      if (bookingError) throw bookingError;
+
+      // Create payment record
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          user_id: user.id,
+          booking_id: bookingData.id,
+          amount: finalAmount,
+          payment_status: paymentOption === 'now' ? 'completed' : 'pending',
+          currency: 'INR',
+          payment_method: paymentMethod,
+          processed_at: paymentOption === 'now' ? new Date().toISOString() : null
+        });
+
+      if (paymentError) throw paymentError;
+
+      // Create queue entry
+      const { error: queueError } = await supabase
+        .from('queue_entries')
+        .insert({
+          salon_id: id,
+          customer_id: user.id,
+          service_id: items[0].id,
+          queue_number: Math.floor(Math.random() * 1000) + 1,
+          status: 'waiting'
+        });
+
+      if (queueError) throw queueError;
+
+      toast.success('Booking confirmed successfully!');
+      navigate(`/booking-confirmation/${bookingData.id}`);
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast.error('Failed to create booking. Please try again.');
+    } finally {
       setIsProcessingPayment(false);
-      navigate(`/booking-confirmation/${id}`);
-    }, 2000);
+    }
   };
 
   return (

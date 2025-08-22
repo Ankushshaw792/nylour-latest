@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Star, Clock, ChevronDown, Mic, Filter, SlidersHorizontal } from "lucide-react";
+import { Search, MapPin, Star, Clock, ChevronDown, Mic, Filter, SlidersHorizontal, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -8,56 +8,111 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AuthSheet } from "@/components/auth/AuthSheet";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-// Mock data
-const mockSalons = [
-  {
-    id: 1,
-    name: "Style Studio",
-    address: "123 Fashion Street, Downtown", 
-    rating: 4.8,
-    waitTime: "15-25 mins",
-    distance: "0.8 km",
-    queueCount: 3,
-    image: "/placeholder.svg",
-    primaryService: "Haircut",
-    servicePrice: "₹200"
-  },
-  {
-    id: 2,
-    name: "Modern Cuts", 
-    address: "456 Trend Avenue, City Center",
-    rating: 4.6,
-    waitTime: "20-30 mins", 
-    distance: "1.2 km",
-    queueCount: 5,
-    image: "/placeholder.svg",
-    primaryService: "Hair Styling",
-    servicePrice: "₹350"
-  },
-  {
-    id: 3,
-    name: "Luxury Hair Lounge",
-    address: "789 Elite Road, Business District",
-    rating: 4.9,
-    waitTime: "25-35 mins",
-    distance: "1.5 km", 
-    queueCount: 7,
-    image: "/placeholder.svg",
-    primaryService: "Premium Cut", 
-    servicePrice: "₹500"
-  },
-];
+interface SalonData {
+  id: string;
+  name: string;
+  address: string;
+  image_url: string | null;
+  phone: string;
+  queueCount: number;
+  waitTime: string;
+  primaryService: string;
+  servicePrice: string;
+  rating: number;
+  distance: string;
+}
 
 const NearbySalons = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [authSheetOpen, setAuthSheetOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [salons, setSalons] = useState<SalonData[]>([]);
+  const [loadingSalons, setLoadingSalons] = useState(true);
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
   const filterTabs = ["All", "Open Now", "Nearby", "Quick Service"];
+
+  // Fetch salons from database
+  useEffect(() => {
+    const fetchSalons = async () => {
+      try {
+        setLoadingSalons(true);
+        
+        // Query salons with their services and queue information
+        const { data: salonsData, error: salonsError } = await supabase
+          .from('salons')
+          .select(`
+            id,
+            name,
+            address,
+            image_url,
+            phone,
+            salon_services (
+              price,
+              services (
+                name
+              )
+            )
+          `)
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false });
+
+        if (salonsError) {
+          console.error('Error fetching salons:', salonsError);
+          toast.error('Failed to load salons');
+          return;
+        }
+
+        // Get queue counts for each salon
+        const salonIds = salonsData?.map(salon => salon.id) || [];
+        const { data: queueData } = await supabase
+          .from('queue_entries')
+          .select('salon_id, status')
+          .in('salon_id', salonIds)
+          .eq('status', 'waiting');
+
+        // Process salon data with queue counts and service info
+        const processedSalons: SalonData[] = salonsData?.map(salon => {
+          const queueCount = queueData?.filter(q => q.salon_id === salon.id).length || 0;
+          const avgWaitTime = Math.max(15, queueCount * 20); // Estimate 20 min per person, min 15 min
+          const waitTimeRange = `${avgWaitTime}-${avgWaitTime + 10} mins`;
+          
+          // Get primary service and price
+          const primarySalonService = salon.salon_services?.[0];
+          const primaryService = primarySalonService?.services?.name || "Haircut";
+          const servicePrice = `₹${primarySalonService?.price || 200}`;
+          
+          return {
+            id: salon.id,
+            name: salon.name,
+            address: salon.address,
+            image_url: salon.image_url,
+            phone: salon.phone,
+            queueCount,
+            waitTime: waitTimeRange,
+            primaryService,
+            servicePrice,
+            rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10, // Mock rating for now
+            distance: `${(Math.random() * 2 + 0.5).toFixed(1)} km` // Mock distance for now
+          };
+        }) || [];
+
+        setSalons(processedSalons);
+      } catch (error) {
+        console.error('Error:', error);
+        toast.error('Failed to load salons');
+      } finally {
+        setLoadingSalons(false);
+      }
+    };
+
+    fetchSalons();
+  }, []);
 
   const handleAvatarClick = () => {
     if (user) {
@@ -67,9 +122,24 @@ const NearbySalons = () => {
     }
   };
 
-  const filteredSalons = mockSalons.filter(salon =>
-    salon.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter salons based on search and active filter
+  const filteredSalons = salons.filter(salon => {
+    const matchesSearch = salon.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         salon.primaryService.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!matchesSearch) return false;
+    
+    switch (activeFilter) {
+      case "Open Now":
+        return true; // All salons are considered open for now
+      case "Nearby": 
+        return parseFloat(salon.distance) <= 1.0; // Within 1km
+      case "Quick Service":
+        return salon.queueCount <= 3; // 3 or fewer people in queue
+      default:
+        return true;
+    }
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -142,7 +212,14 @@ const NearbySalons = () => {
         {/* Results Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-foreground">{filteredSalons.length} salons found</span>
+            {loadingSalons ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm font-medium text-foreground">Loading salons...</span>
+              </div>
+            ) : (
+              <span className="text-sm font-medium text-foreground">{filteredSalons.length} salons found</span>
+            )}
           </div>
           <Button variant="ghost" size="sm" className="gap-2">
             <SlidersHorizontal className="h-4 w-4" />
@@ -152,79 +229,98 @@ const NearbySalons = () => {
 
         {/* Salon Cards */}
         <div className="space-y-4">
-          {filteredSalons.map((salon) => (
-            <Card
-              key={salon.id}
-              className="overflow-hidden rounded-xl border border-border hover:shadow-lg transition-all duration-300 cursor-pointer bg-white card-hover"
-              onClick={() => {
-                if (user) {
-                  navigate(`/salon/${salon.id}`);
-                } else {
-                  setAuthSheetOpen(true);
-                }
-              }}
-            >
-              <CardContent className="p-0">
-                {/* Salon Image */}
-                <div className="relative h-48 bg-muted">
-                  <img
-                    src={salon.image}
-                    alt={salon.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-medium">{salon.rating}</span>
-                  </div>
-                  <Badge 
-                    variant="secondary" 
-                    className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-foreground font-medium"
-                  >
-                    {salon.queueCount} in queue
-                  </Badge>
-                </div>
-
-                {/* Salon Info */}
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="text-lg font-semibold text-foreground mb-1">{salon.name}</h3>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        {salon.address}
-                      </p>
+          {loadingSalons ? (
+            // Loading skeleton
+            Array.from({ length: 3 }).map((_, index) => (
+              <Card key={index} className="overflow-hidden rounded-xl border border-border bg-white">
+                <CardContent className="p-0">
+                  <div className="h-48 bg-muted animate-pulse" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                    <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
+                    <div className="flex justify-between items-center">
+                      <div className="h-3 bg-muted animate-pulse rounded w-1/4" />
+                      <div className="h-8 bg-muted animate-pulse rounded w-20" />
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            filteredSalons.map((salon) => (
+              <Card
+                key={salon.id}
+                className="overflow-hidden rounded-xl border border-border hover:shadow-lg transition-all duration-300 cursor-pointer bg-white card-hover"
+                onClick={() => {
+                  if (user) {
+                    navigate(`/salon/${salon.id}`);
+                  } else {
+                    setAuthSheetOpen(true);
+                  }
+                }}
+              >
+                <CardContent className="p-0">
+                  {/* Salon Image */}
+                  <div className="relative h-48 bg-muted">
+                    <img
+                      src={salon.image_url || "/placeholder.svg"}
+                      alt={salon.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm font-medium">{salon.rating}</span>
+                    </div>
+                    <Badge 
+                      variant="secondary" 
+                      className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-foreground font-medium"
+                    >
+                      {salon.queueCount} in queue
+                    </Badge>
+                  </div>
 
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1 text-sm">
-                        <Clock className="h-4 w-4 text-primary" />
-                        <span className="text-primary font-medium">{salon.waitTime}</span>
+                  {/* Salon Info */}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-1">{salon.name}</h3>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          {salon.address}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        <span>{salon.distance}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1 text-sm">
+                          <Clock className="h-4 w-4 text-primary" />
+                          <span className="text-primary font-medium">{salon.waitTime}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span>{salon.distance}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-border">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{salon.primaryService}</p>
-                      <p className="text-lg font-semibold text-primary">{salon.servicePrice}</p>
+                    <div className="flex items-center justify-between pt-3 border-t border-border">
+                      <div>
+                        <p className="text-sm text-muted-foreground">{salon.primaryService}</p>
+                        <p className="text-lg font-semibold text-primary">{salon.servicePrice}</p>
+                      </div>
+                      <Button size="sm" className="ml-4">
+                        Book Now
+                      </Button>
                     </div>
-                    <Button size="sm" className="ml-4">
-                      Book Now
-                    </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
-        {filteredSalons.length === 0 && (
+        {!loadingSalons && filteredSalons.length === 0 && (
           <div className="text-center py-12">
             <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">No salons found matching your search</p>
