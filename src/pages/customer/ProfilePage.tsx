@@ -156,7 +156,7 @@ const ProfilePage = () => {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <Card className="border border-border bg-white">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-foreground">15</div>
+              <div className="text-2xl font-bold text-foreground">{profile?.total_visits || 0}</div>
               <div className="text-xs text-muted-foreground">Total Visits</div>
             </CardContent>
           </Card>
@@ -168,7 +168,7 @@ const ProfilePage = () => {
           </Card>
           <Card className="border border-border bg-white">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-foreground">₹2,500</div>
+              <div className="text-2xl font-bold text-foreground">₹{profile?.total_spent || 0}</div>
               <div className="text-xs text-muted-foreground">Total Spent</div>
             </CardContent>
           </Card>
@@ -194,7 +194,7 @@ const ProfilePage = () => {
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-foreground">Kankarbagh, Patna</p>
+                  <p className="text-sm text-foreground">{profile?.address || "Add address"}</p>
                   <p className="text-xs text-muted-foreground">Location</p>
                 </div>
               </div>

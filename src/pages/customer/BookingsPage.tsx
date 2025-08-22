@@ -1,70 +1,106 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, Star, Phone, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-
-const mockCurrentBookings = [
-  {
-    id: 1,
-    salonName: "Glam Studio",
-    service: "Hair Cut & Style",
-    date: "Today",
-    time: "2:30 PM",
-    status: "upcoming",
-    price: "$75",
-    address: "123 Fashion St",
-    queuePosition: 3,
-    estimatedWait: "15 min"
-  },
-  {
-    id: 2,
-    salonName: "Beauty Haven",
-    service: "Manicure & Pedicure", 
-    date: "Tomorrow",
-    time: "11:00 AM",
-    status: "confirmed",
-    price: "$50",
-    address: "456 Style Ave",
-    queuePosition: null,
-    estimatedWait: null
-  }
-];
-
-const mockPastBookings = [
-  {
-    id: 3,
-    salonName: "Radiant Salon",
-    service: "Hair Color Treatment",
-    date: "Jan 15, 2024",
-    time: "1:00 PM",
-    status: "completed",
-    price: "$120",
-    address: "789 Beauty Blvd",
-    rating: 4.7,
-    userRating: null
-  },
-  {
-    id: 4,
-    salonName: "Modern Cuts",
-    service: "Beard Trim",
-    date: "Jan 10, 2024",
-    time: "3:00 PM", 
-    status: "cancelled",
-    price: "$30",
-    address: "321 Style Blvd",
-    rating: 4.5,
-    userRating: 5
-  }
-];
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const BookingsPage = () => {
   const { user, loading } = useRequireAuth();
-  const [activeRating, setActiveRating] = useState<{[key: number]: number}>({});
+  const navigate = useNavigate();
+  const [currentBookings, setCurrentBookings] = useState<any[]>([]);
+  const [pastBookings, setPastBookings] = useState<any[]>([]);
+  const [activeRating, setActiveRating] = useState<{[key: string]: number}>({});
+  const [dataLoading, setDataLoading] = useState(true);
 
-  if (loading) {
+  // Fetch user's bookings
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!user) return;
+
+      try {
+        // Fetch current bookings (pending, confirmed)
+        const { data: currentData, error: currentError } = await supabase
+          .from("bookings")
+          .select(`
+            *,
+            salons!inner (
+              name,
+              address,
+              phone
+            ),
+            salon_services!inner (
+              services!inner (
+                name
+              )
+            ),
+            queue_entries (
+              queue_number,
+              estimated_wait_time,
+              status
+            ),
+            payments (
+              payment_status
+            )
+          `)
+          .eq("customer_id", user.id)
+          .in("status", ["pending", "confirmed"])
+          .order("booking_date", { ascending: true });
+
+        if (currentError) {
+          console.error("Error fetching current bookings:", currentError);
+          toast.error("Failed to load current bookings");
+        } else {
+          setCurrentBookings(currentData || []);
+        }
+
+        // Fetch past bookings (completed, cancelled)
+        const { data: pastData, error: pastError } = await supabase
+          .from("bookings")
+          .select(`
+            *,
+            salons!inner (
+              name,
+              address,
+              phone
+            ),
+            salon_services!inner (
+              services!inner (
+                name
+              )
+            ),
+            payments (
+              payment_status
+            )
+          `)
+          .eq("customer_id", user.id)
+          .in("status", ["completed", "cancelled"])
+          .order("booking_date", { ascending: false });
+
+        if (pastError) {
+          console.error("Error fetching past bookings:", pastError);
+          toast.error("Failed to load past bookings");
+        } else {
+          setPastBookings(pastData || []);
+        }
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+        toast.error("Failed to load bookings");
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchBookings();
+    }
+  }, [user]);
+
+  if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
@@ -72,8 +108,48 @@ const BookingsPage = () => {
     );
   }
 
-  const handleRating = (bookingId: number, rating: number) => {
+  const handleRating = (bookingId: string, rating: number) => {
     setActiveRating(prev => ({ ...prev, [bookingId]: rating }));
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    try {
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: "cancelled" })
+        .eq("id", bookingId);
+
+      if (error) {
+        console.error("Error cancelling booking:", error);
+        toast.error("Failed to cancel booking");
+      } else {
+        toast.success("Booking cancelled successfully");
+        // Refresh bookings
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      toast.error("Failed to cancel booking");
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return "Tomorrow";
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+    }
   };
 
   return (
@@ -82,7 +158,7 @@ const BookingsPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">My Bookings</h1>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => navigate("/")}>
             <Calendar className="h-4 w-4 mr-2" />
             Book Now
           </Button>
@@ -97,68 +173,89 @@ const BookingsPage = () => {
 
           {/* Current Bookings */}
           <TabsContent value="current" className="space-y-4">
-            {mockCurrentBookings.map((booking) => (
-              <Card key={booking.id} className="border border-border bg-white">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{booking.salonName}</h3>
-                      <p className="text-sm text-muted-foreground">{booking.service}</p>
+            {currentBookings.map((booking) => {
+              const salon = booking.salons;
+              const service = booking.salon_services?.services?.name || "Service";
+              const queueEntry = booking.queue_entries?.[0];
+              
+              return (
+                <Card key={booking.id} className="border border-border bg-white">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-semibold text-foreground">{salon.name}</h3>
+                        <p className="text-sm text-muted-foreground">{service}</p>
+                      </div>
+                      <Badge variant={booking.status === "confirmed" ? "default" : "secondary"}>
+                        {booking.status === "confirmed" ? "Confirmed" : "Pending"}
+                      </Badge>
                     </div>
-                    <Badge variant={booking.status === "upcoming" ? "default" : "secondary"}>
-                      {booking.status === "upcoming" ? "Upcoming" : "Confirmed"}
-                    </Badge>
-                  </div>
 
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{booking.date}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{booking.time}</span>
-                    </div>
-                  </div>
-
-                  {booking.queuePosition && (
-                    <div className="bg-primary/10 p-3 rounded-lg mb-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">Queue Position</p>
-                          <p className="text-xs text-muted-foreground">Estimated wait time</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-primary">#{booking.queuePosition}</p>
-                          <p className="text-sm text-primary">{booking.estimatedWait}</p>
-                        </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>{formatDate(booking.booking_date)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{booking.booking_time}</span>
                       </div>
                     </div>
-                  )}
 
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span className="text-sm">{booking.address}</span>
+                    {queueEntry && queueEntry.status === "waiting" && (
+                      <div className="bg-primary/10 p-3 rounded-lg mb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Queue Position</p>
+                            <p className="text-xs text-muted-foreground">Estimated wait time</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-primary">#{queueEntry.queue_number}</p>
+                            <p className="text-sm text-primary">{queueEntry.estimated_wait_time || 0} min</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span className="text-sm">{salon.address}</span>
+                      </div>
+                      <span className="font-semibold text-primary">₹{booking.total_price}</span>
                     </div>
-                    <span className="font-semibold text-primary">{booking.price}</span>
-                  </div>
 
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 gap-2">
-                      <Phone className="h-4 w-4" />
-                      Call
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1 gap-2">
-                      <X className="h-4 w-4" />
-                      Cancel
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1 gap-2">
+                        <Phone className="h-4 w-4" />
+                        Call
+                      </Button>
+                      {queueEntry && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 gap-2"
+                          onClick={() => navigate(`/queue-status/${booking.id}`)}
+                        >
+                          View Queue
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 gap-2"
+                        onClick={() => handleCancelBooking(booking.id)}
+                      >
+                        <X className="h-4 w-4" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
             
-            {mockCurrentBookings.length === 0 && (
+            {currentBookings.length === 0 && (
               <div className="text-center py-12">
                 <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">No current bookings</h3>
@@ -170,65 +267,75 @@ const BookingsPage = () => {
 
           {/* Past Bookings */}
           <TabsContent value="past" className="space-y-4">
-            {mockPastBookings.map((booking) => (
-              <Card key={booking.id} className="border border-border bg-white">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{booking.salonName}</h3>
-                      <p className="text-sm text-muted-foreground">{booking.service}</p>
+            {pastBookings.map((booking) => {
+              const salon = booking.salons;
+              const service = booking.salon_services?.services?.name || "Service";
+              
+              return (
+                <Card key={booking.id} className="border border-border bg-white">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-semibold text-foreground">{salon.name}</h3>
+                        <p className="text-sm text-muted-foreground">{service}</p>
+                      </div>
+                      <Badge variant={booking.status === "completed" ? "secondary" : "destructive"}>
+                        {booking.status === "completed" ? "Completed" : "Cancelled"}
+                      </Badge>
                     </div>
-                    <Badge variant={booking.status === "completed" ? "secondary" : "destructive"}>
-                      {booking.status === "completed" ? "Completed" : "Cancelled"}
-                    </Badge>
-                  </div>
 
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{booking.date}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{booking.time}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span className="text-sm">{booking.address}</span>
-                    </div>
-                    <span className="font-semibold text-foreground">{booking.price}</span>
-                  </div>
-
-                  {booking.status === "completed" && (
-                    <div className="bg-muted/30 p-3 rounded-lg mb-3">
-                      <p className="text-sm font-medium text-foreground mb-2">Rate your experience</p>
-                      <div className="flex items-center gap-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-5 w-5 cursor-pointer transition-colors ${
-                              star <= (activeRating[booking.id] || booking.userRating || 0)
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-muted-foreground"
-                            }`}
-                            onClick={() => handleRating(booking.id, star)}
-                          />
-                        ))}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>{formatDate(booking.booking_date)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{booking.booking_time}</span>
                       </div>
                     </div>
-                  )}
 
-                  <Button variant="outline" size="sm" className="w-full">
-                    {booking.status === "completed" ? "Book Again" : "Rebook"}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span className="text-sm">{salon.address}</span>
+                      </div>
+                      <span className="font-semibold text-foreground">₹{booking.total_price}</span>
+                    </div>
+
+                    {booking.status === "completed" && (
+                      <div className="bg-muted/30 p-3 rounded-lg mb-3">
+                        <p className="text-sm font-medium text-foreground mb-2">Rate your experience</p>
+                        <div className="flex items-center gap-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-5 w-5 cursor-pointer transition-colors ${
+                                star <= (activeRating[booking.id] || 0)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-muted-foreground"
+                              }`}
+                              onClick={() => handleRating(booking.id, star)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => navigate("/")}
+                    >
+                      {booking.status === "completed" ? "Book Again" : "Rebook"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
             
-            {mockPastBookings.length === 0 && (
+            {pastBookings.length === 0 && (
               <div className="text-center py-12">
                 <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">No past bookings</h3>
