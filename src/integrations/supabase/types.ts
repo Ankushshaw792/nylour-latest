@@ -20,10 +20,14 @@ export type Database = {
           booking_time: string
           created_at: string
           customer_id: string
+          customer_notes: string | null
           duration: number
           id: string
+          is_walk_in: boolean | null
           notes: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"] | null
           salon_id: string
+          salon_notes: string | null
           service_id: string
           status: Database["public"]["Enums"]["booking_status"]
           total_price: number
@@ -34,10 +38,14 @@ export type Database = {
           booking_time: string
           created_at?: string
           customer_id: string
+          customer_notes?: string | null
           duration?: number
           id?: string
+          is_walk_in?: boolean | null
           notes?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
           salon_id: string
+          salon_notes?: string | null
           service_id: string
           status?: Database["public"]["Enums"]["booking_status"]
           total_price: number
@@ -48,10 +56,14 @@ export type Database = {
           booking_time?: string
           created_at?: string
           customer_id?: string
+          customer_notes?: string | null
           duration?: number
           id?: string
+          is_walk_in?: boolean | null
           notes?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
           salon_id?: string
+          salon_notes?: string | null
           service_id?: string
           status?: Database["public"]["Enums"]["booking_status"]
           total_price?: number
@@ -74,34 +86,127 @@ export type Database = {
           },
         ]
       }
-      profiles: {
+      notifications: {
         Row: {
-          avatar_url: string | null
           created_at: string
-          first_name: string | null
           id: string
-          last_name: string | null
-          phone: string | null
+          is_read: boolean
+          message: string
+          related_id: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          related_id?: string | null
+          title: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          related_id?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string
+          currency: string
+          gateway_response: Json | null
+          id: string
+          payment_method: string
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          processed_at: string | null
+          transaction_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          avatar_url?: string | null
+          amount: number
+          booking_id: string
           created_at?: string
-          first_name?: string | null
+          currency?: string
+          gateway_response?: Json | null
           id?: string
-          last_name?: string | null
-          phone?: string | null
+          payment_method: string
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          processed_at?: string | null
+          transaction_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string
+          currency?: string
+          gateway_response?: Json | null
+          id?: string
+          payment_method?: string
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          processed_at?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          created_at: string
+          first_name: string | null
+          gender: string | null
+          id: string
+          last_name: string | null
+          notification_preferences: Json | null
+          phone: string | null
+          total_spent: number | null
+          total_visits: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
           avatar_url?: string | null
           created_at?: string
           first_name?: string | null
+          gender?: string | null
           id?: string
           last_name?: string | null
+          notification_preferences?: Json | null
           phone?: string | null
+          total_spent?: number | null
+          total_visits?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          first_name?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          notification_preferences?: Json | null
+          phone?: string | null
+          total_spent?: number | null
+          total_visits?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -109,11 +214,13 @@ export type Database = {
       }
       queue_entries: {
         Row: {
+          actual_wait_time: number | null
           completed_at: string | null
           customer_id: string
           estimated_wait_time: number | null
           id: string
           joined_at: string
+          notification_sent: Json | null
           queue_number: number
           salon_id: string
           service_id: string
@@ -121,11 +228,13 @@ export type Database = {
           status: Database["public"]["Enums"]["queue_status"]
         }
         Insert: {
+          actual_wait_time?: number | null
           completed_at?: string | null
           customer_id: string
           estimated_wait_time?: number | null
           id?: string
           joined_at?: string
+          notification_sent?: Json | null
           queue_number: number
           salon_id: string
           service_id: string
@@ -133,11 +242,13 @@ export type Database = {
           status?: Database["public"]["Enums"]["queue_status"]
         }
         Update: {
+          actual_wait_time?: number | null
           completed_at?: string | null
           customer_id?: string
           estimated_wait_time?: number | null
           id?: string
           joined_at?: string
+          notification_sent?: Json | null
           queue_number?: number
           salon_id?: string
           service_id?: string
@@ -369,6 +480,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_queue_position: {
+        Args: { p_customer_id: string; p_salon_id: string }
+        Returns: number
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
@@ -380,9 +495,32 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_queue_estimated_times: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_user_stats: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       booking_status: "pending" | "confirmed" | "completed" | "cancelled"
+      notification_type:
+        | "booking_confirmation"
+        | "booking_reminder"
+        | "queue_update"
+        | "payment_receipt"
+        | "queue_ready"
+        | "booking_cancelled"
+        | "general"
+      payment_status:
+        | "pending"
+        | "processing"
+        | "completed"
+        | "failed"
+        | "refunded"
+        | "cancelled"
       queue_status: "waiting" | "in_progress" | "completed"
       salon_status: "pending" | "approved" | "suspended"
       user_role: "admin" | "salon_owner" | "customer"
@@ -514,6 +652,23 @@ export const Constants = {
   public: {
     Enums: {
       booking_status: ["pending", "confirmed", "completed", "cancelled"],
+      notification_type: [
+        "booking_confirmation",
+        "booking_reminder",
+        "queue_update",
+        "payment_receipt",
+        "queue_ready",
+        "booking_cancelled",
+        "general",
+      ],
+      payment_status: [
+        "pending",
+        "processing",
+        "completed",
+        "failed",
+        "refunded",
+        "cancelled",
+      ],
       queue_status: ["waiting", "in_progress", "completed"],
       salon_status: ["pending", "approved", "suspended"],
       user_role: ["admin", "salon_owner", "customer"],
