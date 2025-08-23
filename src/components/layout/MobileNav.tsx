@@ -10,10 +10,11 @@ const customerNavItems = [
 ];
 
 const salonNavItems = [
-  { icon: Home, label: "Home", path: "/" },
-  { icon: Users, label: "Queue", path: "/salon-dashboard" },
+  { icon: Home, label: "Home", path: "/salon-dashboard" },
+  { icon: Users, label: "Queue", path: "/salon-dashboard/queue" },
   { icon: Calendar, label: "Bookings", path: "/salon-dashboard/bookings" },
   { icon: Clock, label: "Check-in", path: "/salon-dashboard/checkin" },
+  { icon: Settings, label: "Profile", path: "/salon-dashboard/profile" },
 ];
 
 export const MobileNav = () => {
