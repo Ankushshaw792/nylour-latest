@@ -1,174 +1,145 @@
 import { useState, useEffect } from "react";
-import { User, MapPin, Phone, Mail, Clock, DollarSign, Save, Bell } from "lucide-react";
+import { LogOut, Pause, Clock, Users, TrendingUp, Settings, MessageSquare, BarChart3, Eye, Wifi } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
-interface SalonProfile {
-  name: string;
-  description: string;
-  address: string;
-  phone: string;
-  email: string;
-  image_url: string;
+interface QueueStats {
+  currentWaitTime: number;
+  queueLength: number;
+  avgServiceTime: number;
+  capacity: number;
 }
 
-interface SalonHours {
-  day_of_week: number;
-  open_time: string;
-  close_time: string;
-  is_closed: boolean;
+interface CustomerCheckIn {
+  id: string;
+  name: string;
+  service: string;
+  time: string;
+  status: 'waiting' | 'ready';
 }
 
 const SalonProfilePage = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [salonProfile, setSalonProfile] = useState<SalonProfile>({
-    name: '',
-    description: '',
-    address: '',
-    phone: '',
-    email: '',
-    image_url: '',
+  const [bookingStatus, setBookingStatus] = useState(true);
+  const [waitTime, setWaitTime] = useState(30);
+  const [stats, setStats] = useState<QueueStats>({
+    currentWaitTime: 25,
+    queueLength: 8,
+    avgServiceTime: 45,
+    capacity: 12
   });
-
-  const [salonHours, setSalonHours] = useState<SalonHours[]>([]);
-  const [notifications, setNotifications] = useState({
-    newBookings: true,
-    queueUpdates: true,
-    dailyReports: false,
-  });
-
-  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const [customers, setCustomers] = useState<CustomerCheckIn[]>([]);
 
   useEffect(() => {
     const fetchSalonData = async () => {
       if (!user?.id) return;
 
       try {
-        // Fetch salon profile
+        // Get salon ID
         const { data: salon } = await supabase
           .from('salons')
-          .select('*')
+          .select('id')
           .eq('owner_id', user.id)
           .single();
 
-        if (salon) {
-          setSalonProfile({
-            name: salon.name || '',
-            description: salon.description || '',
-            address: salon.address || '',
-            phone: salon.phone || '',
-            email: salon.email || '',
-            image_url: salon.image_url || '',
-          });
-        }
+        if (!salon) return;
 
-        // Fetch salon hours
-        const { data: hours } = await supabase
-          .from('salon_hours')
-          .select('*')
-          .eq('salon_id', salon?.id)
-          .order('day_of_week');
+        // Fetch queue entries for check-in list
+        const { data: queueData } = await supabase
+          .from('queue_entries')
+          .select(`
+            *,
+            profiles!queue_entries_customer_id_fkey (
+              first_name,
+              last_name
+            ),
+            services (
+              name
+            )
+          `)
+          .eq('salon_id', salon.id)
+          .in('status', ['waiting', 'in_progress'])
+          .order('joined_at')
+          .limit(5);
 
-        if (hours && hours.length > 0) {
-          setSalonHours(hours);
-        } else {
-          // Initialize default hours (9 AM to 6 PM, closed on Sunday)
-          const defaultHours = Array.from({ length: 7 }, (_, i) => ({
-            day_of_week: i,
-            open_time: '09:00',
-            close_time: '18:00',
-            is_closed: i === 0, // Sunday closed by default
+        if (queueData) {
+          const formattedCustomers = queueData.map((entry: any) => ({
+            id: entry.id,
+            name: `${entry.profiles?.first_name || 'Unknown'} ${entry.profiles?.last_name || 'Customer'}`,
+            service: entry.services?.name || 'Service',
+            time: new Date(entry.joined_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: entry.status === 'in_progress' ? 'ready' as const : 'waiting' as const
           }));
-          setSalonHours(defaultHours);
+          setCustomers(formattedCustomers);
+          
+          // Update stats
+          setStats(prev => ({
+            ...prev,
+            queueLength: queueData.length,
+            currentWaitTime: queueData.length > 0 ? queueData.length * 15 : 0
+          }));
         }
       } catch (error) {
         console.error('Error fetching salon data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load salon data",
-          variant: "destructive",
-        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchSalonData();
-  }, [user, toast]);
 
-  const handleSaveProfile = async () => {
-    if (!user?.id) return;
-    setSaving(true);
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('profile-queue-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'queue_entries' },
+        () => fetchSalonData()
+      )
+      .subscribe();
 
-    try {
-      // Update salon profile
-      const { error: salonError } = await supabase
-        .from('salons')
-        .update(salonProfile)
-        .eq('owner_id', user.id);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
-      if (salonError) throw salonError;
-
-      // Get salon ID for hours update
-      const { data: salon } = await supabase
-        .from('salons')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single();
-
-      if (salon) {
-        // Delete existing hours and insert new ones
-        await supabase
-          .from('salon_hours')
-          .delete()
-          .eq('salon_id', salon.id);
-
-        const hoursToInsert = salonHours.map(hour => ({
-          salon_id: salon.id,
-          day_of_week: hour.day_of_week,
-          open_time: hour.open_time,
-          close_time: hour.close_time,
-          is_closed: hour.is_closed,
-        }));
-
-        const { error: hoursError } = await supabase
-          .from('salon_hours')
-          .insert(hoursToInsert);
-
-        if (hoursError) throw hoursError;
-      }
-
-      toast({
-        title: "Success",
-        description: "Profile updated successfully",
-      });
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update profile",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
   };
 
-  const updateHours = (dayIndex: number, field: keyof SalonHours, value: any) => {
-    setSalonHours(prev => prev.map((hour, index) => 
-      index === dayIndex ? { ...hour, [field]: value } : hour
+  const handleUpdateWaitTime = () => {
+    toast({
+      title: "Wait time updated",
+      description: `Current wait time set to ${waitTime} minutes`,
+    });
+  };
+
+  const handleQuickTimeUpdate = (minutes: number) => {
+    setWaitTime(minutes);
+    handleUpdateWaitTime();
+  };
+
+  const handleCheckIn = (customerId: string) => {
+    setCustomers(prev => prev.map(customer => 
+      customer.id === customerId 
+        ? { ...customer, status: customer.status === 'waiting' ? 'ready' as const : 'waiting' as const }
+        : customer
     ));
+    toast({
+      title: "Customer status updated",
+      description: "Customer check-in status has been updated",
+    });
   };
 
   if (loading) {
@@ -176,7 +147,7 @@ const SalonProfilePage = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading profile...</p>
+          <p className="text-muted-foreground">Loading salon dashboard...</p>
         </div>
       </div>
     );
@@ -187,184 +158,220 @@ const SalonProfilePage = () => {
       {/* Header */}
       <div className="bg-gradient-hero text-white p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Salon Profile & Settings</h1>
-          <p className="text-white/90">Manage your salon information and preferences</p>
+          <h1 className="text-2xl font-bold mb-2">Salon Management</h1>
+          <p className="text-white/90">Manage your queue, bookings and customer check-ins</p>
         </div>
       </div>
 
       <div className="p-4 space-y-6">
-        {/* Basic Information */}
+        {/* Stop Bookings Button */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Basic Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="salonName">Salon Name</Label>
-              <Input
-                id="salonName"
-                value={salonProfile.name}
-                onChange={(e) => setSalonProfile(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter salon name"
-                className="mt-2"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={salonProfile.description}
-                onChange={(e) => setSalonProfile(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Brief description of your salon"
-                className="mt-2"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={salonProfile.address}
-                onChange={(e) => setSalonProfile(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="Full salon address"
-                className="mt-2"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={salonProfile.phone}
-                onChange={(e) => setSalonProfile(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="+91 98765 43210"
-                className="mt-2"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={salonProfile.email}
-                onChange={(e) => setSalonProfile(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="salon@example.com"
-                className="mt-2"
-              />
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">Booking Control</h3>
+                <p className="text-sm text-muted-foreground">
+                  {bookingStatus ? "Currently accepting new bookings" : "Bookings are paused"}
+                </p>
+              </div>
+              <Button 
+                variant={bookingStatus ? "destructive" : "default"}
+                onClick={() => setBookingStatus(!bookingStatus)}
+                className="gap-2"
+              >
+                <Pause className="h-4 w-4" />
+                {bookingStatus ? "Stop Bookings" : "Resume Bookings"}
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Operating Hours */}
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-2 gap-4">
+          <Card>
+            <CardContent className="p-4 text-center">
+              <Clock className="h-6 w-6 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-primary">{stats.currentWaitTime}m</p>
+              <p className="text-xs text-muted-foreground">Current Wait Time</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4 text-center">
+              <Users className="h-6 w-6 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-primary">{stats.queueLength}</p>
+              <p className="text-xs text-muted-foreground">Queue Length</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4 text-center">
+              <TrendingUp className="h-6 w-6 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-primary">{stats.avgServiceTime}m</p>
+              <p className="text-xs text-muted-foreground">Avg Service Time</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4 text-center">
+              <Wifi className="h-6 w-6 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-primary">{stats.capacity}</p>
+              <p className="text-xs text-muted-foreground">Capacity</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Update Wait Time */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Operating Hours
+              Update Wait Time
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {salonHours.map((hour, index) => (
-              <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
-                <div className="w-20 font-medium">
-                  {daysOfWeek[hour.day_of_week]}
-                </div>
-                
-                <Switch
-                  checked={!hour.is_closed}
-                  onCheckedChange={(checked) => updateHours(index, 'is_closed', !checked)}
+            <div>
+              <Label htmlFor="waitTime">Current Wait Time (minutes)</Label>
+              <div className="flex gap-2 mt-2">
+                <Input
+                  id="waitTime"
+                  type="number"
+                  value={waitTime}
+                  onChange={(e) => setWaitTime(Number(e.target.value))}
+                  className="flex-1"
                 />
-                
-                {!hour.is_closed && (
-                  <>
-                    <Input
-                      type="time"
-                      value={hour.open_time}
-                      onChange={(e) => updateHours(index, 'open_time', e.target.value)}
-                      className="w-24"
-                    />
-                    <span className="text-muted-foreground">to</span>
-                    <Input
-                      type="time"
-                      value={hour.close_time}
-                      onChange={(e) => updateHours(index, 'close_time', e.target.value)}
-                      className="w-24"
-                    />
-                  </>
-                )}
-                
-                {hour.is_closed && (
-                  <span className="text-muted-foreground ml-4">Closed</span>
-                )}
+                <Button onClick={handleUpdateWaitTime}>Update</Button>
               </div>
-            ))}
+            </div>
+            
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={() => handleQuickTimeUpdate(15)}>
+                15 min
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleQuickTimeUpdate(30)}>
+                30 min
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleQuickTimeUpdate(45)}>
+                45 min
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleQuickTimeUpdate(60)}>
+                1 hour
+              </Button>
+            </div>
+
+            <div className="bg-muted p-3 rounded-lg">
+              <p className="text-sm font-medium mb-1">Wait Time Guidelines</p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• Update regularly based on current queue</li>
+                <li>• Consider service complexity and staff availability</li>
+                <li>• Communicate changes to waiting customers</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Notification Preferences */}
+        {/* Booking Status Toggle */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Booking Status</p>
+                <p className="text-sm text-muted-foreground">
+                  Allow new customers to book appointments
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={bookingStatus ? "default" : "secondary"}>
+                  {bookingStatus ? "Open" : "Closed"}
+                </Badge>
+                <Switch
+                  checked={bookingStatus}
+                  onCheckedChange={setBookingStatus}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Customer Check-in */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notification Preferences
-            </CardTitle>
+            <CardTitle>Customer Check-in</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">New Bookings</p>
-                <p className="text-sm text-muted-foreground">Get notified when customers book appointments</p>
+          <CardContent>
+            {customers.length > 0 ? (
+              <div className="space-y-3">
+                {customers.map((customer) => (
+                  <div key={customer.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium">{customer.name}</p>
+                        <Badge variant={customer.status === 'ready' ? 'default' : 'secondary'}>
+                          {customer.status === 'ready' ? 'Ready' : 'Waiting'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {customer.service} • Arrived at {customer.time}
+                      </p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant={customer.status === 'ready' ? 'outline' : 'default'}
+                      onClick={() => handleCheckIn(customer.id)}
+                    >
+                      {customer.status === 'ready' ? 'Mark Waiting' : 'Check In'}
+                    </Button>
+                  </div>
+                ))}
               </div>
-              <Switch
-                checked={notifications.newBookings}
-                onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, newBookings: checked }))}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Queue Updates</p>
-                <p className="text-sm text-muted-foreground">Notifications when customers join or leave queue</p>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No customers in queue</p>
               </div>
-              <Switch
-                checked={notifications.queueUpdates}
-                onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, queueUpdates: checked }))}
-              />
-            </div>
+            )}
+          </CardContent>
+        </Card>
 
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Daily Reports</p>
-                <p className="text-sm text-muted-foreground">Daily summary of appointments and revenue</p>
-              </div>
-              <Switch
-                checked={notifications.dailyReports}
-                onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, dailyReports: checked }))}
-              />
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" className="h-16 flex-col gap-2">
+                <MessageSquare className="h-5 w-5" />
+                <span className="text-sm">Send SMS Updates</span>
+              </Button>
+              
+              <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => navigate('/salon-dashboard')}>
+                <Eye className="h-5 w-5" />
+                <span className="text-sm">View Queue</span>
+              </Button>
+              
+              <Button variant="outline" className="h-16 flex-col gap-2">
+                <Settings className="h-5 w-5" />
+                <span className="text-sm">Salon Settings</span>
+              </Button>
+              
+              <Button variant="outline" className="h-16 flex-col gap-2">
+                <BarChart3 className="h-5 w-5" />
+                <span className="text-sm">Analytics</span>
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Save Button */}
+        {/* Logout Button */}
         <Button
-          onClick={handleSaveProfile}
-          disabled={saving}
+          onClick={handleLogout}
+          variant="destructive"
           size="lg"
-          className="w-full"
+          className="w-full gap-2"
         >
-          <Save className="h-5 w-5 mr-2" />
-          {saving ? 'Saving...' : 'Save Changes'}
+          <LogOut className="h-5 w-5" />
+          Logout
         </Button>
       </div>
     </div>
