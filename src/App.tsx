@@ -23,7 +23,7 @@ import ProfilePage from "./pages/customer/ProfilePage";
 import QueueManagement from "./pages/salon/QueueManagement";
 import BookingsOverview from "./pages/salon/BookingsOverview";
 import CheckInUpdate from "./pages/salon/CheckInUpdate";
-import SalonDashboardHome from "./pages/salon/SalonDashboardHome";
+
 import SalonProfilePage from "./pages/salon/SalonProfilePage";
 
 import NotFound from "./pages/NotFound";
@@ -52,7 +52,7 @@ const App = () => (
               <Route path="/profile" element={<MobileLayout><ProfilePage /></MobileLayout>} />
               
               {/* Salon Dashboard Routes */}
-            <Route path="/salon-dashboard" element={<MobileLayout><SalonDashboardHome /></MobileLayout>} />
+            <Route path="/salon-dashboard" element={<MobileLayout><QueueManagement /></MobileLayout>} />
             <Route path="/salon-dashboard/queue" element={<MobileLayout><QueueManagement /></MobileLayout>} />
             <Route path="/salon-dashboard/bookings" element={<MobileLayout><BookingsOverview /></MobileLayout>} />
             <Route path="/salon-dashboard/checkin" element={<MobileLayout><CheckInUpdate /></MobileLayout>} />

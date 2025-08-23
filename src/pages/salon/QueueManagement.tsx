@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import { Clock, Users, CheckCircle, Search, Phone, MessageCircle, Play, Filter } from "lucide-react";
+import { Clock, Users, CheckCircle, Phone, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,24 +24,10 @@ interface QueueEntry {
   } | null;
 }
 
-interface Analytics {
-  totalInQueue: number;
-  waiting: number;
-  inProgress: number;
-  onlineBookings: number;
-}
 
 const QueueManagement = () => {
   const { user } = useAuth();
   const [queue, setQueue] = useState<QueueEntry[]>([]);
-  const [analytics, setAnalytics] = useState<Analytics>({
-    totalInQueue: 0,
-    waiting: 0,
-    inProgress: 0,
-    onlineBookings: 0,
-  });
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -80,27 +64,6 @@ const QueueManagement = () => {
 
         if (queueData) {
           setQueue(queueData as any);
-
-          // Calculate analytics
-          const totalInQueue = queueData.length;
-          const waiting = queueData.filter(entry => entry.status === 'waiting').length;
-          const inProgress = queueData.filter(entry => entry.status === 'in_progress').length;
-          
-          // Get today's bookings count for online bookings metric
-          const today = new Date().toISOString().split('T')[0];
-          const { data: bookingsData } = await supabase
-            .from('bookings')
-            .select('id')
-            .eq('salon_id', salon.id)
-            .gte('booking_date', today)
-            .lt('booking_date', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-
-          setAnalytics({
-            totalInQueue,
-            waiting,
-            inProgress,
-            onlineBookings: bookingsData?.length || 0,
-          });
         }
       } catch (error) {
         console.error('Error fetching queue data:', error);
@@ -157,12 +120,6 @@ const QueueManagement = () => {
     }
   };
 
-  const filteredQueue = queue.filter(entry => {
-    const matchesSearch = searchQuery === "" || 
-      `${entry.profiles?.first_name || ''} ${entry.profiles?.last_name || ''}`.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || entry.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
 
   if (loading) {
     return (
@@ -181,79 +138,15 @@ const QueueManagement = () => {
       <div className="bg-gradient-hero text-white p-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Queue Management</h1>
-          <p className="text-white/90 mb-4">Monitor and manage your customer queue</p>
-          
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="bg-white/10 border-white/20">
-              <CardContent className="p-4 text-center">
-                <Users className="h-6 w-6 mx-auto mb-2 text-white" />
-                <p className="text-2xl font-bold text-white">{analytics.totalInQueue}</p>
-                <p className="text-xs text-white/80">Total in Queue</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/10 border-white/20">
-              <CardContent className="p-4 text-center">
-                <Clock className="h-6 w-6 mx-auto mb-2 text-white" />
-                <p className="text-2xl font-bold text-white">{analytics.waiting}</p>
-                <p className="text-xs text-white/80">Waiting</p>
-              </CardContent>
-            </Card>
-          </div>
+          <p className="text-white/90">Monitor and manage your customer queue</p>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Additional Statistics */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <Play className="h-5 w-5 text-success" />
-              </div>
-              <p className="text-xl font-bold text-success">{analytics.inProgress}</p>
-              <p className="text-sm text-muted-foreground">In Progress</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <CheckCircle className="h-5 w-5 text-primary" />
-              </div>
-              <p className="text-xl font-bold text-primary">{analytics.onlineBookings}</p>
-              <p className="text-sm text-muted-foreground">Online Bookings</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search and Filter */}
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search customers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="waiting">Waiting</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Queue List */}
         <div className="space-y-3">
-          {filteredQueue.length > 0 ? (
-            filteredQueue.map((entry) => (
+          {queue.length > 0 ? (
+            queue.map((entry) => (
               <Card key={entry.id} className="card-hover">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-3">
@@ -292,10 +185,8 @@ const QueueManagement = () => {
                         variant="default" 
                         size="sm"
                         onClick={() => handleStartService(entry.id)}
-                        className="flex-1"
                       >
-                        <Play className="h-4 w-4 mr-1" />
-                        Start
+                        Start Service
                       </Button>
                     )}
                     
@@ -304,9 +195,7 @@ const QueueManagement = () => {
                         variant="default" 
                         size="sm"
                         onClick={() => handleCompleteService(entry.id)}
-                        className="flex-1"
                       >
-                        <CheckCircle className="h-4 w-4 mr-1" />
                         Complete
                       </Button>
                     )}
@@ -325,11 +214,9 @@ const QueueManagement = () => {
             <Card>
               <CardContent className="p-8 text-center">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No customers found</h3>
+                <h3 className="text-lg font-semibold mb-2">Queue is Empty</h3>
                 <p className="text-muted-foreground">
-                  {searchQuery || statusFilter !== 'all' 
-                    ? 'Try adjusting your search or filter criteria.' 
-                    : 'The queue is empty. New customers will appear here when they join.'}
+                  New customers will appear here when they join the queue.
                 </p>
               </CardContent>
             </Card>
