@@ -10,8 +10,7 @@ const customerNavItems = [
 ];
 
 const salonNavItems = [
-  { icon: Home, label: "Home", path: "/salon-dashboard" },
-  { icon: Users, label: "Queue", path: "/salon-dashboard/queue" },
+  { icon: Users, label: "Queue", path: "/salon-dashboard" },
   { icon: Calendar, label: "Bookings", path: "/salon-dashboard/bookings" },
   { icon: Clock, label: "Check-in", path: "/salon-dashboard/checkin" },
   { icon: Settings, label: "Profile", path: "/salon-dashboard/profile" },

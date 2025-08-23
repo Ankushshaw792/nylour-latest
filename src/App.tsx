@@ -53,7 +53,6 @@ const App = () => (
               
               {/* Salon Dashboard Routes */}
             <Route path="/salon-dashboard" element={<MobileLayout><QueueManagement /></MobileLayout>} />
-            <Route path="/salon-dashboard/queue" element={<MobileLayout><QueueManagement /></MobileLayout>} />
             <Route path="/salon-dashboard/bookings" element={<MobileLayout><BookingsOverview /></MobileLayout>} />
             <Route path="/salon-dashboard/checkin" element={<MobileLayout><CheckInUpdate /></MobileLayout>} />
             <Route path="/salon-dashboard/profile" element={<MobileLayout><SalonProfilePage /></MobileLayout>} />
