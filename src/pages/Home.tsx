@@ -93,8 +93,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-50 bg-transparent">
-        <div className="container mx-auto px-4 py-6">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center">
@@ -129,7 +129,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-hero text-white">
+      <section className="relative overflow-hidden bg-gradient-hero text-white pt-20">
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative container mx-auto px-4 py-20 lg:py-32">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
