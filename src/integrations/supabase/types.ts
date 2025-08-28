@@ -78,6 +78,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bookings_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bookings_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -264,6 +271,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "queue_entries_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "queue_entries_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -308,6 +322,13 @@ export type Database = {
             referencedRelation: "salons"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "salon_hours_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       salon_services: {
@@ -344,6 +365,13 @@ export type Database = {
             columns: ["salon_id"]
             isOneToOne: false
             referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salon_services_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons_public"
             referencedColumns: ["id"]
           },
           {
@@ -477,7 +505,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      salons_public: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          image_url: string | null
+          name: string | null
+          status: Database["public"]["Enums"]["salon_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          name?: string | null
+          status?: Database["public"]["Enums"]["salon_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          name?: string | null
+          status?: Database["public"]["Enums"]["salon_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_queue_position: {
