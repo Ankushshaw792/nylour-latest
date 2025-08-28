@@ -10,6 +10,7 @@ import { RegistrationSuccess } from "./registration/RegistrationSuccess";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
 export interface SalonFormData {
@@ -74,8 +75,8 @@ export const SalonRegistrationForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<SalonFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
-  const [registrationComplete, setRegistrationComplete] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Load form data from localStorage on mount
   useEffect(() => {
@@ -147,8 +148,8 @@ export const SalonRegistrationForm = () => {
           max_queue_size: formData.maxQueueSize,
           current_wait_time: formData.currentWaitTime,
           accepts_bookings: formData.acceptsBookings,
-          status: 'pending',
-          admin_approved: false,
+          status: 'approved',
+          admin_approved: true,
         })
         .select()
         .single();
@@ -185,8 +186,8 @@ export const SalonRegistrationForm = () => {
       // Clear localStorage draft
       localStorage.removeItem('salon-registration-draft');
       
-      toast.success("Salon registration submitted successfully!");
-      setRegistrationComplete(true);
+      toast.success("Salon registration completed successfully!");
+      navigate('/salon-dashboard');
     } catch (error) {
       console.error('Registration error:', error);
       toast.error("Failed to submit registration. Please try again.");
@@ -195,9 +196,6 @@ export const SalonRegistrationForm = () => {
     }
   };
 
-  if (registrationComplete) {
-    return <RegistrationSuccess />;
-  }
 
   const progress = ((currentStep + 1) / steps.length) * 100;
 
