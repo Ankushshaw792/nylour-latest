@@ -1,11 +1,14 @@
-import { ArrowRight, MapPin, Calendar, Bell, Clock, Users, TrendingUp, Star, CheckCircle, MessageSquare, Smartphone, ChevronRight } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowRight, MapPin, Calendar, Bell, Clock, Users, TrendingUp, Star, CheckCircle, MessageSquare, Smartphone, ChevronRight, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useNavigate } from "react-router-dom";
+import { AuthSheet } from "@/components/auth/AuthSheet";
 
 export default function Home() {
   const navigate = useNavigate();
+  const [showAuthSheet, setShowAuthSheet] = useState(false);
 
   const customerFeatures = [
     {
@@ -89,6 +92,42 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="absolute top-0 left-0 right-0 z-50 bg-transparent">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold text-white">
+                Nylour
+              </h1>
+            </div>
+            
+            {/* Auth Buttons */}
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAuthSheet(true)}
+                className="text-white hover:bg-white/10 hover:text-white"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Login
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowAuthSheet(true)}
+                className="bg-white text-primary hover:bg-white/90"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Sign Up
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-hero text-white">
         <div className="absolute inset-0 bg-black/10" />
@@ -349,6 +388,12 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Auth Sheet */}
+      <AuthSheet 
+        open={showAuthSheet} 
+        onOpenChange={setShowAuthSheet}
+      />
     </div>
   );
 }
