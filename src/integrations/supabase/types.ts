@@ -105,6 +105,54 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          created_at: string | null
+          first_name: string | null
+          gender: string | null
+          id: string
+          last_name: string | null
+          notification_preferences: Json | null
+          phone: string | null
+          total_spent: number | null
+          total_visits: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          notification_preferences?: Json | null
+          phone?: string | null
+          total_spent?: number | null
+          total_visits?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          notification_preferences?: Json | null
+          phone?: string | null
+          total_spent?: number | null
+          total_visits?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -343,6 +391,39 @@ export type Database = {
           },
         ]
       }
+      salon_owners: {
+        Row: {
+          created_at: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       salon_services: {
         Row: {
           created_at: string
@@ -399,6 +480,9 @@ export type Database = {
         Row: {
           accepts_bookings: boolean | null
           address: string
+          admin_approved: boolean | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           current_wait_time: number | null
           description: string | null
@@ -417,6 +501,9 @@ export type Database = {
         Insert: {
           accepts_bookings?: boolean | null
           address: string
+          admin_approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           current_wait_time?: number | null
           description?: string | null
@@ -435,6 +522,9 @@ export type Database = {
         Update: {
           accepts_bookings?: boolean | null
           address?: string
+          admin_approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           current_wait_time?: number | null
           description?: string | null

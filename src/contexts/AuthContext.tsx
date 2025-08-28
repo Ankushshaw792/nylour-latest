@@ -8,8 +8,8 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: any }>;
-  signInWithGoogle: () => Promise<{ error: any }>;
+  signUp: (email: string, password: string, firstName?: string, lastName?: string, userType?: string) => Promise<{ error: any }>;
+  signInWithGoogle: (userType?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
+  const signUp = async (email: string, password: string, firstName?: string, lastName?: string, userType?: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
@@ -85,6 +85,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           data: {
             first_name: firstName,
             last_name: lastName,
+            user_type: userType,
           },
         },
       });
@@ -103,7 +104,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (userType?: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
@@ -111,6 +112,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         provider: "google",
         options: {
           redirectTo: redirectUrl,
+          queryParams: {
+            user_type: userType || '',
+          },
         },
       });
 

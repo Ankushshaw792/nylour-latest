@@ -3,9 +3,33 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { SalonAuthSheet } from "@/components/auth/SalonAuthSheet";
+import { SalonRegistrationForm } from "@/components/salon/SalonRegistrationForm";
 
 export default function SalonRegister() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
+  const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+
+  // Check if user is authenticated and redirect to registration form
+  useEffect(() => {
+    if (user && !loading) {
+      setShowRegistrationForm(true);
+    }
+  }, [user, loading]);
+
+  const handleAuthSuccess = () => {
+    setShowAuth(false);
+    setShowRegistrationForm(true);
+  };
+
+  // If user is authenticated, show registration form
+  if (showRegistrationForm) {
+    return <SalonRegistrationForm />;
+  }
 
   const benefits = [
     {
@@ -130,7 +154,7 @@ export default function SalonRegister() {
             <div className="flex items-center space-x-4">
               <Button 
                 variant="ghost" 
-                onClick={() => navigate('/salon-dashboard')}
+                onClick={() => setShowAuth(true)}
                 className="text-muted-foreground hover:text-foreground"
               >
                 Already have an account? Sign In
@@ -159,6 +183,7 @@ export default function SalonRegister() {
                   size="xl"
                   variant="secondary"
                   className="text-lg px-8 py-4 bg-white text-primary hover:bg-white/90 font-semibold"
+                  onClick={() => setShowAuth(true)}
                 >
                   Register Your Salon FREE
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -338,6 +363,7 @@ export default function SalonRegister() {
               size="xl"
               variant="secondary"
               className="text-lg px-8 py-4 bg-white text-primary hover:bg-white/90 font-semibold"
+              onClick={() => setShowAuth(true)}
             >
               Start Your Free Registration
               <ChevronRight className="ml-2 h-5 w-5" />
@@ -401,6 +427,13 @@ export default function SalonRegister() {
           </div>
         </div>
       </footer>
+
+      {/* Authentication Sheet */}
+      <SalonAuthSheet 
+        open={showAuth}
+        onOpenChange={setShowAuth}
+        onAuthSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }
