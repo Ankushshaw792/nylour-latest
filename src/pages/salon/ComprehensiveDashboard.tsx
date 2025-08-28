@@ -238,22 +238,32 @@ const ComprehensiveDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {pendingBookings.map((booking) => (
-                <div key={booking.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <h4 className="font-semibold">
-                        {booking.profiles?.first_name} {booking.profiles?.last_name}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        {booking.services?.name} • {booking.booking_time}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Phone: {booking.profiles?.phone}
-                      </p>
-                    </div>
-                    <Badge variant="secondary">₹{booking.total_price}</Badge>
+            {pendingBookings.map((booking) => (
+              <div key={booking.id} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h4 className="font-semibold">
+                      {booking.customer_id 
+                        ? `${booking.profiles?.first_name || ''} ${booking.profiles?.last_name || ''}`.trim() || 'Customer'
+                        : booking.customer_notes?.includes('Walk-in:') 
+                          ? booking.customer_notes.replace('Walk-in: ', '').split(' - ')[0]
+                          : 'Walk-in Customer'
+                      }
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {booking.services?.name || 'Service'} • {booking.booking_time}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {booking.customer_id 
+                        ? `Phone: ${booking.profiles?.phone || 'N/A'}`
+                        : booking.customer_notes?.includes(' - ') 
+                          ? `Phone: ${booking.customer_notes.split(' - ')[1]}`
+                          : 'Walk-in'
+                      }
+                    </p>
                   </div>
+                  <Badge variant="secondary">₹{booking.total_price}</Badge>
+                </div>
                   
                   <div className="flex gap-2">
                     <Button
@@ -297,10 +307,15 @@ const ComprehensiveDashboard = () => {
                     </div>
                     <div>
                       <h4 className="font-semibold">
-                        {booking.profiles?.first_name} {booking.profiles?.last_name}
+                        {booking.customer_id 
+                          ? `${booking.profiles?.first_name || ''} ${booking.profiles?.last_name || ''}`.trim() || 'Customer'
+                          : booking.customer_notes?.includes('Walk-in:') 
+                            ? booking.customer_notes.replace('Walk-in: ', '').split(' - ')[0]
+                            : 'Walk-in Customer'
+                        }
                       </h4>
                       <p className="text-sm text-muted-foreground">
-                        {booking.services?.name} • {booking.booking_time}
+                        {booking.services?.name || 'Service'} • {booking.booking_time}
                       </p>
                     </div>
                   </div>

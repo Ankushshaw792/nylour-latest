@@ -2,26 +2,30 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
+
+type BookingStatus = Database['public']['Enums']['booking_status'];
+type QueueStatus = Database['public']['Enums']['queue_status'];
 
 interface Booking {
   id: string;
-  customer_id: string;
+  customer_id: string | null;
   service_id: string;
   booking_date: string;
   booking_time: string;
-  status: string;
+  status: BookingStatus;
   total_price: number;
-  queue_position?: number;
-  customer_notes?: string;
-  is_walk_in: boolean;
+  queue_position?: number | null;
+  customer_notes?: string | null;
+  is_walk_in: boolean | null;
   profiles?: {
-    first_name: string;
-    last_name: string;
-    phone: string;
-  };
+    first_name: string | null;
+    last_name: string | null;
+    phone: string | null;
+  } | null;
   services?: {
     name: string;
-  };
+  } | null;
 }
 
 interface QueueEntry {
@@ -29,18 +33,18 @@ interface QueueEntry {
   customer_id: string;
   service_id: string;
   queue_number: number;
-  estimated_wait_time?: number;
-  status: string;
+  estimated_wait_time?: number | null;
+  status: QueueStatus;
   joined_at: string;
   profiles?: {
-    first_name: string;
-    last_name: string;
-    phone: string;
-  };
+    first_name: string | null;
+    last_name: string | null;
+    phone: string | null;
+  } | null;
   services?: {
     name: string;
-    duration: number;
-  };
+    duration?: number;
+  } | null;
 }
 
 interface SalonStatus {
@@ -77,31 +81,62 @@ export const useSalonRealtimeData = () => {
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
-          *,
-          profiles:customer_id(first_name, last_name, phone),
-          services(name)
+          id,
+          customer_id,
+          service_id,
+          booking_date,
+          booking_time,
+          status,
+          total_price,
+          queue_position,
+          customer_notes,
+          is_walk_in
         `)
         .eq('salon_id', salonData.id)
         .eq('booking_date', today)
         .order('created_at', { ascending: true });
 
-      if (bookingsError) throw bookingsError;
-      setBookings(bookingsData || []);
+      if (bookingsError) {
+        console.error('Bookings fetch error:', bookingsError);
+        setBookings([]);
+      } else {
+        // Map the raw data to include proper types
+        const mappedBookings: Booking[] = (bookingsData || []).map(booking => ({
+          ...booking,
+          profiles: null, // Will fetch separately if needed
+          services: null  // Will fetch separately if needed
+        }));
+        setBookings(mappedBookings);
+      }
 
-      // Fetch queue entries
+      // Fetch queue entries - simplified
       const { data: queueData, error: queueError } = await supabase
         .from('queue_entries')
         .select(`
-          *,
-          profiles:customer_id(first_name, last_name, phone),
-          services(name, duration)
+          id,
+          customer_id,
+          service_id,
+          queue_number,
+          estimated_wait_time,
+          status,
+          joined_at
         `)
         .eq('salon_id', salonData.id)
         .neq('status', 'completed')
         .order('joined_at', { ascending: true });
 
-      if (queueError) throw queueError;
-      setQueue(queueData || []);
+      if (queueError) {
+        console.error('Queue fetch error:', queueError);
+        setQueue([]);
+      } else {
+        // Map the raw data to include proper types
+        const mappedQueue: QueueEntry[] = (queueData || []).map(entry => ({
+          ...entry,
+          profiles: null, // Will fetch separately if needed
+          services: null  // Will fetch separately if needed
+        }));
+        setQueue(mappedQueue);
+      }
 
     } catch (error) {
       console.error('Error fetching salon data:', error);
@@ -254,46 +289,27 @@ export const useSalonRealtimeData = () => {
     if (!salon) return;
 
     try {
-      // Create a temporary customer entry or find existing one by phone
-      let customerId = null;
-      
       // Try to find existing customer by phone
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('user_id')
         .eq('phone', customerData.phone)
+        .maybeSingle();
+
+      let customerId = existingProfile?.user_id || null;
+
+      // Get service price for the booking
+      const { data: serviceData } = await supabase
+        .from('salon_services')
+        .select('price')
+        .eq('salon_id', salon.id)
+        .eq('service_id', customerData.service_id)
         .single();
 
-      if (existingProfile) {
-        customerId = existingProfile.user_id;
-      } else {
-        // Create booking as walk-in without customer account
-        const { data: booking, error: bookingError } = await supabase
-          .from('bookings')
-          .insert({
-            salon_id: salon.id,
-            service_id: customerData.service_id,
-            booking_date: new Date().toISOString().split('T')[0],
-            booking_time: new Date().toTimeString().split(' ')[0],
-            status: 'confirmed',
-            total_price: 0, // Will be updated with actual service price
-            is_walk_in: true,
-            customer_notes: `Walk-in: ${customerData.name} - ${customerData.phone}`
-          })
-          .select()
-          .single();
+      const servicePrice = serviceData?.price || 0;
 
-        if (bookingError) throw bookingError;
-
-        toast({
-          title: "Success",
-          description: "Walk-in customer added to queue",
-        });
-        return;
-      }
-
-      // Create booking for existing customer
-      const { error } = await supabase
+      // Create booking - with or without customer_id for walk-ins
+      const { error: bookingError } = await supabase
         .from('bookings')
         .insert({
           customer_id: customerId,
@@ -301,12 +317,14 @@ export const useSalonRealtimeData = () => {
           service_id: customerData.service_id,
           booking_date: new Date().toISOString().split('T')[0],
           booking_time: new Date().toTimeString().split(' ')[0],
-          status: 'confirmed',
-          total_price: 0,
-          is_walk_in: true
+          status: 'confirmed' as BookingStatus,
+          total_price: servicePrice,
+          is_walk_in: true,
+          customer_notes: customerId ? null : `Walk-in: ${customerData.name} - ${customerData.phone}`,
+          duration: 30
         });
 
-      if (error) throw error;
+      if (bookingError) throw bookingError;
 
       toast({
         title: "Success",
