@@ -1,14 +1,17 @@
 import React, { useState } from "react";
-import { ArrowRight, MapPin, Calendar, Bell, Clock, Users, TrendingUp, Star, CheckCircle, MessageSquare, Smartphone, ChevronRight, LogIn, UserPlus } from "lucide-react";
+import { ArrowRight, MapPin, Calendar, Bell, Clock, Users, TrendingUp, Star, CheckCircle, MessageSquare, Smartphone, ChevronRight, LogIn, UserPlus, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { AuthSheet } from "@/components/auth/AuthSheet";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
   const navigate = useNavigate();
   const [showAuthSheet, setShowAuthSheet] = useState(false);
+  const { user, signOut } = useAuth();
 
   const customerFeatures = [
     {
@@ -103,26 +106,44 @@ export default function Home() {
               </h1>
             </div>
             
-            {/* Auth Buttons */}
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAuthSheet(true)}
-                className="text-white hover:bg-white/10 hover:text-white"
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Login
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowAuthSheet(true)}
-                className="bg-white text-primary hover:bg-white/90"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Sign Up
-              </Button>
+            {/* Auth Section */}
+            <div className="flex items-center">
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/10 hover:text-white w-10 h-10 rounded-full p-0"
+                    >
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <div className="px-3 py-2">
+                      <p className="text-sm font-medium">{user.email}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={signOut}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowAuthSheet(true)}
+                  className="bg-white text-primary hover:bg-white/90"
+                >
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Login
+                </Button>
+              )}
             </div>
           </div>
         </div>
