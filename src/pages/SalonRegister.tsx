@@ -154,7 +154,10 @@ export default function SalonRegister() {
             <div className="flex items-center space-x-4">
               <Button 
                 variant="ghost" 
-                onClick={() => setShowAuth(true)}
+                onClick={() => {
+                  console.log("Sign In button clicked, opening auth sheet");
+                  setShowAuth(true);
+                }}
                 className="text-muted-foreground hover:text-foreground"
               >
                 Already have an account? Sign In
@@ -183,7 +186,10 @@ export default function SalonRegister() {
                   size="xl"
                   variant="secondary"
                   className="text-lg px-8 py-4 bg-white text-primary hover:bg-white/90 font-semibold"
-                  onClick={() => setShowAuth(true)}
+                  onClick={() => {
+                    console.log("Register Your Salon FREE button clicked, opening auth sheet");
+                    setShowAuth(true);
+                  }}
                 >
                   Register Your Salon FREE
                   <ArrowRight className="ml-2 h-5 w-5" />
