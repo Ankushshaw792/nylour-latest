@@ -16,16 +16,20 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          actual_end_time: string | null
+          actual_start_time: string | null
           booking_date: string
           booking_time: string
           created_at: string
           customer_id: string
           customer_notes: string | null
           duration: number
+          estimated_service_time: number | null
           id: string
           is_walk_in: boolean | null
           notes: string | null
           payment_status: Database["public"]["Enums"]["payment_status"] | null
+          queue_position: number | null
           salon_id: string
           salon_notes: string | null
           service_id: string
@@ -34,16 +38,20 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actual_end_time?: string | null
+          actual_start_time?: string | null
           booking_date: string
           booking_time: string
           created_at?: string
           customer_id: string
           customer_notes?: string | null
           duration?: number
+          estimated_service_time?: number | null
           id?: string
           is_walk_in?: boolean | null
           notes?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          queue_position?: number | null
           salon_id: string
           salon_notes?: string | null
           service_id: string
@@ -52,16 +60,20 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actual_end_time?: string | null
+          actual_start_time?: string | null
           booking_date?: string
           booking_time?: string
           created_at?: string
           customer_id?: string
           customer_notes?: string | null
           duration?: number
+          estimated_service_time?: number | null
           id?: string
           is_walk_in?: boolean | null
           notes?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          queue_position?: number | null
           salon_id?: string
           salon_notes?: string | null
           service_id?: string
@@ -385,12 +397,17 @@ export type Database = {
       }
       salons: {
         Row: {
+          accepts_bookings: boolean | null
           address: string
           created_at: string
+          current_wait_time: number | null
           description: string | null
           email: string | null
           id: string
           image_url: string | null
+          is_online: boolean | null
+          last_activity: string | null
+          max_queue_size: number | null
           name: string
           owner_id: string
           phone: string
@@ -398,12 +415,17 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepts_bookings?: boolean | null
           address: string
           created_at?: string
+          current_wait_time?: number | null
           description?: string | null
           email?: string | null
           id?: string
           image_url?: string | null
+          is_online?: boolean | null
+          last_activity?: string | null
+          max_queue_size?: number | null
           name: string
           owner_id: string
           phone: string
@@ -411,12 +433,17 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepts_bookings?: boolean | null
           address?: string
           created_at?: string
+          current_wait_time?: number | null
           description?: string | null
           email?: string | null
           id?: string
           image_url?: string | null
+          is_online?: boolean | null
+          last_activity?: string | null
+          max_queue_size?: number | null
           name?: string
           owner_id?: string
           phone?: string
@@ -554,6 +581,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      notify_next_customer: {
+        Args: { p_message?: string; p_salon_id: string }
+        Returns: undefined
       }
       update_queue_estimated_times: {
         Args: Record<PropertyKey, never>
