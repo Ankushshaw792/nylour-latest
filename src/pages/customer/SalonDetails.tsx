@@ -104,7 +104,7 @@ const SalonDetails = () => {
         const serviceIcons = [Scissors, Sparkles, Sparkles];
         
         const processedServices: SalonService[] = salonData.salon_services?.map((salonService, index) => ({
-          id: salonService.id,
+          id: salonService.services.id, // Use actual service ID, not salon_service ID
           name: salonService.services.name,
           price: salonService.price,
           duration: salonService.duration,

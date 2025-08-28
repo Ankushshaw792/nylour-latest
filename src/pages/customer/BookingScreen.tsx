@@ -55,12 +55,17 @@ const BookingScreen = () => {
     
     try {
       // Create booking record
+      // Ensure we have valid data
+      if (!id || items.length === 0) {
+        throw new Error('Missing required booking information');
+      }
+
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')
         .insert({
           customer_id: user.id,
           salon_id: id,
-          service_id: items[0].id, // Primary service for now
+          service_id: items[0].id, // Now correctly references services.id
           booking_date: new Date().toISOString().split('T')[0],
           booking_time: new Date().toTimeString().split(' ')[0],
           duration: items.reduce((total, item) => total + (parseInt(item.duration) * item.quantity), 0),
