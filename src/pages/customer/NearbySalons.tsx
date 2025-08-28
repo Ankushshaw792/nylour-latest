@@ -45,13 +45,12 @@ const NearbySalons = () => {
         
         // Query salons with their services and queue information
         const { data: salonsData, error: salonsError } = await supabase
-          .from('salons')
+          .from('salons_public')
           .select(`
             id,
             name,
             address,
             image_url,
-            phone,
             salon_services (
               price,
               services (
@@ -92,7 +91,7 @@ const NearbySalons = () => {
             name: salon.name,
             address: salon.address,
             image_url: salon.image_url,
-            phone: salon.phone,
+            phone: 'Contact salon for phone number', // Phone now protected
             queueCount,
             waitTime: waitTimeRange,
             primaryService,

@@ -54,12 +54,11 @@ const SalonDetails = () => {
         
         // Fetch salon with services
         const { data: salonData, error: salonError } = await supabase
-          .from('salons')
+          .from('salons_public')
           .select(`
             id,
             name,
             address,
-            phone,
             image_url,
             salon_services (
               id,
@@ -117,7 +116,7 @@ const SalonDetails = () => {
           id: salonData.id,
           name: salonData.name,
           address: salonData.address,
-          phone: salonData.phone,
+          phone: 'Contact salon for phone number', // Phone now protected
           rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10, // Mock rating
           reviews: Math.floor(Math.random() * 200) + 50, // Mock reviews
           waitTime: `${avgWaitTime} min`,
