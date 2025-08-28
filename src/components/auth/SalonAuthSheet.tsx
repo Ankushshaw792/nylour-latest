@@ -18,8 +18,6 @@ interface SalonAuthSheetProps {
 export const SalonAuthSheet = ({ open, onOpenChange, onAuthSuccess }: SalonAuthSheetProps) => {
   const [activeTab, setActiveTab] = useState("signup");
 
-  console.log("SalonAuthSheet render - open:", open);
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[90vh] rounded-t-xl">
