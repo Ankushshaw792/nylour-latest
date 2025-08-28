@@ -9,6 +9,7 @@ import { CartProvider } from "@/contexts/CartContext";
 
 // Landing Page
 import Home from "./pages/Home";
+import SalonRegister from "./pages/SalonRegister";
 
 // Customer App Pages
 import NearbySalons from "./pages/customer/NearbySalons";
@@ -42,6 +43,7 @@ const App = () => (
             <Routes>
               {/* Landing Page */}
               <Route path="/" element={<Home />} />
+              <Route path="/salon-register" element={<SalonRegister />} />
               
               {/* Customer App Routes */}
               <Route path="/customer" element={<MobileLayout><NearbySalons /></MobileLayout>} />

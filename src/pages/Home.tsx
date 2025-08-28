@@ -116,7 +116,7 @@ export default function Home() {
                 <Button 
                   size="lg" 
                   variant="outline"
-                  onClick={() => navigate('/salon-dashboard')}
+                  onClick={() => navigate('/salon-register')}
                   className="text-lg px-8 py-6 border-white text-white hover:bg-white hover:text-primary"
                 >
                   List Your Salon
@@ -319,7 +319,7 @@ export default function Home() {
             <Button 
               size="lg" 
               variant="outline"
-              onClick={() => navigate('/salon-dashboard')}
+              onClick={() => navigate('/salon-register')}
               className="text-lg px-8 py-6"
             >
               List Your Salon
