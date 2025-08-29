@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
 
 const CheckInUpdate = () => {
   const [currentWaitTime, setCurrentWaitTime] = useState(25);
@@ -42,15 +43,10 @@ const CheckInUpdate = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-hero text-white p-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Check-in & Updates</h1>
-          <p className="text-white/90">Manage walk-ins and wait times</p>
-        </div>
-      </div>
-
+    <SalonDashboardLayout
+      title="Check-in & Updates"
+      description="Manage walk-ins and wait times"
+    >
       <div className="p-4 space-y-6">
         {/* Current Wait Time Display */}
         <Card className="bg-gradient-card">
@@ -211,7 +207,7 @@ const CheckInUpdate = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </SalonDashboardLayout>
   );
 };
 

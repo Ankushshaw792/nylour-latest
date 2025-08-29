@@ -1,25 +1,21 @@
-import React, { useState } from "react";
+import React from "react";
 import { User, Users, Phone, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
 
 const ComprehensiveDashboard = () => {
   const { user, loading: authLoading } = useRequireAuth();
-  const navigate = useNavigate();
   
   const {
     loading,
     salon,
     queue,
-    updateSalonStatus,
   } = useSalonRealtimeData();
 
   if (authLoading || loading) {
@@ -47,15 +43,6 @@ const ComprehensiveDashboard = () => {
       </div>
     );
   }
-
-  const handleToggleOnline = async () => {
-    try {
-      await updateSalonStatus({ is_online: !salon.is_online });
-      toast.success(salon.is_online ? 'Salon is now offline' : 'Salon is now online');
-    } catch (error) {
-      toast.error('Failed to update salon status');
-    }
-  };
 
   const handleStartService = async (entryId: string) => {
     try {
@@ -92,37 +79,10 @@ const ComprehensiveDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-hero text-white p-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold">{salon.name}</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="online-toggle" className="text-white text-sm">
-                {salon.is_online ? "Online" : "Offline"}
-              </Label>
-              <Switch
-                id="online-toggle"
-                checked={salon.is_online}
-                onCheckedChange={handleToggleOnline}
-              />
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/salon-dashboard/profile')}
-              className="text-white hover:bg-white/20"
-            >
-              <User className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Queue Section */}
+    <SalonDashboardLayout
+      title="Queue Management"
+      description="Real-time customer queue"
+    >
       <div className="p-4 space-y-4">
         <div className="space-y-3">
           {queue.length > 0 ? (
@@ -203,7 +163,7 @@ const ComprehensiveDashboard = () => {
           )}
         </div>
       </div>
-    </div>
+    </SalonDashboardLayout>
   );
 };
 

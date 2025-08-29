@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
 
 // Mock data for bookings
 const initialBookings = [
@@ -77,31 +78,10 @@ const BookingsOverview = () => {
   const pendingBookings = bookings.filter(b => b.status === 'pending');
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-hero text-white p-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Online Bookings</h1>
-          <p className="text-white/90">Manage customer appointments</p>
-        </div>
-
-        {/* Stats */}
-        <div className="flex justify-center gap-6 mt-6">
-          <div className="text-center">
-            <p className="text-2xl font-bold">{todayBookings.length}</p>
-            <p className="text-xs text-white/80">Today</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold">{pendingBookings.length}</p>
-            <p className="text-xs text-white/80">Pending</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold">{upcomingBookings.length}</p>
-            <p className="text-xs text-white/80">Upcoming</p>
-          </div>
-        </div>
-      </div>
-
+    <SalonDashboardLayout
+      title="Online Bookings"
+      description="Manage customer appointments"
+    >
       <div className="p-4">
         <Tabs defaultValue="today" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
@@ -159,7 +139,7 @@ const BookingsOverview = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </SalonDashboardLayout>
   );
 };
 

@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
 
 interface QueueStats {
   currentWaitTime: number;
@@ -154,15 +155,10 @@ const SalonProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-hero text-white p-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Salon Management</h1>
-          <p className="text-white/90">Manage your queue, bookings and customer check-ins</p>
-        </div>
-      </div>
-
+    <SalonDashboardLayout
+      title="Salon Management"
+      description="Manage your queue, bookings and customer check-ins"
+    >
       <div className="p-4 space-y-6">
         {/* Stop Bookings Button */}
         <Card>
@@ -374,7 +370,7 @@ const SalonProfilePage = () => {
           Logout
         </Button>
       </div>
-    </div>
+    </SalonDashboardLayout>
   );
 };
 
