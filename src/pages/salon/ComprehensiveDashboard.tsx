@@ -146,60 +146,60 @@ const ComprehensiveDashboard = () => {
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
-        {/* Quick Controls */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Controls</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="online-toggle">Salon Status</Label>
-                <div className="flex items-center gap-2">
-                  <span className={salon.is_online ? "text-green-600" : "text-red-600"}>
-                    {salon.is_online ? "Online" : "Offline"}
-                  </span>
-                  <Switch
-                    id="online-toggle"
-                    checked={salon.is_online}
-                    onCheckedChange={handleToggleOnline}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label htmlFor="bookings-toggle">Accept Bookings</Label>
+      {/* Quick Controls - Moved to top */}
+      <Card className="mx-4 mt-4">
+        <CardHeader>
+          <CardTitle>Quick Controls</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="online-toggle">Salon Status</Label>
+              <div className="flex items-center gap-2">
+                <span className={salon.is_online ? "text-green-600" : "text-red-600"}>
+                  {salon.is_online ? "Online" : "Offline"}
+                </span>
                 <Switch
-                  id="bookings-toggle"
-                  checked={salon.accepts_bookings}
-                  onCheckedChange={handleToggleAcceptingBookings}
+                  id="online-toggle"
+                  checked={salon.is_online}
+                  onCheckedChange={handleToggleOnline}
                 />
               </div>
             </div>
 
-            <Separator />
-
-            {/* Wait Time Update */}
-            <div className="space-y-3">
-              <Label htmlFor="wait-time">Update Wait Time (minutes)</Label>
-              <div className="flex gap-3">
-                <Input
-                  id="wait-time"
-                  type="number"
-                  value={newWaitTime}
-                  onChange={(e) => setNewWaitTime(Number(e.target.value))}
-                  className="flex-1"
-                />
-                <Button onClick={handleUpdateWaitTime} variant="outline">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Update
-                </Button>
-              </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="bookings-toggle">Accept Bookings</Label>
+              <Switch
+                id="bookings-toggle"
+                checked={salon.accepts_bookings}
+                onCheckedChange={handleToggleAcceptingBookings}
+              />
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
+          <Separator />
+
+          {/* Wait Time Update */}
+          <div className="space-y-3">
+            <Label htmlFor="wait-time">Update Wait Time (minutes)</Label>
+            <div className="flex gap-3">
+              <Input
+                id="wait-time"
+                type="number"
+                value={newWaitTime}
+                onChange={(e) => setNewWaitTime(Number(e.target.value))}
+                className="flex-1"
+              />
+              <Button onClick={handleUpdateWaitTime} variant="outline">
+                <Clock className="h-4 w-4 mr-2" />
+                Update
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="p-4 space-y-6">
         {/* Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
