@@ -98,6 +98,39 @@ const BookingsPage = () => {
     if (user) {
       fetchBookings();
     }
+
+    // Setup real-time subscription for booking updates
+    const subscription = supabase
+      .channel('booking-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings'
+        },
+        (payload) => {
+          console.log('Booking update received:', payload);
+          fetchBookings(); // Refetch bookings on any change
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'queue_entries'
+        },
+        (payload) => {
+          console.log('Queue update received:', payload);
+          fetchBookings(); // Refetch bookings when queue changes
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, [user]);
 
   if (loading || dataLoading) {

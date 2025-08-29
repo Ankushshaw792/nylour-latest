@@ -101,7 +101,20 @@ const QueueStatus = () => {
           schema: 'public',
           table: 'queue_entries'
         },
-        () => {
+        (payload) => {
+          console.log('Queue update received:', payload);
+          fetchQueueData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings'
+        },
+        (payload) => {
+          console.log('Booking update received:', payload);
           fetchQueueData();
         }
       )
