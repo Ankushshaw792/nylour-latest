@@ -49,6 +49,7 @@ interface QueueEntry {
 
 interface SalonStatus {
   id: string;
+  name: string;
   is_online: boolean;
   accepts_bookings: boolean;
   current_wait_time: number;
@@ -69,7 +70,7 @@ export const useSalonRealtimeData = () => {
     try {
       const { data: salonData, error: salonError } = await supabase
         .from('salons')
-        .select('id, is_online, accepts_bookings, current_wait_time, max_queue_size')
+        .select('id, name, is_online, accepts_bookings, current_wait_time, max_queue_size')
         .eq('owner_id', user.id)
         .single();
 
