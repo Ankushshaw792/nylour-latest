@@ -51,7 +51,8 @@ const App = () => (
               <Route path="/salon/:id" element={<MobileLayout><SalonDetails /></MobileLayout>} />
               <Route path="/book/:id" element={<MobileLayout><BookingScreen /></MobileLayout>} />
               <Route path="/booking-confirmation/:id" element={<MobileLayout><BookingConfirmation /></MobileLayout>} />
-              <Route path="/queue-status/:bookingId" element={<MobileLayout><QueueStatus /></MobileLayout>} />
+              <Route path="/queue-status/:id" element={<MobileLayout><QueueStatus /></MobileLayout>} />
+              <Route path="/queue-status" element={<MobileLayout><QueueStatus /></MobileLayout>} />
               <Route path="/bookings" element={<MobileLayout><BookingsPage /></MobileLayout>} />
               <Route path="/profile" element={<MobileLayout><ProfilePage /></MobileLayout>} />
               

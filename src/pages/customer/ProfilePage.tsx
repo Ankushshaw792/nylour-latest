@@ -44,10 +44,10 @@ const ProfilePage = () => {
       
       try {
         const { data, error } = await supabase
-          .from("profiles")
+          .from("customers")
           .select("*")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
           console.error("Error fetching profile:", error);
@@ -72,10 +72,10 @@ const ProfilePage = () => {
     
     try {
       const { data, error } = await supabase
-        .from("profiles")
+        .from("customers")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error refetching profile:", error);
