@@ -335,6 +335,7 @@ export type Database = {
           email: string | null
           id: string
           image_url: string | null
+          is_active: boolean | null
           is_online: boolean | null
           last_activity: string | null
           max_queue_size: number | null
@@ -356,6 +357,7 @@ export type Database = {
           email?: string | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
           is_online?: boolean | null
           last_activity?: string | null
           max_queue_size?: number | null
@@ -377,6 +379,7 @@ export type Database = {
           email?: string | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
           is_online?: boolean | null
           last_activity?: string | null
           max_queue_size?: number | null
@@ -451,6 +454,14 @@ export type Database = {
           _role: Database["public"]["Enums"]["user_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_salon_owner_of: {
+        Args: { p_salon_id: string }
         Returns: boolean
       }
       notify_next_customer: {
