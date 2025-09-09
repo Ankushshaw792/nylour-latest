@@ -33,18 +33,13 @@ const BookingsPage = () => {
               address,
               phone
             ),
-            salon_services!inner (
-              services!inner (
-                name
-              )
+            services!inner (
+              name
             ),
             queue_entries (
               queue_number,
               estimated_wait_time,
               status
-            ),
-            payments (
-              payment_status
             )
           `)
           .eq("customer_id", user.id)
@@ -68,13 +63,8 @@ const BookingsPage = () => {
               address,
               phone
             ),
-            salon_services!inner (
-              services!inner (
-                name
-              )
-            ),
-            payments (
-              payment_status
+            services!inner (
+              name
             )
           `)
           .eq("customer_id", user.id)
@@ -208,7 +198,7 @@ const BookingsPage = () => {
           <TabsContent value="current" className="space-y-4">
             {currentBookings.map((booking) => {
               const salon = booking.salons;
-              const service = booking.salon_services?.services?.name || "Service";
+              const service = booking.services?.name || "Service";
               const queueEntry = booking.queue_entries?.[0];
               
               return (
@@ -302,7 +292,7 @@ const BookingsPage = () => {
           <TabsContent value="past" className="space-y-4">
             {pastBookings.map((booking) => {
               const salon = booking.salons;
-              const service = booking.salon_services?.services?.name || "Service";
+              const service = booking.services?.name || "Service";
               
               return (
                 <Card key={booking.id} className="border border-border bg-white">
