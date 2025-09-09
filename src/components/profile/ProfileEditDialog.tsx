@@ -61,7 +61,7 @@ export const ProfileEditDialog = ({
     setIsLoading(true);
     try {
       const { error } = await supabase
-        .from("customers")
+        .from("profiles")
         .update({
           first_name: data.first_name,
           last_name: data.last_name,

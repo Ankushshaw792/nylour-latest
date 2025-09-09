@@ -26,10 +26,10 @@ const BookingScreen = () => {
     const fetchUserProfile = async () => {
       if (user) {
         const { data } = await supabase
-          .from('customers')
+          .from('profiles')
           .select('*')
           .eq('user_id', user.id)
-          .maybeSingle();
+          .single();
         setUserProfile(data);
       }
     };
@@ -78,17 +78,20 @@ const BookingScreen = () => {
 
       if (bookingError) throw bookingError;
 
-      // Payment tracking - store in booking record for now
-      // Update booking with payment info
-      if (paymentOption === 'now') {
-        await supabase
-          .from('bookings')
-          .update({ 
-            payment_status: 'completed',
-            salon_notes: `Payment: ${paymentMethod.toUpperCase()} - ₹${finalAmount}`
-          })
-          .eq('id', bookingData.id);
-      }
+      // Create payment record
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          user_id: user.id,
+          booking_id: bookingData.id,
+          amount: finalAmount,
+          payment_status: paymentOption === 'now' ? 'completed' : 'pending',
+          currency: 'INR',
+          payment_method: paymentMethod,
+          processed_at: paymentOption === 'now' ? new Date().toISOString() : null
+        });
+
+      if (paymentError) throw paymentError;
 
       // Create queue entry
       const { error: queueError } = await supabase

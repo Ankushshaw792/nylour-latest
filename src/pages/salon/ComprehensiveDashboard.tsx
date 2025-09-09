@@ -96,7 +96,7 @@ const ComprehensiveDashboard = () => {
                           #{entry.queue_number}
                         </Badge>
                         <h3 className="font-semibold">
-                          {entry.customers?.first_name || 'Unknown'} {entry.customers?.last_name || 'Customer'}
+                          {entry.profiles?.first_name || 'Unknown'} {entry.profiles?.last_name || 'Customer'}
                         </h3>
                         <Badge 
                           variant={entry.status === 'in_progress' ? 'default' : 'secondary'}
@@ -107,7 +107,7 @@ const ComprehensiveDashboard = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">{entry.services?.name || 'Service'}</p>
                       <p className="text-xs text-muted-foreground">
-                        Phone: {entry.customers?.phone || 'N/A'} • Joined: {new Date(entry.joined_at).toLocaleTimeString()}
+                        Phone: {entry.profiles?.phone || 'N/A'} • Joined: {new Date(entry.joined_at).toLocaleTimeString()}
                       </p>
                     </div>
                     

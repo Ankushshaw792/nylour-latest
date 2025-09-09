@@ -158,7 +158,7 @@ export default function Home() {
               <h1 className="text-4xl lg:text-6xl font-bold mb-6 leading-tight">
                 Skip the Wait.<br />
                 Book Your Salon<br />
-                Visit Nylour.
+                Visit Instantly.
               </h1>
               <p className="text-xl lg:text-2xl mb-8 text-white/90 leading-relaxed">
                 Discover nearby salons, book your spot, and manage queues – all in one app.
@@ -181,6 +181,15 @@ export default function Home() {
                 >
                   List Your Salon
                 </Button>
+              </div>
+            </div>
+            <div className="flex justify-center lg:justify-end">
+              <div className="relative">
+                <div className="w-80 h-96 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 shadow-2xl flex items-center justify-center">
+                  <Smartphone className="h-32 w-32 text-white/70" />
+                </div>
+                <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary rounded-full opacity-80 animate-pulse" />
+                <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-primary-light rounded-full opacity-60 animate-pulse" />
               </div>
             </div>
           </div>

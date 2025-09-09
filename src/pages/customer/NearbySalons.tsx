@@ -45,7 +45,7 @@ const NearbySalons = () => {
         
         // Query salons with their services and queue information
         const { data: salonsData, error: salonsError } = await supabase
-          .from('salons')
+          .from('salons_public')
           .select(`
             id,
             name,
@@ -59,7 +59,6 @@ const NearbySalons = () => {
             )
           `)
           .eq('status', 'approved')
-          .eq('admin_approved', true)
           .order('created_at', { ascending: false });
 
         if (salonsError) {
