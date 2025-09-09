@@ -90,13 +90,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "bookings_salon_id_fkey"
-            columns: ["salon_id"]
-            isOneToOne: false
-            referencedRelation: "salons_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "bookings_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -153,132 +146,6 @@ export type Database = {
         }
         Relationships: []
       }
-      notifications: {
-        Row: {
-          created_at: string
-          id: string
-          is_read: boolean
-          message: string
-          related_id: string | null
-          title: string
-          type: Database["public"]["Enums"]["notification_type"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_read?: boolean
-          message: string
-          related_id?: string | null
-          title: string
-          type?: Database["public"]["Enums"]["notification_type"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_read?: boolean
-          message?: string
-          related_id?: string | null
-          title?: string
-          type?: Database["public"]["Enums"]["notification_type"]
-          user_id?: string
-        }
-        Relationships: []
-      }
-      payments: {
-        Row: {
-          amount: number
-          booking_id: string
-          created_at: string
-          currency: string
-          gateway_response: Json | null
-          id: string
-          payment_method: string
-          payment_status: Database["public"]["Enums"]["payment_status"]
-          processed_at: string | null
-          transaction_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          booking_id: string
-          created_at?: string
-          currency?: string
-          gateway_response?: Json | null
-          id?: string
-          payment_method: string
-          payment_status?: Database["public"]["Enums"]["payment_status"]
-          processed_at?: string | null
-          transaction_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          booking_id?: string
-          created_at?: string
-          currency?: string
-          gateway_response?: Json | null
-          id?: string
-          payment_method?: string
-          payment_status?: Database["public"]["Enums"]["payment_status"]
-          processed_at?: string | null
-          transaction_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          address: string | null
-          avatar_url: string | null
-          created_at: string
-          first_name: string | null
-          gender: string | null
-          id: string
-          last_name: string | null
-          notification_preferences: Json | null
-          phone: string | null
-          total_spent: number | null
-          total_visits: number | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          address?: string | null
-          avatar_url?: string | null
-          created_at?: string
-          first_name?: string | null
-          gender?: string | null
-          id?: string
-          last_name?: string | null
-          notification_preferences?: Json | null
-          phone?: string | null
-          total_spent?: number | null
-          total_visits?: number | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          address?: string | null
-          avatar_url?: string | null
-          created_at?: string
-          first_name?: string | null
-          gender?: string | null
-          id?: string
-          last_name?: string | null
-          notification_preferences?: Json | null
-          phone?: string | null
-          total_spent?: number | null
-          total_visits?: number | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       queue_entries: {
         Row: {
           actual_wait_time: number | null
@@ -331,13 +198,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "queue_entries_salon_id_fkey"
-            columns: ["salon_id"]
-            isOneToOne: false
-            referencedRelation: "salons_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "queue_entries_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -380,13 +240,6 @@ export type Database = {
             columns: ["salon_id"]
             isOneToOne: false
             referencedRelation: "salons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "salon_hours_salon_id_fkey"
-            columns: ["salon_id"]
-            isOneToOne: false
-            referencedRelation: "salons_public"
             referencedColumns: ["id"]
           },
         ]
@@ -461,13 +314,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "salon_services_salon_id_fkey"
-            columns: ["salon_id"]
-            isOneToOne: false
-            referencedRelation: "salons_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "salon_services_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -489,6 +335,7 @@ export type Database = {
           email: string | null
           id: string
           image_url: string | null
+          is_active: boolean | null
           is_online: boolean | null
           last_activity: string | null
           max_queue_size: number | null
@@ -510,6 +357,7 @@ export type Database = {
           email?: string | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
           is_online?: boolean | null
           last_activity?: string | null
           max_queue_size?: number | null
@@ -531,6 +379,7 @@ export type Database = {
           email?: string | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
           is_online?: boolean | null
           last_activity?: string | null
           max_queue_size?: number | null
@@ -566,39 +415,6 @@ export type Database = {
         }
         Relationships: []
       }
-      support_tickets: {
-        Row: {
-          created_at: string
-          id: string
-          message: string
-          priority: string
-          status: string
-          subject: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          message: string
-          priority?: string
-          status?: string
-          subject: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          message?: string
-          priority?: string
-          status?: string
-          subject?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       user_roles: {
         Row: {
           created_at: string
@@ -622,39 +438,7 @@ export type Database = {
       }
     }
     Views: {
-      salons_public: {
-        Row: {
-          address: string | null
-          created_at: string | null
-          description: string | null
-          id: string | null
-          image_url: string | null
-          name: string | null
-          status: Database["public"]["Enums"]["salon_status"] | null
-          updated_at: string | null
-        }
-        Insert: {
-          address?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string | null
-          image_url?: string | null
-          name?: string | null
-          status?: Database["public"]["Enums"]["salon_status"] | null
-          updated_at?: string | null
-        }
-        Update: {
-          address?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string | null
-          image_url?: string | null
-          name?: string | null
-          status?: Database["public"]["Enums"]["salon_status"] | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       calculate_queue_position: {
@@ -670,6 +454,14 @@ export type Database = {
           _role: Database["public"]["Enums"]["user_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_salon_owner_of: {
+        Args: { p_salon_id: string }
         Returns: boolean
       }
       notify_next_customer: {

@@ -54,7 +54,7 @@ const SalonDetails = () => {
         
         // Fetch salon with services
         const { data: salonData, error: salonError } = await supabase
-          .from('salons_public')
+          .from('salons')
           .select(`
             id,
             name,
@@ -73,6 +73,7 @@ const SalonDetails = () => {
           `)
           .eq('id', id)
           .eq('status', 'approved')
+          .eq('admin_approved', true)
           .single();
 
         if (salonError) {

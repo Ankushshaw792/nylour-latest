@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 const QueueStatus = () => {
   const navigate = useNavigate();
-  const { id: bookingId } = useParams();
+  const { id } = useParams();
   const { user, loading } = useRequireAuth();
   const [queueEntry, setQueueEntry] = useState<any>(null);
   const [queueMembers, setQueueMembers] = useState<any[]>([]);
@@ -20,7 +20,7 @@ const QueueStatus = () => {
   // Fetch queue data and setup real-time updates
   useEffect(() => {
     const fetchQueueData = async () => {
-      if (!user || !bookingId) return;
+      if (!user || !id) return;
       
       try {
         // Fetch user's queue entry with booking details
@@ -45,7 +45,7 @@ const QueueStatus = () => {
             )
           `)
           .eq("customer_id", user.id)
-          .eq("bookings.id", bookingId)
+          .eq("bookings.id", id)
           .eq("status", "waiting")
           .single();
 
@@ -123,7 +123,7 @@ const QueueStatus = () => {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [user, bookingId]);
+  }, [user, id]);
 
   if (loading || dataLoading) {
     return (

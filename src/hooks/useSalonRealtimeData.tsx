@@ -18,7 +18,7 @@ interface Booking {
   queue_position?: number | null;
   customer_notes?: string | null;
   is_walk_in: boolean | null;
-  profiles?: {
+  customers?: {
     first_name: string | null;
     last_name: string | null;
     phone: string | null;
@@ -36,7 +36,7 @@ interface QueueEntry {
   estimated_wait_time?: number | null;
   status: QueueStatus;
   joined_at: string;
-  profiles?: {
+  customers?: {
     first_name: string | null;
     last_name: string | null;
     phone: string | null;
@@ -104,7 +104,7 @@ export const useSalonRealtimeData = () => {
         // Map the raw data to include proper types
         const mappedBookings: Booking[] = (bookingsData || []).map(booking => ({
           ...booking,
-          profiles: null, // Will fetch separately if needed
+          customers: null, // Will fetch separately if needed
           services: null  // Will fetch separately if needed
         }));
         setBookings(mappedBookings);
@@ -133,7 +133,7 @@ export const useSalonRealtimeData = () => {
         // Map the raw data to include proper types
         const mappedQueue: QueueEntry[] = (queueData || []).map(entry => ({
           ...entry,
-          profiles: null, // Will fetch separately if needed
+          customers: null, // Will fetch separately if needed
           services: null  // Will fetch separately if needed
         }));
         setQueue(mappedQueue);
@@ -291,13 +291,13 @@ export const useSalonRealtimeData = () => {
 
     try {
       // Try to find existing customer by phone
-      const { data: existingProfile } = await supabase
-        .from('profiles')
+      const { data: existingCustomer } = await supabase
+        .from('customers')
         .select('user_id')
         .eq('phone', customerData.phone)
         .maybeSingle();
 
-      let customerId = existingProfile?.user_id || null;
+      let customerId = existingCustomer?.user_id || null;
 
       // Get service price for the booking
       const { data: serviceData } = await supabase
