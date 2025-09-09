@@ -51,9 +51,11 @@ const NearbySalons = () => {
             name,
             address,
             image_url,
-            salon_services (
+            phone,
+            salon_services(
               price,
-              services (
+              duration,
+              services(
                 name
               )
             )
@@ -64,9 +66,16 @@ const NearbySalons = () => {
 
         if (salonsError) {
           console.error('Error fetching salons:', salonsError);
-          toast.error('Failed to load salons');
+          console.error('Error details:', { 
+            message: salonsError.message, 
+            code: salonsError.code,
+            details: salonsError.details 
+          });
+          toast.error('Failed to load salons: ' + salonsError.message);
           return;
         }
+
+        console.log('Fetched salons data:', salonsData);
 
         // Get queue counts for each salon
         const salonIds = salonsData?.map(salon => salon.id) || [];
