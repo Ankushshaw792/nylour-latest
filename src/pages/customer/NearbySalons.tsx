@@ -60,8 +60,6 @@ const NearbySalons = () => {
               )
             )
           `)
-          .eq('status', 'approved')
-          .eq('admin_approved', true)
           .order('created_at', { ascending: false });
 
         if (salonsError) {
