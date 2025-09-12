@@ -62,7 +62,7 @@ const QueueStatus = () => {
           .from("queue_entries")
           .select(`
             *,
-            profiles!inner (
+            customers!inner (
               first_name,
               last_name
             ),
@@ -229,7 +229,7 @@ const QueueStatus = () => {
                 const isActive = member.queue_number === 1;
                 const displayName = isCurrentUser 
                   ? "You" 
-                  : `${member.profiles?.first_name || "Customer"} ${member.profiles?.last_name || ""}`.trim();
+                  : `${member.customers?.first_name || "Customer"} ${member.customers?.last_name || ""}`.trim();
                 
                 return (
                   <div
