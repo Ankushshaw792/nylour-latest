@@ -50,7 +50,36 @@ const BookingsPage = () => {
 
         if (currentError) {
           console.error("Error fetching current bookings:", currentError);
-          toast.error("Failed to load current bookings");
+          
+          // Fallback: Try direct service join if salon_services join fails
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("bookings")
+            .select(`
+              *,
+              salons!inner (
+                name,
+                address,
+                phone
+              ),
+              services!inner (
+                name
+              ),
+              queue_entries (
+                queue_number,
+                estimated_wait_time,
+                status
+              )
+            `)
+            .eq("customer_id", user.id)
+            .in("status", ["pending", "confirmed"])
+            .order("booking_date", { ascending: true });
+          
+          if (fallbackError) {
+            console.error("Fallback query also failed:", fallbackError);
+            toast.error("Failed to load current bookings");
+          } else {
+            setCurrentBookings(fallbackData || []);
+          }
         } else {
           setCurrentBookings(currentData || []);
         }
@@ -77,7 +106,31 @@ const BookingsPage = () => {
 
         if (pastError) {
           console.error("Error fetching past bookings:", pastError);
-          toast.error("Failed to load past bookings");
+          
+          // Fallback: Try direct service join if salon_services join fails
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("bookings")
+            .select(`
+              *,
+              salons!inner (
+                name,
+                address,
+                phone
+              ),
+              services!inner (
+                name
+              )
+            `)
+            .eq("customer_id", user.id)
+            .in("status", ["completed", "cancelled"])
+            .order("booking_date", { ascending: false });
+          
+          if (fallbackError) {
+            console.error("Fallback query also failed:", fallbackError);
+            toast.error("Failed to load past bookings");
+          } else {
+            setPastBookings(fallbackData || []);
+          }
         } else {
           setPastBookings(pastData || []);
         }
@@ -202,7 +255,7 @@ const BookingsPage = () => {
           <TabsContent value="current" className="space-y-4">
             {currentBookings.map((booking) => {
               const salon = booking.salons;
-              const service = booking.salon_services?.services?.name || "Service";
+              const service = booking.salon_services?.services?.name || booking.services?.name || "Service";
               const queueEntry = booking.queue_entries?.[0];
               
               return (
@@ -296,7 +349,7 @@ const BookingsPage = () => {
           <TabsContent value="past" className="space-y-4">
             {pastBookings.map((booking) => {
               const salon = booking.salons;
-              const service = booking.salon_services?.services?.name || "Service";
+              const service = booking.salon_services?.services?.name || booking.services?.name || "Service";
               
               return (
                 <Card key={booking.id} className="border border-border bg-white">
