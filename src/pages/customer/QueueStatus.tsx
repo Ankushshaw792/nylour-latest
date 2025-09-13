@@ -23,31 +23,43 @@ const QueueStatus = () => {
       if (!user || !id) return;
       
       try {
-        // Fetch user's queue entry with booking details
-        const { data: queueData, error: queueError } = await supabase
-          .from("queue_entries")
+        // First fetch the booking details
+        const { data: bookingData, error: bookingError } = await supabase
+          .from("bookings")
           .select(`
             *,
-            bookings!inner (
+            salons!inner (
               id,
-              total_price,
-              salons!inner (
-                id,
-                name,
-                address,
-                phone
-              ),
-              salon_services!inner (
-                services!inner (
-                  name
-                )
-              )
+              name,
+              address,
+              phone
             )
           `)
+          .eq("id", id)
           .eq("customer_id", user.id)
-          .eq("bookings.id", id)
+          .maybeSingle();
+
+        if (bookingError || !bookingData) {
+          console.error("Error fetching booking:", bookingError);
+          toast.error("Failed to load booking details");
+          return;
+        }
+
+        // Fetch the service name
+        const { data: serviceData } = await supabase
+          .from("services")
+          .select("name")
+          .eq("id", bookingData.service_id)
+          .maybeSingle();
+
+        // Fetch user's queue entry
+        const { data: queueData, error: queueError } = await supabase
+          .from("queue_entries")
+          .select("*")
+          .eq("customer_id", user.id)
+          .eq("salon_id", bookingData.salon_id)
           .eq("status", "waiting")
-          .single();
+          .maybeSingle();
 
         if (queueError) {
           console.error("Error fetching queue data:", queueError);
@@ -55,31 +67,59 @@ const QueueStatus = () => {
           return;
         }
 
-        setQueueEntry(queueData);
+        if (!queueData) {
+          console.log("No active queue entry found");
+          return;
+        }
+
+        // Combine the data
+        const combinedData = {
+          ...queueData,
+          bookings: {
+            ...bookingData,
+            service_name: serviceData?.name || "Service"
+          }
+        };
+
+        setQueueEntry(combinedData);
 
         // Fetch all queue members for this salon
         const { data: membersData, error: membersError } = await supabase
           .from("queue_entries")
-          .select(`
-            *,
-            customers!inner (
-              first_name,
-              last_name
-            ),
-            salon_services!inner (
-              services!inner (
-                name
-              )
-            )
-          `)
-          .eq("salon_id", queueData.salon_id)
+          .select("*")
+          .eq("salon_id", bookingData.salon_id)
           .eq("status", "waiting")
           .order("queue_number");
 
         if (membersError) {
           console.error("Error fetching queue members:", membersError);
         } else {
-          setQueueMembers(membersData || []);
+          // Fetch customer names for queue members
+          if (membersData && membersData.length > 0) {
+            const customerIds = membersData.map(m => m.customer_id);
+            const { data: customersData } = await supabase
+              .from("customers")
+              .select("user_id, first_name, last_name")
+              .in("user_id", customerIds);
+
+            // Fetch service names for queue members
+            const serviceIds = membersData.map(m => m.service_id).filter(Boolean);
+            const { data: servicesData } = await supabase
+              .from("services")
+              .select("id, name")
+              .in("id", serviceIds);
+
+            // Combine queue members with customer and service data
+            const enrichedMembers = membersData.map(member => ({
+              ...member,
+              customer: customersData?.find(c => c.user_id === member.customer_id),
+              service_name: servicesData?.find(s => s.id === member.service_id)?.name || "Service"
+            }));
+
+            setQueueMembers(enrichedMembers);
+          } else {
+            setQueueMembers([]);
+          }
         }
       } catch (error) {
         console.error("Error fetching queue data:", error);
@@ -153,7 +193,7 @@ const QueueStatus = () => {
   // Extract booking and salon data
   const booking = queueEntry.bookings;
   const salon = booking.salons;
-  const service = booking.salon_services?.services?.name || "Service";
+  const service = booking.service_name;
 
   return (
     <div className="min-h-screen bg-background">
@@ -229,7 +269,7 @@ const QueueStatus = () => {
                 const isActive = member.queue_number === 1;
                 const displayName = isCurrentUser 
                   ? "You" 
-                  : `${member.customers?.first_name || "Customer"} ${member.customers?.last_name || ""}`.trim();
+                  : `${member.customer?.first_name || "Customer"} ${member.customer?.last_name || ""}`.trim();
                 
                 return (
                   <div
@@ -259,7 +299,7 @@ const QueueStatus = () => {
                           {displayName}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {member.salon_services?.services?.name || "Service"}
+                          {member.service_name}
                         </p>
                       </div>
                     </div>

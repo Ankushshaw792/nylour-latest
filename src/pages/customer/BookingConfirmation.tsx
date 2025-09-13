@@ -21,7 +21,8 @@ const BookingConfirmation = () => {
       if (!user || !bookingId) return;
 
       try {
-        const { data, error } = await supabase
+        // Fetch booking with basic data
+        const { data: bookingData, error } = await supabase
           .from("bookings")
           .select(`
             *,
@@ -29,33 +30,43 @@ const BookingConfirmation = () => {
               name,
               address,
               phone
-            ),
-            salon_services!inner (
-              services!inner (
-                name
-              )
-            ),
-            queue_entries (
-              queue_number,
-              estimated_wait_time
-            ),
-            payments (
-              amount,
-              payment_status
             )
           `)
           .eq("id", bookingId)
           .eq("customer_id", user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) {
+        if (error || !bookingData) {
           console.error("Error fetching booking:", error);
           toast.error("Failed to load booking details");
           navigate("/bookings");
           return;
         }
 
-        setBooking(data);
+        // Fetch service name
+        const { data: serviceData } = await supabase
+          .from("services")
+          .select("name")
+          .eq("id", bookingData.service_id)
+          .maybeSingle();
+
+        // Fetch queue entry if exists
+        const { data: queueData } = await supabase
+          .from("queue_entries")
+          .select("queue_number, estimated_wait_time")
+          .eq("customer_id", user.id)
+          .eq("salon_id", bookingData.salon_id)
+          .eq("status", "waiting")
+          .maybeSingle();
+
+        // Combine the data
+        const combinedData = {
+          ...bookingData,
+          service_name: serviceData?.name || "Service",
+          queue_entry: queueData
+        };
+
+        setBooking(combinedData);
       } catch (error) {
         console.error("Error fetching booking:", error);
         toast.error("Failed to load booking details");
@@ -89,9 +100,8 @@ const BookingConfirmation = () => {
   }
 
   const salon = booking.salons;
-  const service = booking.salon_services?.services?.name || "Service";
-  const queueEntry = booking.queue_entries?.[0];
-  const payment = booking.payments?.[0];
+  const service = booking.service_name;
+  const queueEntry = booking.queue_entry;
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,8 +140,8 @@ const BookingConfirmation = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Payment Status</span>
-                <Badge variant={payment?.payment_status === "completed" ? "default" : "secondary"}>
-                  {payment?.payment_status || "Pending"}
+                <Badge variant={booking.payment_status === "completed" ? "default" : "secondary"}>
+                  {booking.payment_status || "Pending"}
                 </Badge>
               </div>
             </div>

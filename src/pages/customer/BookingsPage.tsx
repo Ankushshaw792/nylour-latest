@@ -23,7 +23,7 @@ const BookingsPage = () => {
       if (!user) return;
 
       try {
-        // Fetch current bookings (pending, confirmed)
+        // Fetch current bookings with basic data
         const { data: currentData, error: currentError } = await supabase
           .from("bookings")
           .select(`
@@ -32,16 +32,6 @@ const BookingsPage = () => {
               name,
               address,
               phone
-            ),
-            salon_services!inner (
-              services!inner (
-                name
-              )
-            ),
-            queue_entries (
-              queue_number,
-              estimated_wait_time,
-              status
             )
           `)
           .eq("customer_id", user.id)
@@ -50,41 +40,37 @@ const BookingsPage = () => {
 
         if (currentError) {
           console.error("Error fetching current bookings:", currentError);
-          
-          // Fallback: Try direct service join if salon_services join fails
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from("bookings")
-            .select(`
-              *,
-              salons!inner (
-                name,
-                address,
-                phone
-              ),
-              services!inner (
-                name
-              ),
-              queue_entries (
-                queue_number,
-                estimated_wait_time,
-                status
-              )
-            `)
-            .eq("customer_id", user.id)
-            .in("status", ["pending", "confirmed"])
-            .order("booking_date", { ascending: true });
-          
-          if (fallbackError) {
-            console.error("Fallback query also failed:", fallbackError);
-            toast.error("Failed to load current bookings");
-          } else {
-            setCurrentBookings(fallbackData || []);
-          }
-        } else {
-          setCurrentBookings(currentData || []);
+          toast.error("Failed to load current bookings");
         }
 
-        // Fetch past bookings (completed, cancelled)
+        // Fetch services for current bookings
+        if (currentData && currentData.length > 0) {
+          const serviceIds = currentData.map(b => b.service_id).filter(Boolean);
+          const { data: servicesData } = await supabase
+            .from("services")
+            .select("id, name")
+            .in("id", serviceIds);
+
+          // Fetch queue entries for current bookings
+          const { data: queueData } = await supabase
+            .from("queue_entries")
+            .select("*")
+            .in("customer_id", [user.id])
+            .eq("status", "waiting");
+
+          // Merge service and queue data
+          const enrichedCurrent = currentData.map(booking => ({
+            ...booking,
+            service_name: servicesData?.find(s => s.id === booking.service_id)?.name || "Service",
+            queue_entry: queueData?.find(q => q.salon_id === booking.salon_id)
+          }));
+
+          setCurrentBookings(enrichedCurrent);
+        } else {
+          setCurrentBookings([]);
+        }
+
+        // Fetch past bookings with basic data
         const { data: pastData, error: pastError } = await supabase
           .from("bookings")
           .select(`
@@ -93,11 +79,6 @@ const BookingsPage = () => {
               name,
               address,
               phone
-            ),
-            salon_services!inner (
-              services!inner (
-                name
-              )
             )
           `)
           .eq("customer_id", user.id)
@@ -106,33 +87,26 @@ const BookingsPage = () => {
 
         if (pastError) {
           console.error("Error fetching past bookings:", pastError);
-          
-          // Fallback: Try direct service join if salon_services join fails
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from("bookings")
-            .select(`
-              *,
-              salons!inner (
-                name,
-                address,
-                phone
-              ),
-              services!inner (
-                name
-              )
-            `)
-            .eq("customer_id", user.id)
-            .in("status", ["completed", "cancelled"])
-            .order("booking_date", { ascending: false });
-          
-          if (fallbackError) {
-            console.error("Fallback query also failed:", fallbackError);
-            toast.error("Failed to load past bookings");
-          } else {
-            setPastBookings(fallbackData || []);
-          }
+          toast.error("Failed to load past bookings");
+        }
+
+        // Fetch services for past bookings
+        if (pastData && pastData.length > 0) {
+          const serviceIds = pastData.map(b => b.service_id).filter(Boolean);
+          const { data: servicesData } = await supabase
+            .from("services")
+            .select("id, name")
+            .in("id", serviceIds);
+
+          // Merge service data
+          const enrichedPast = pastData.map(booking => ({
+            ...booking,
+            service_name: servicesData?.find(s => s.id === booking.service_id)?.name || "Service"
+          }));
+
+          setPastBookings(enrichedPast);
         } else {
-          setPastBookings(pastData || []);
+          setPastBookings([]);
         }
       } catch (error) {
         console.error("Error fetching bookings:", error);
@@ -255,8 +229,8 @@ const BookingsPage = () => {
           <TabsContent value="current" className="space-y-4">
             {currentBookings.map((booking) => {
               const salon = booking.salons;
-              const service = booking.salon_services?.services?.name || booking.services?.name || "Service";
-              const queueEntry = booking.queue_entries?.[0];
+              const service = booking.service_name;
+              const queueEntry = booking.queue_entry;
               
               return (
                 <Card key={booking.id} className="border border-border bg-white">
@@ -349,7 +323,7 @@ const BookingsPage = () => {
           <TabsContent value="past" className="space-y-4">
             {pastBookings.map((booking) => {
               const salon = booking.salons;
-              const service = booking.salon_services?.services?.name || booking.services?.name || "Service";
+              const service = booking.service_name;
               
               return (
                 <Card key={booking.id} className="border border-border bg-white">
