@@ -74,7 +74,7 @@ const SalonDetails = () => {
           .eq('id', id)
           .eq('status', 'approved')
           .eq('admin_approved', true)
-          .single();
+          .maybeSingle();
 
         if (salonError) {
           console.error('Error fetching salon:', salonError);

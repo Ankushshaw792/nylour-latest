@@ -40,7 +40,7 @@ const QueueManagement = () => {
           .from('salons')
           .select('id')
           .eq('owner_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (!salon) return;
 

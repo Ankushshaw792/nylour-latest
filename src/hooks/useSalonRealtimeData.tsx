@@ -72,9 +72,10 @@ export const useSalonRealtimeData = () => {
         .from('salons')
         .select('id, name, is_online, accepts_bookings, current_wait_time, max_queue_size')
         .eq('owner_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (salonError) throw salonError;
+      if (!salonData) throw new Error('No salon found for this owner');
       setSalon(salonData);
 
       // Fetch bookings for today
@@ -305,7 +306,7 @@ export const useSalonRealtimeData = () => {
         .select('price')
         .eq('salon_id', salon.id)
         .eq('service_id', customerData.service_id)
-        .single();
+        .maybeSingle();
 
       const servicePrice = serviceData?.price || 0;
 

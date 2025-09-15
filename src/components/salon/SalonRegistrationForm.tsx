@@ -152,9 +152,10 @@ export const SalonRegistrationForm = () => {
           admin_approved: true,
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (salonError) throw salonError;
+      if (!salon) throw new Error('Failed to create salon record');
 
       // Create business hours
       const hoursToInsert = formData.businessHours.map(hour => ({

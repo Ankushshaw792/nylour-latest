@@ -271,7 +271,7 @@ const NearbySalons = () => {
                   <div className="relative h-48 bg-muted">
                     <img
                       src={salon.image_url || "/placeholder.svg"}
-                      alt={salon.name}
+                      alt={`${salon.name} salon exterior view - ${salon.address}`}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">

@@ -74,9 +74,10 @@ const BookingScreen = () => {
           payment_status: paymentOption === 'now' ? 'completed' : 'pending'
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (bookingError) throw bookingError;
+      if (!bookingData) throw new Error('Failed to create booking');
 
       // Payment tracking - store in booking record for now
       // Update booking with payment info
