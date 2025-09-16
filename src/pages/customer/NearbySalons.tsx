@@ -4,6 +4,7 @@ import { Search, MapPin, Star, Clock, ChevronDown, Mic, Filter, SlidersHorizonta
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AuthSheet } from "@/components/auth/AuthSheet";
@@ -274,9 +275,12 @@ const NearbySalons = () => {
                       alt={`${salon.name} salon exterior view - ${salon.address}`}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium">{salon.rating}</span>
+                    <div className="absolute top-3 right-3 flex items-center gap-2">
+                      <div className="bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium">{salon.rating}</span>
+                      </div>
+                      <FavoriteButton salonId={salon.id} size="sm" />
                     </div>
                     <Badge 
                       variant="secondary" 

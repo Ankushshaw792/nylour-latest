@@ -4,6 +4,7 @@ import { ArrowLeft, Star, MapPin, Clock, Users, Phone, Scissors, Sparkles, Plus,
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -208,13 +209,11 @@ const SalonDetails = () => {
             >
               <Share className="h-5 w-5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="mobile-icon"
+            <FavoriteButton 
+              salonId={salon.id} 
+              size="md"
               className="bg-black/20 text-white hover:bg-black/40 backdrop-blur-sm"
-            >
-              <Heart className="h-5 w-5" />
-            </Button>
+            />
           </div>
         </div>
       </div>

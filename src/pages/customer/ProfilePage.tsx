@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
+import { FavoritesList } from "@/components/favorites/FavoritesList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -28,12 +29,12 @@ const ProfilePage = () => {
     {
       icon: Heart,
       label: "Favorite Salons",
-      action: () => toast.info("Favorites coming soon")
+      action: () => navigate("/profile") // Scroll to favorites section
     },
     {
       icon: Bell,
-      label: "Notifications",
-      action: () => toast.info("Notifications coming soon")
+      label: "Notifications", 
+      action: () => toast.info("Check the notification bell in the top navigation")
     }
   ];
 
@@ -254,6 +255,9 @@ const ProfilePage = () => {
           <LogOut className="h-4 w-4" />
           Logout
         </Button>
+
+        {/* Favorites Section */}
+        <FavoritesList />
 
         {/* Profile Edit Dialog */}
         {profile && (
