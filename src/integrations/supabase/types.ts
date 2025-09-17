@@ -209,6 +209,7 @@ export type Database = {
           completed_at: string | null
           customer_id: string
           estimated_wait_time: number | null
+          expires_at: string | null
           id: string
           joined_at: string
           notification_sent: Json | null
@@ -223,6 +224,7 @@ export type Database = {
           completed_at?: string | null
           customer_id: string
           estimated_wait_time?: number | null
+          expires_at?: string | null
           id?: string
           joined_at?: string
           notification_sent?: Json | null
@@ -237,6 +239,7 @@ export type Database = {
           completed_at?: string | null
           customer_id?: string
           estimated_wait_time?: number | null
+          expires_at?: string | null
           id?: string
           joined_at?: string
           notification_sent?: Json | null
@@ -501,6 +504,10 @@ export type Database = {
       calculate_queue_position: {
         Args: { p_customer_id: string; p_salon_id: string }
         Returns: number
+      }
+      expire_old_queue_entries: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
