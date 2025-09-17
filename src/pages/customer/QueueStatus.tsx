@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Clock, MapPin, Phone, RefreshCw, CheckCircle2, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Clock, MapPin, Phone, RefreshCw, CheckCircle2, MessageSquare, Calendar, Users, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,19 +11,44 @@ import { toast } from "sonner";
 
 const QueueStatus = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
   const { user, loading } = useRequireAuth();
   const [queueEntry, setQueueEntry] = useState<any>(null);
   const [queueMembers, setQueueMembers] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
-  // Fetch queue data and setup real-time updates
+  // Fetch active queue data and setup real-time updates
   useEffect(() => {
-    const fetchQueueData = async () => {
-      if (!user || !id) return;
+    const fetchActiveQueue = async () => {
+      if (!user) return;
       
       try {
-        // First fetch the booking details
+        // Call the expire function first to clean up old entries
+        await supabase.rpc('expire_old_queue_entries');
+
+        // Find user's active queue entry (not expired)
+        const { data: activeQueueData, error: queueError } = await supabase
+          .from("queue_entries")
+          .select("*")
+          .eq("customer_id", user.id)
+          .eq("status", "waiting")
+          .gt("expires_at", new Date().toISOString())
+          .order("joined_at", { ascending: false })
+          .maybeSingle();
+
+        if (queueError) {
+          console.error("Error fetching active queue:", queueError);
+          toast.error("Failed to load queue status");
+          return;
+        }
+
+        if (!activeQueueData) {
+          console.log("No active queue entry found");
+          setQueueEntry(null);
+          return;
+        }
+
+        // Fetch the booking details separately
         const { data: bookingData, error: bookingError } = await supabase
           .from("bookings")
           .select(`
@@ -35,60 +60,47 @@ const QueueStatus = () => {
               phone
             )
           `)
-          .eq("id", id)
           .eq("customer_id", user.id)
+          .eq("salon_id", activeQueueData.salon_id)
+          .order("created_at", { ascending: false })
           .maybeSingle();
 
         if (bookingError || !bookingData) {
           console.error("Error fetching booking:", bookingError);
-          toast.error("Failed to load booking details");
-          return;
+          // Continue without booking data
         }
 
         // Fetch the service name
         const { data: serviceData } = await supabase
           .from("services")
           .select("name")
-          .eq("id", bookingData.service_id)
+          .eq("id", activeQueueData.service_id)
           .maybeSingle();
 
-        // Fetch user's queue entry
-        const { data: queueData, error: queueError } = await supabase
-          .from("queue_entries")
-          .select("*")
-          .eq("customer_id", user.id)
-          .eq("salon_id", bookingData.salon_id)
-          .eq("status", "waiting")
-          .maybeSingle();
-
-        if (queueError) {
-          console.error("Error fetching queue data:", queueError);
-          toast.error("Failed to load queue status");
-          return;
-        }
-
-        if (!queueData) {
-          console.log("No active queue entry found");
-          return;
-        }
-
-        // Combine the data
+        // Combine the data with service name
         const combinedData = {
-          ...queueData,
-          bookings: {
+          ...activeQueueData,
+          bookings: bookingData ? {
             ...bookingData,
             service_name: serviceData?.name || "Service"
-          }
+          } : null
         };
 
         setQueueEntry(combinedData);
+
+        // Calculate time remaining until expiration
+        const expiresAt = new Date(activeQueueData.expires_at).getTime();
+        const now = Date.now();
+        const remaining = Math.max(0, expiresAt - now);
+        setTimeRemaining(remaining);
 
         // Fetch all queue members for this salon
         const { data: membersData, error: membersError } = await supabase
           .from("queue_entries")
           .select("*")
-          .eq("salon_id", bookingData.salon_id)
+          .eq("salon_id", activeQueueData.salon_id)
           .eq("status", "waiting")
+          .gt("expires_at", new Date().toISOString())
           .order("queue_number");
 
         if (membersError) {
@@ -129,7 +141,7 @@ const QueueStatus = () => {
       }
     };
 
-    fetchQueueData();
+    fetchActiveQueue();
 
     // Setup real-time subscription for queue updates
     const subscription = supabase
@@ -143,7 +155,7 @@ const QueueStatus = () => {
         },
         (payload) => {
           console.log('Queue update received:', payload);
-          fetchQueueData();
+          fetchActiveQueue();
         }
       )
       .on(
@@ -155,7 +167,7 @@ const QueueStatus = () => {
         },
         (payload) => {
           console.log('Booking update received:', payload);
-          fetchQueueData();
+          fetchActiveQueue();
         }
       )
       .subscribe();
@@ -163,7 +175,25 @@ const QueueStatus = () => {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [user, id]);
+  }, [user]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!timeRemaining || timeRemaining <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (!prev || prev <= 1000) {
+          // Queue expired - refresh the page
+          window.location.reload();
+          return 0;
+        }
+        return prev - 1000;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeRemaining]);
 
   if (loading || dataLoading) {
     return (
@@ -173,13 +203,71 @@ const QueueStatus = () => {
     );
   }
 
+  // No Active Queue State
   if (!queueEntry) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
-          <h2 className="text-xl font-bold mb-2">Queue Entry Not Found</h2>
-          <p className="text-muted-foreground mb-4">Unable to find your queue status.</p>
-          <Button onClick={() => navigate("/bookings")}>View Bookings</Button>
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="bg-gradient-hero text-white p-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-2">Queue Status</h1>
+            <p className="text-white/90">Your queue position</p>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-6 -mt-2">
+          {/* No Queue Status */}
+          <Card className="bg-gradient-card">
+            <CardContent className="p-6">
+              <div className="text-center mb-6">
+                <div className="w-20 h-20 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2 text-muted-foreground">No queue at this time</h2>
+                <p className="text-muted-foreground">You don't have any active bookings in queue</p>
+              </div>
+
+              {/* Book Now Action */}
+              <div className="space-y-4">
+                <Button
+                  size="xl"
+                  className="w-full"
+                  onClick={() => navigate("/customer")}
+                >
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Book Now
+                </Button>
+                <p className="text-sm text-center text-muted-foreground">
+                  Find nearby salons and book your appointment
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Features Info */}
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-4">How Queue Works</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Users className="h-4 w-4 text-primary" />
+                  <span className="text-sm">See your live position in queue</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Get estimated wait time</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Receive SMS notifications</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm">Queue expires after 1 hour</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -194,6 +282,16 @@ const QueueStatus = () => {
   const booking = queueEntry.bookings;
   const salon = booking.salons;
   const service = booking.service_name;
+
+  // Format time remaining
+  const formatTimeRemaining = (ms: number): string => {
+    const minutes = Math.floor(ms / (1000 * 60));
+    const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Check if queue is about to expire (less than 10 minutes)
+  const isAboutToExpire = timeRemaining && timeRemaining < 10 * 60 * 1000;
 
   return (
     <div className="min-h-screen bg-background">
@@ -216,6 +314,26 @@ const QueueStatus = () => {
               <h2 className="text-2xl font-bold mb-2">Position #{currentPosition}</h2>
               <p className="text-muted-foreground">in the queue</p>
             </div>
+
+            {/* Expiration Warning */}
+            {timeRemaining && (
+              <div className={`mb-4 p-3 rounded-lg border ${
+                isAboutToExpire 
+                  ? 'bg-destructive/10 border-destructive/20 text-destructive' 
+                  : 'bg-amber-50 border-amber-200 text-amber-700'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <div className="text-sm">
+                    <span className="font-medium">Queue expires in: </span>
+                    <span className="font-bold">{formatTimeRemaining(timeRemaining)}</span>
+                  </div>
+                </div>
+                {isAboutToExpire && (
+                  <p className="text-xs mt-1">Please head to the salon soon!</p>
+                )}
+              </div>
+            )}
 
             {/* Progress Bar */}
             <div className="mb-6">
