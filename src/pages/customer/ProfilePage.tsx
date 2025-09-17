@@ -246,6 +246,11 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
 
+        {/* Favorites Section */}
+        <div className="mb-6">
+          <FavoritesList />
+        </div>
+
         {/* Logout */}
         <Button 
           variant="outline" 
@@ -255,9 +260,6 @@ const ProfilePage = () => {
           <LogOut className="h-4 w-4" />
           Logout
         </Button>
-
-        {/* Favorites Section */}
-        <FavoritesList />
 
         {/* Profile Edit Dialog */}
         {profile && (

@@ -41,7 +41,7 @@ export const useFavorites = () => {
             .from('salons')
             .select('id, name, address, image_url, is_online')
             .eq('id', favorite.salon_id)
-            .single();
+            .maybeSingle();
           
           return {
             ...favorite,
@@ -88,7 +88,7 @@ export const useFavorites = () => {
         .from('salons')
         .select('id, name, address, image_url, is_online')
         .eq('id', salonId)
-        .single();
+        .maybeSingle();
 
       const favoriteWithSalon = {
         ...data,
