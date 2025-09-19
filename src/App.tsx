@@ -16,6 +16,7 @@ import SalonRegister from "./pages/SalonRegister";
 import NearbySalons from "./pages/customer/NearbySalons";
 import SalonDetails from "./pages/customer/SalonDetails";
 import BookingScreen from "./pages/customer/BookingScreen";
+import PaymentPage from "./pages/customer/PaymentPage";
 import BookingConfirmation from "./pages/customer/BookingConfirmation";
 import QueueStatus from "./pages/customer/QueueStatus";
 import BookingsPage from "./pages/customer/BookingsPage";
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/customer" element={<MobileLayout><NearbySalons /></MobileLayout>} />
               <Route path="/salon/:id" element={<MobileLayout><SalonDetails /></MobileLayout>} />
               <Route path="/book/:id" element={<MobileLayout><BookingScreen /></MobileLayout>} />
+              <Route path="/payment/:bookingId" element={<MobileLayout><PaymentPage /></MobileLayout>} />
               <Route path="/booking-confirmation/:id" element={<MobileLayout><BookingConfirmation /></MobileLayout>} />
               <Route path="/queue-status/:id" element={<MobileLayout><QueueStatus /></MobileLayout>} />
               <Route path="/queue-status" element={<MobileLayout><QueueStatus /></MobileLayout>} />

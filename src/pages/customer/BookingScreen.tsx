@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Clock, CreditCard, Smartphone, Bell, Users, CheckCircle } from "lucide-react";
+import { ArrowLeft, Smartphone, Bell, Users, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -17,9 +17,10 @@ const BookingScreen = () => {
   const { user, loading } = useRequireAuth();
   const { items, totalPrice } = useCart();
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [paymentOption, setPaymentOption] = useState("now"); // "now" or "salon"
-  const [paymentMethod, setPaymentMethod] = useState("upi"); // "upi", "card", "wallet"
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch user profile to get mobile number
   useEffect(() => {
@@ -31,6 +32,10 @@ const BookingScreen = () => {
           .eq('user_id', user.id)
           .maybeSingle();
         setUserProfile(data);
+        if (data) {
+          setContactName(`${data.first_name || ''} ${data.last_name || ''}`.trim());
+          setContactPhone(data.phone || '');
+        }
       }
     };
     fetchUserProfile();
@@ -44,34 +49,33 @@ const BookingScreen = () => {
     );
   }
 
-  const bookingFee = 25; // ₹25 booking fee as shown in image
-  const serviceTotal = totalPrice;
-  const finalAmount = paymentOption === "now" ? serviceTotal + bookingFee : bookingFee;
+  const bookingFee = 10; // ₹10 booking fee
 
   const handleBooking = async () => {
     if (!user || items.length === 0) return;
     
-    setIsProcessingPayment(true);
+    setIsProcessing(true);
     
     try {
-      // Create booking record
-      // Ensure we have valid data
-      if (!id || items.length === 0) {
-        throw new Error('Missing required booking information');
+      // Validate contact details
+      if (!contactName.trim() || !contactPhone.trim()) {
+        throw new Error('Please fill in contact details');
       }
 
+      // Create booking record with pending status
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')
         .insert({
           customer_id: user.id,
           salon_id: id,
-          service_id: items[0].id, // Now correctly references services.id
+          service_id: items[0].id,
           booking_date: new Date().toISOString().split('T')[0],
           booking_time: new Date().toTimeString().split(' ')[0],
           duration: items.reduce((total, item) => total + (parseInt(item.duration) * item.quantity), 0),
-          total_price: finalAmount,
-          status: 'confirmed',
-          payment_status: paymentOption === 'now' ? 'completed' : 'pending'
+          total_price: bookingFee,
+          status: 'pending',
+          payment_status: 'pending',
+          customer_notes: `Contact: ${contactName} - ${contactPhone}`
         })
         .select()
         .maybeSingle();
@@ -79,38 +83,13 @@ const BookingScreen = () => {
       if (bookingError) throw bookingError;
       if (!bookingData) throw new Error('Failed to create booking');
 
-      // Payment tracking - store in booking record for now
-      // Update booking with payment info
-      if (paymentOption === 'now') {
-        await supabase
-          .from('bookings')
-          .update({ 
-            payment_status: 'completed',
-            salon_notes: `Payment: ${paymentMethod.toUpperCase()} - ₹${finalAmount}`
-          })
-          .eq('id', bookingData.id);
-      }
-
-      // Create queue entry
-      const { error: queueError } = await supabase
-        .from('queue_entries')
-        .insert({
-          salon_id: id,
-          customer_id: user.id,
-          service_id: items[0].id,
-          queue_number: Math.floor(Math.random() * 1000) + 1,
-          status: 'waiting'
-        });
-
-      if (queueError) throw queueError;
-
-      toast.success('Booking confirmed successfully!');
-      navigate(`/booking-confirmation/${bookingData.id}`);
+      toast.success('Booking details saved! Please complete payment.');
+      navigate(`/payment/${bookingData.id}`);
     } catch (error) {
       console.error('Booking error:', error);
-      toast.error('Failed to create booking. Please try again.');
+      toast.error(error.message || 'Failed to create booking. Please try again.');
     } finally {
-      setIsProcessingPayment(false);
+      setIsProcessing(false);
     }
   };
 
@@ -178,122 +157,95 @@ const BookingScreen = () => {
           </CardContent>
         </Card>
 
-        {/* 2. Your Details Section */}
+        {/* 2. Contact Details Section */}
         <Card>
           <CardContent className="p-4">
-            <h3 className="font-semibold text-lg mb-4">Your Details</h3>
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <Smartphone className="h-5 w-5 text-muted-foreground" />
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Mobile Number</p>
-                <p className="font-medium">{userProfile?.phone || "+91 98765 43210"}</p>
-              </div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg">Contact Details</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+                className="text-primary"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
             </div>
+            
+            {isEditing ? (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder="Enter full name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Mobile Number</Label>
+                  <Input
+                    id="phone"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="Enter mobile number"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  You can book for someone else by editing these details
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <Smartphone className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Full Name</p>
+                    <p className="font-medium">{contactName || "Not provided"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <Smartphone className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Mobile Number</p>
+                    <p className="font-medium">{contactPhone || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* 3. Payment Details Section */}
+        {/* 3. Booking Summary Section */}
         <Card>
           <CardContent className="p-4">
-            <h3 className="font-semibold text-lg mb-4">Payment Details</h3>
+            <h3 className="font-semibold text-lg mb-4">Booking Summary</h3>
             
             <div className="space-y-3 mb-4">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Service Price</span>
-                <span className="font-medium">₹{serviceTotal}</span>
-              </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Booking Fee</span>
                 <span className="font-medium">₹{bookingFee}</span>
               </div>
             </div>
 
-            {/* Pay Now vs Pay at Salon */}
-            <div className="space-y-3">
-              <div 
-                className={`p-3 border rounded-lg cursor-pointer transition-all ${paymentOption === "now" ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-border"}`}
-                onClick={() => setPaymentOption("now")}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Pay Now</p>
-                    <p className="text-sm text-muted-foreground">Pay full amount online</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg">₹{serviceTotal + bookingFee}</p>
-                    {paymentOption === "now" && <CheckCircle className="h-5 w-5 text-blue-500 ml-auto mt-1" />}
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                className={`p-3 border rounded-lg cursor-pointer transition-all ${paymentOption === "salon" ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-border"}`}
-                onClick={() => setPaymentOption("salon")}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Pay at Salon</p>
-                    <p className="text-sm text-muted-foreground">Pay booking fee now, rest at salon</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg">₹{bookingFee}</p>
-                    {paymentOption === "salon" && <CheckCircle className="h-5 w-5 text-blue-500 ml-auto mt-1" />}
-                  </div>
-                </div>
-              </div>
+            <Separator className="my-4" />
+            
+            <div className="flex justify-between items-center text-lg font-bold">
+              <span>Total</span>
+              <span>₹{bookingFee}</span>
             </div>
 
-            {/* Booking Fee Policy */}
-            <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-              <p className="text-sm text-orange-700 dark:text-orange-300">
-                <strong>Booking Fee Policy:</strong> Non-refundable booking fee to secure your slot. 
-                {paymentOption === "salon" && " Remaining amount to be paid at the salon."}
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                <strong>Note:</strong> Pay ₹10 booking fee now. Service charges will be paid at the salon.
               </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* 4. Payment Method Section */}
-        <Card>
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-lg mb-4">Payment Method</h3>
-            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50">
-                  <RadioGroupItem value="upi" id="upi" />
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                      <span className="text-xs font-bold text-purple-600">UPI</span>
-                    </div>
-                    <Label htmlFor="upi" className="font-medium cursor-pointer">UPI</Label>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50">
-                  <RadioGroupItem value="card" id="card" />
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                      <CreditCard className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <Label htmlFor="card" className="font-medium cursor-pointer">Credit / Debit Card</Label>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50">
-                  <RadioGroupItem value="wallet" id="wallet" />
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                      <span className="text-xs font-bold text-green-600">₹</span>
-                    </div>
-                    <Label htmlFor="wallet" className="font-medium cursor-pointer">Digital Wallet</Label>
-                  </div>
-                </div>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        {/* 5. Notification Reminder Section */}
+        {/* 4. Notification Reminder Section */}
         <Card>
           <CardContent className="p-4">
             <h3 className="font-semibold text-lg mb-4">Notification Reminder</h3>
@@ -311,25 +263,22 @@ const BookingScreen = () => {
           </CardContent>
         </Card>
 
-        {/* 6. Pay Now Button */}
+        {/* 5. Confirm Booking Button */}
         <div className="pt-2 pb-4">
           <Button
             variant="gradient"
             size="xl"
             className="w-full"
             onClick={handleBooking}
-            disabled={isProcessingPayment}
+            disabled={isProcessing || !contactName.trim() || !contactPhone.trim()}
           >
-            {isProcessingPayment ? (
+            {isProcessing ? (
               <div className="flex items-center gap-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                Processing Payment...
+                Processing...
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Pay ₹{finalAmount} Now
-              </div>
+              "Confirm Booking"
             )}
           </Button>
         </div>
