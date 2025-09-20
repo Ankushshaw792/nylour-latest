@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -25,6 +26,7 @@ const profileSchema = z.object({
   first_name: z.string().min(2, "First name must be at least 2 characters"),
   last_name: z.string().min(2, "Last name must be at least 2 characters"),
   phone: z.string().optional(),
+  address: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -36,6 +38,7 @@ interface ProfileEditDialogProps {
     first_name: string | null;
     last_name: string | null;
     phone: string | null;
+    address: string | null;
   };
   onProfileUpdate: () => void;
 }
@@ -54,6 +57,7 @@ export const ProfileEditDialog = ({
       first_name: profile.first_name || "",
       last_name: profile.last_name || "",
       phone: profile.phone || "",
+      address: profile.address || "",
     },
   });
 
@@ -66,6 +70,7 @@ export const ProfileEditDialog = ({
           first_name: data.first_name,
           last_name: data.last_name,
           phone: data.phone,
+          address: data.address,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", (await supabase.auth.getUser()).data.user?.id);
@@ -122,6 +127,24 @@ export const ProfileEditDialog = ({
               )}
             />
             
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Enter your address" 
+                      className="min-h-[80px]"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="phone"

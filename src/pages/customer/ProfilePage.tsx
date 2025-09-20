@@ -8,7 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
-import { FavoritesList } from "@/components/favorites/FavoritesList";
+import { PhoneEditDialog } from "@/components/profile/PhoneEditDialog";
+import { AddressEditDialog } from "@/components/profile/AddressEditDialog";
+import { PreferencesEditDialog } from "@/components/profile/PreferencesEditDialog";
+import { FavoritesDialog } from "@/components/profile/FavoritesDialog";
+import { NotificationsDialog } from "@/components/profile/NotificationsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,6 +22,11 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPhoneEditOpen, setIsPhoneEditOpen] = useState(false);
+  const [isAddressEditOpen, setIsAddressEditOpen] = useState(false);
+  const [isPreferencesEditOpen, setIsPreferencesEditOpen] = useState(false);
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
 
   const quickActions = [
@@ -29,12 +38,12 @@ const ProfilePage = () => {
     {
       icon: Heart,
       label: "Favorite Salons",
-      action: () => navigate("/profile") // Scroll to favorites section
+      action: () => setIsFavoritesOpen(true)
     },
     {
       icon: Bell,
       label: "Notifications", 
-      action: () => toast.info("Check the notification bell in the top navigation")
+      action: () => setIsNotificationsOpen(true)
     }
   ];
 
@@ -189,7 +198,10 @@ const ProfilePage = () => {
                   <p className="text-xs text-muted-foreground">Phone Number</p>
                 </div>
               </div>
-              <Edit className="h-4 w-4 text-muted-foreground cursor-pointer" />
+              <Edit 
+                className="h-4 w-4 text-muted-foreground cursor-pointer" 
+                onClick={() => setIsPhoneEditOpen(true)}
+              />
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -199,7 +211,10 @@ const ProfilePage = () => {
                   <p className="text-xs text-muted-foreground">Location</p>
                 </div>
               </div>
-              <Edit className="h-4 w-4 text-muted-foreground cursor-pointer" />
+              <Edit 
+                className="h-4 w-4 text-muted-foreground cursor-pointer" 
+                onClick={() => setIsAddressEditOpen(true)}
+              />
             </div>
           </CardContent>
         </Card>
@@ -213,16 +228,28 @@ const ProfilePage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-foreground">Favorite Services</p>
-                <p className="text-xs text-muted-foreground">Hair Cut, Beard Trim</p>
+                <p className="text-xs text-muted-foreground">
+                  {Array.isArray(profile?.favorite_services) && profile.favorite_services.length > 0
+                    ? profile.favorite_services.join(", ")
+                    : "Add favorite services"}
+                </p>
               </div>
-              <Edit className="h-4 w-4 text-muted-foreground cursor-pointer" />
+              <Edit 
+                className="h-4 w-4 text-muted-foreground cursor-pointer" 
+                onClick={() => setIsPreferencesEditOpen(true)}
+              />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-foreground">Preferred Time</p>
-                <p className="text-xs text-muted-foreground">2:00 PM - 4:00 PM</p>
+                <p className="text-xs text-muted-foreground">
+                  {profile?.preferred_time || "Set preferred time"}
+                </p>
               </div>
-              <Edit className="h-4 w-4 text-muted-foreground cursor-pointer" />
+              <Edit 
+                className="h-4 w-4 text-muted-foreground cursor-pointer" 
+                onClick={() => setIsPreferencesEditOpen(true)}
+              />
             </div>
           </CardContent>
         </Card>
@@ -246,11 +273,8 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
 
-        {/* Favorites Section */}
-        <div className="mb-6">
-          <FavoritesList />
-        </div>
-
+        {/* Favorites Section - Removed inline display */}
+        
         {/* Logout */}
         <Button 
           variant="outline" 
@@ -270,6 +294,45 @@ const ProfilePage = () => {
             onProfileUpdate={handleProfileUpdate}
           />
         )}
+
+        {/* Phone Edit Dialog */}
+        <PhoneEditDialog
+          open={isPhoneEditOpen}
+          onOpenChange={setIsPhoneEditOpen}
+          currentPhone={profile?.phone}
+          onPhoneUpdate={handleProfileUpdate}
+        />
+
+        {/* Address Edit Dialog */}
+        <AddressEditDialog
+          open={isAddressEditOpen}
+          onOpenChange={setIsAddressEditOpen}
+          currentAddress={profile?.address}
+          onAddressUpdate={handleProfileUpdate}
+        />
+
+        {/* Preferences Edit Dialog */}
+        <PreferencesEditDialog
+          open={isPreferencesEditOpen}
+          onOpenChange={setIsPreferencesEditOpen}
+          currentPreferences={{
+            favorite_services: profile?.favorite_services,
+            preferred_time: profile?.preferred_time
+          }}
+          onPreferencesUpdate={handleProfileUpdate}
+        />
+
+        {/* Favorites Dialog */}
+        <FavoritesDialog
+          open={isFavoritesOpen}
+          onOpenChange={setIsFavoritesOpen}
+        />
+
+        {/* Notifications Dialog */}
+        <NotificationsDialog
+          open={isNotificationsOpen}
+          onOpenChange={setIsNotificationsOpen}
+        />
       </div>
     </div>
   );

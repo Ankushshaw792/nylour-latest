@@ -103,12 +103,14 @@ export type Database = {
           address: string | null
           avatar_url: string | null
           created_at: string | null
+          favorite_services: Json | null
           first_name: string | null
           gender: string | null
           id: string
           last_name: string | null
           notification_preferences: Json | null
           phone: string | null
+          preferred_time: string | null
           total_spent: number | null
           total_visits: number | null
           updated_at: string | null
@@ -118,12 +120,14 @@ export type Database = {
           address?: string | null
           avatar_url?: string | null
           created_at?: string | null
+          favorite_services?: Json | null
           first_name?: string | null
           gender?: string | null
           id?: string
           last_name?: string | null
           notification_preferences?: Json | null
           phone?: string | null
+          preferred_time?: string | null
           total_spent?: number | null
           total_visits?: number | null
           updated_at?: string | null
@@ -133,12 +137,14 @@ export type Database = {
           address?: string | null
           avatar_url?: string | null
           created_at?: string | null
+          favorite_services?: Json | null
           first_name?: string | null
           gender?: string | null
           id?: string
           last_name?: string | null
           notification_preferences?: Json | null
           phone?: string | null
+          preferred_time?: string | null
           total_spent?: number | null
           total_visits?: number | null
           updated_at?: string | null
