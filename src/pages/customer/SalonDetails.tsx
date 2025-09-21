@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
+import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -181,41 +182,45 @@ const SalonDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Image Section */}
-      <div className="relative h-80 overflow-hidden">
-        <img 
-          src={salon.image_url || salonHeroImage} 
-          alt={salon.name}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-        
-        {/* Overlay Buttons */}
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
-          <Button
-            variant="ghost"
-            size="mobile-icon"
-            onClick={() => navigate(-1)}
-            className="bg-black/20 text-white hover:bg-black/40 backdrop-blur-sm"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+    <CustomerLayout
+      headerProps={{
+        title: salon?.name || "Salon Details",
+        showBackButton: true,
+        showProfile: false,
+        showNotifications: false,
+        rightContent: (
           <div className="flex gap-2">
             <Button
               variant="ghost"
               size="mobile-icon"
-              className="bg-black/20 text-white hover:bg-black/40 backdrop-blur-sm"
+              className="text-foreground hover:bg-muted"
             >
               <Share className="h-5 w-5" />
             </Button>
             <FavoriteButton 
-              salonId={salon.id} 
+              salonId={salon?.id || ""} 
               size="md"
-              className="bg-black/20 text-white hover:bg-black/40 backdrop-blur-sm"
+              className="text-foreground hover:bg-muted"
             />
           </div>
-        </div>
+        )
+      }}
+      bottomButtonProps={totalItems > 0 ? {
+        text: "Book Now",
+        onClick: () => navigate(`/book/${salon?.id}`),
+        disabled: totalItems === 0,
+        price: totalPrice,
+        itemCount: totalItems
+      } : undefined}
+    >
+      {/* Hero Image Section */}
+      <div className="relative h-64 overflow-hidden">
+        <img 
+          src={salon?.image_url || salonHeroImage} 
+          alt={salon?.name}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
       </div>
 
       <div className="p-4 space-y-6">
@@ -325,29 +330,11 @@ const SalonDetails = () => {
         </div>
 
         {/* Book Now Button */}
-        <div className="pb-24">
-          <div className="fixed bottom-20 left-4 right-4">
-            <Button
-              variant="gradient"
-              size="xl"
-              className="w-full relative"
-              onClick={() => navigate(`/book/${salon.id}`)}
-              disabled={totalItems === 0}
-            >
-              Book Now
-              {totalItems > 0 && (
-                <div className="absolute -top-2 -right-2 bg-secondary text-secondary-foreground rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">
-                  {totalItems}
-                </div>
-              )}
-              {totalPrice > 0 && (
-                <span className="ml-2">• ₹{totalPrice}</span>
-              )}
-            </Button>
-          </div>
+        <div className="pb-6">
+          {/* Fixed button is now handled by CustomerLayout */}
         </div>
       </div>
-    </div>
+    </CustomerLayout>
   );
 };
 

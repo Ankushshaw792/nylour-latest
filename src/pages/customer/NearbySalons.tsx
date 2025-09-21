@@ -5,9 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AuthSheet } from "@/components/auth/AuthSheet";
+import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -122,7 +122,7 @@ const NearbySalons = () => {
     fetchSalons();
   }, []);
 
-  const handleAvatarClick = () => {
+  const handleProfileClick = () => {
     if (user) {
       navigate('/profile');
     } else {
@@ -150,10 +150,17 @@ const NearbySalons = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-white border-b border-border p-4">
-        {/* Top Section with Location and Profile */}
+    <CustomerLayout
+      headerProps={{
+        title: "Find Salons",
+        showBackButton: false,
+        showProfile: true,
+        showNotifications: true,
+        onProfileClick: handleProfileClick
+      }}
+    >
+      {/* Location Section */}
+      <div className="bg-card border-b border-border p-4">
         <div className="flex items-center justify-between mb-4">
           {/* Location Selector */}
           <div className="flex-1">
@@ -171,20 +178,6 @@ const NearbySalons = () => {
               </div>
             </div>
           </div>
-
-          {/* Profile */}
-          <Avatar 
-            className="h-8 w-8 cursor-pointer ring-2 ring-border hover:ring-primary transition-all"
-            onClick={handleAvatarClick}
-          >
-            <AvatarImage src={user?.user_metadata?.avatar_url} />
-            <AvatarFallback className="bg-primary text-primary-foreground font-medium">
-              {user ? 
-                `${user.user_metadata?.first_name?.[0] || ''}${user.user_metadata?.last_name?.[0] || ''}`.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'
-                : 'U'
-              }
-            </AvatarFallback>
-          </Avatar>
         </div>
 
         {/* Search Bar */}
@@ -344,7 +337,7 @@ const NearbySalons = () => {
         open={authSheetOpen} 
         onOpenChange={setAuthSheetOpen} 
       />
-    </div>
+    </CustomerLayout>
   );
 };
 

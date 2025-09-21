@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -92,21 +93,21 @@ const PaymentPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-hero text-white p-4">
-        <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="ghost"
-            size="mobile-icon"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-white/20"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">Payment</h1>
-        </div>
-        
+    <CustomerLayout
+      headerProps={{
+        title: "Payment",
+        showBackButton: true,
+        showProfile: false,
+        showNotifications: false
+      }}
+      bottomButtonProps={{
+        text: isProcessingPayment ? "Processing Payment..." : "Pay ₹10 Now",
+        onClick: handlePayment,
+        disabled: isProcessingPayment
+      }}
+    >
+      {/* Hero Section */}
+      <div className="bg-gradient-hero text-white p-4">        
         <div className="text-center">
           <h2 className="text-xl font-bold">{salon?.name}</h2>
           <p className="text-white/90">Complete your payment</p>
@@ -181,30 +182,12 @@ const PaymentPage = () => {
           </CardContent>
         </Card>
 
-        {/* Pay Button */}
-        <div className="pt-2 pb-4">
-          <Button
-            variant="gradient"
-            size="xl"
-            className="w-full"
-            onClick={handlePayment}
-            disabled={isProcessingPayment}
-          >
-            {isProcessingPayment ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                Processing Payment...
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Pay ₹10 Now
-              </div>
-            )}
-          </Button>
+        {/* Pay Button - Now handled by CustomerLayout */}
+        <div className="pt-2 pb-6">
+          {/* Fixed button is now handled by CustomerLayout */}
         </div>
       </div>
-    </div>
+    </CustomerLayout>
   );
 };
 

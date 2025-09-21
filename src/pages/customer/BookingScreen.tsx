@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,21 +95,21 @@ const BookingScreen = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-hero text-white p-4">
-        <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="ghost"
-            size="mobile-icon"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-white/20"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">Book Service</h1>
-        </div>
-        
+    <CustomerLayout
+      headerProps={{
+        title: "Book Service",
+        showBackButton: true,
+        showProfile: false,
+        showNotifications: false
+      }}
+      bottomButtonProps={{
+        text: isProcessing ? "Processing..." : "Confirm Booking",
+        onClick: handleBooking,
+        disabled: isProcessing || !contactName.trim() || !contactPhone.trim()
+      }}
+    >
+      {/* Hero Section */}
+      <div className="bg-gradient-hero text-white p-4">        
         <div className="text-center">
           <h2 className="text-xl font-bold">Style Studio</h2>
           <p className="text-white/90">Complete your booking</p>
@@ -263,27 +264,12 @@ const BookingScreen = () => {
           </CardContent>
         </Card>
 
-        {/* 5. Confirm Booking Button */}
-        <div className="pt-2 pb-4">
-          <Button
-            variant="gradient"
-            size="xl"
-            className="w-full"
-            onClick={handleBooking}
-            disabled={isProcessing || !contactName.trim() || !contactPhone.trim()}
-          >
-            {isProcessing ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                Processing...
-              </div>
-            ) : (
-              "Confirm Booking"
-            )}
-          </Button>
+        {/* 5. Confirm Booking Button - Now handled by CustomerLayout */}
+        <div className="pt-2 pb-6">
+          {/* Fixed button is now handled by CustomerLayout */}
         </div>
       </div>
-    </div>
+    </CustomerLayout>
   );
 };
 
