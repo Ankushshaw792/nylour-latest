@@ -13,6 +13,7 @@ import { AddressEditDialog } from "@/components/profile/AddressEditDialog";
 import { PreferencesEditDialog } from "@/components/profile/PreferencesEditDialog";
 import { FavoritesDialog } from "@/components/profile/FavoritesDialog";
 import { NotificationsDialog } from "@/components/profile/NotificationsDialog";
+import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -135,8 +136,15 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="p-4 pb-20">
+    <CustomerLayout
+      headerProps={{
+        title: "Profile",
+        showBackButton: false,
+        showProfile: false,
+        showNotifications: true
+      }}
+    >
+      <div className="p-4">
         {/* User Info Header */}
         <Card className="border border-border bg-white mb-6">
           <CardContent className="p-6">
@@ -334,7 +342,7 @@ const ProfilePage = () => {
           onOpenChange={setIsNotificationsOpen}
         />
       </div>
-    </div>
+    </CustomerLayout>
   );
 };
 

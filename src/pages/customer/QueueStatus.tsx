@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -206,16 +207,15 @@ const QueueStatus = () => {
   // No Active Queue State
   if (!queueEntry) {
     return (
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <div className="bg-gradient-hero text-white p-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-2">Queue Status</h1>
-            <p className="text-white/90">Your queue position</p>
-          </div>
-        </div>
-
-        <div className="p-4 space-y-6 -mt-2">
+      <CustomerLayout
+        headerProps={{
+          title: "Queue Status",
+          showBackButton: false,
+          showProfile: true,
+          showNotifications: true
+        }}
+      >
+        <div className="p-4 space-y-6">
           {/* No Queue Status */}
           <Card className="bg-gradient-card">
             <CardContent className="p-6">
@@ -269,7 +269,7 @@ const QueueStatus = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </CustomerLayout>
     );
   }
 
@@ -294,16 +294,15 @@ const QueueStatus = () => {
   const isAboutToExpire = timeRemaining && timeRemaining < 10 * 60 * 1000;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-hero text-white p-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Queue Status</h1>
-          <p className="text-white/90">Live updates for your booking</p>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-6 -mt-2">
+    <CustomerLayout
+      headerProps={{
+        title: "Queue Status",
+        showBackButton: false,
+        showProfile: true,
+        showNotifications: true
+      }}
+    >
+      <div className="p-4 space-y-6">
         {/* Live Queue Status */}
         <Card className="bg-gradient-card">
           <CardContent className="p-6">
@@ -495,11 +494,11 @@ const QueueStatus = () => {
                 </div>
               </CardContent>
             </Card>
-          )}
+           )}
         </div>
       </div>
-    </div>
-  );
-};
+      </CustomerLayout>
+    );
+  };
 
-export default QueueStatus;
+  export default QueueStatus;

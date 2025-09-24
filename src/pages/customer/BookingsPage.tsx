@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -276,16 +277,21 @@ const BookingsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="p-4 pb-20">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-foreground">My Bookings</h1>
+    <CustomerLayout
+      headerProps={{
+        title: "My Bookings",
+        showBackButton: false,
+        showProfile: true,
+        showNotifications: true,
+        rightContent: (
           <Button variant="outline" size="sm" onClick={() => navigate("/")}>
             <Calendar className="h-4 w-4 mr-2" />
             Book Now
           </Button>
-        </div>
+        )
+      }}
+    >
+      <div className="p-4">
 
         {/* Tabs */}
         <Tabs defaultValue="current" className="w-full">
@@ -482,7 +488,7 @@ const BookingsPage = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </CustomerLayout>
   );
 };
 
