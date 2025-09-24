@@ -9,8 +9,12 @@ interface MobileLayoutProps {
 export const MobileLayout = ({ children }: MobileLayoutProps) => {
   const location = useLocation();
   
-  // Hide nav on certain pages like booking confirmation
-  const hideNav = location.pathname.includes('/booking-confirmation');
+  // Hide nav for customer booking flow and details pages
+  const hideNav =
+    location.pathname.includes('/salon/') ||
+    location.pathname.includes('/book/') ||
+    location.pathname.includes('/payment/') ||
+    location.pathname.includes('/booking-confirmation');
 
   return (
     <div className="min-h-screen bg-background">

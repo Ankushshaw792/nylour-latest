@@ -48,15 +48,15 @@ const App = () => (
               <Route path="/salon-register" element={<SalonRegister />} />
               
               {/* Customer App Routes */}
-              <Route path="/customer" element={<MobileLayout><NearbySalons /></MobileLayout>} />
-              <Route path="/salon/:id" element={<MobileLayout><SalonDetails /></MobileLayout>} />
-              <Route path="/book/:id" element={<MobileLayout><BookingScreen /></MobileLayout>} />
-              <Route path="/payment/:bookingId" element={<MobileLayout><PaymentPage /></MobileLayout>} />
-              <Route path="/booking-confirmation/:id" element={<MobileLayout><BookingConfirmation /></MobileLayout>} />
-              <Route path="/queue-status/:id" element={<MobileLayout><QueueStatus /></MobileLayout>} />
-              <Route path="/queue-status" element={<MobileLayout><QueueStatus /></MobileLayout>} />
-              <Route path="/bookings" element={<MobileLayout><BookingsPage /></MobileLayout>} />
-              <Route path="/profile" element={<MobileLayout><ProfilePage /></MobileLayout>} />
+              <Route path="/customer" element={<NearbySalons />} />
+              <Route path="/salon/:id" element={<SalonDetails />} />
+              <Route path="/book/:id" element={<BookingScreen />} />
+              <Route path="/payment/:bookingId" element={<PaymentPage />} />
+              <Route path="/booking-confirmation/:id" element={<BookingConfirmation />} />
+              <Route path="/queue-status/:id" element={<QueueStatus />} />
+              <Route path="/queue-status" element={<QueueStatus />} />
+              <Route path="/bookings" element={<BookingsPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
               
               {/* Salon Dashboard Routes */}
             <Route path="/salon-dashboard" element={<MobileLayout><ComprehensiveDashboard /></MobileLayout>} />
