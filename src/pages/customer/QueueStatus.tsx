@@ -278,8 +278,38 @@ const QueueStatus = () => {
   const currentPosition = queueEntry.queue_number;
   const progress = totalQueueMembers > 0 ? Math.max(0, ((totalQueueMembers - currentPosition) / totalQueueMembers) * 100) : 0;
 
-  // Extract booking and salon data
+  // Extract booking and salon data with null checks
   const booking = queueEntry.bookings;
+  if (!booking || !booking.salons) {
+    // If booking or salon data is missing, show error state
+    return (
+      <CustomerLayout
+        headerProps={{
+          title: "Queue Status",
+          showBackButton: false,
+          showProfile: true,
+          showNotifications: true
+        }}
+      >
+        <div className="p-4 space-y-6">
+          <Card className="bg-destructive/10 border-destructive/20">
+            <CardContent className="p-6">
+              <div className="text-center">
+                <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                <h2 className="text-xl font-bold text-destructive mb-2">Booking Data Error</h2>
+                <p className="text-muted-foreground mb-4">Unable to load booking information</p>
+                <Button onClick={() => window.location.reload()}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </CustomerLayout>
+    );
+  }
+  
   const salon = booking.salons;
   const service = booking.service_name;
 
