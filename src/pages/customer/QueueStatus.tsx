@@ -50,7 +50,7 @@ const QueueStatus = () => {
         }
 
         // Fetch the booking details separately
-        const { data: bookingData, error: bookingError } = await supabase
+        const { data: bookingDataArray, error: bookingError } = await supabase
           .from("bookings")
           .select(`
             *,
@@ -64,12 +64,16 @@ const QueueStatus = () => {
           .eq("customer_id", user.id)
           .eq("salon_id", activeQueueData.salon_id)
           .order("created_at", { ascending: false })
-          .maybeSingle();
+          .limit(1);
 
-        if (bookingError || !bookingData) {
+        const bookingData = bookingDataArray && bookingDataArray.length > 0 ? bookingDataArray[0] : null;
+
+        if (bookingError) {
           console.error("Error fetching booking:", bookingError);
           // Continue without booking data
         }
+        
+        console.log("Booking data:", bookingData);
 
         // Fetch the service name
         const { data: serviceData } = await supabase
