@@ -9,6 +9,7 @@ import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { BookingSummaryDialog } from "@/components/bookings/BookingSummaryDialog";
 
 const BookingsPage = () => {
   const { user, loading } = useRequireAuth();
@@ -18,6 +19,8 @@ const BookingsPage = () => {
   const [activeRating, setActiveRating] = useState<{[key: string]: number}>({});
   const [dataLoading, setDataLoading] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState<{[key: string]: number}>({});
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
 
   // Fetch user's bookings
   useEffect(() => {
@@ -236,6 +239,24 @@ const BookingsPage = () => {
     setActiveRating(prev => ({ ...prev, [bookingId]: rating }));
   };
 
+  const handleCall = (salonPhone: string) => {
+    if (salonPhone) {
+      window.open(`tel:${salonPhone}`, '_self');
+    } else {
+      toast.error("Phone number not available");
+    }
+  };
+
+  const handleCardClick = (booking: any) => {
+    setSelectedBooking(booking);
+    setSummaryDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setSummaryDialogOpen(false);
+    setSelectedBooking(null);
+  };
+
   const handleCancelBooking = async (bookingId: string) => {
     try {
       const { error } = await supabase
@@ -308,7 +329,11 @@ const BookingsPage = () => {
               const queueEntry = booking.queue_entry;
               
               return (
-                <Card key={booking.id} className="border border-border bg-white">
+                <Card 
+                  key={booking.id} 
+                  className="border border-border bg-white cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleCardClick(booking)}
+                >
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -364,8 +389,13 @@ const BookingsPage = () => {
                       <span className="font-semibold text-primary">₹{booking.total_price}</span>
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1 gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 gap-2"
+                        onClick={() => handleCall(salon.phone)}
+                      >
                         <Phone className="h-4 w-4" />
                         Call
                       </Button>
@@ -415,7 +445,11 @@ const BookingsPage = () => {
               const service = booking.service_name;
               
               return (
-                <Card key={booking.id} className="border border-border bg-white">
+                <Card 
+                  key={booking.id} 
+                  className="border border-border bg-white cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleCardClick(booking)}
+                >
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -488,6 +522,12 @@ const BookingsPage = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <BookingSummaryDialog
+        booking={selectedBooking}
+        isOpen={summaryDialogOpen}
+        onClose={handleCloseDialog}
+      />
     </CustomerLayout>
   );
 };
