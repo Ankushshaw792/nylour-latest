@@ -28,14 +28,16 @@ const QueueStatus = () => {
         await supabase.rpc('expire_old_queue_entries');
 
         // Find user's active queue entry (not expired)
-        const { data: activeQueueData, error: queueError } = await supabase
+        const { data: queueDataArray, error: queueError } = await supabase
           .from("queue_entries")
           .select("*")
           .eq("customer_id", user.id)
           .eq("status", "waiting")
           .gt("expires_at", new Date().toISOString())
           .order("joined_at", { ascending: false })
-          .maybeSingle();
+          .limit(1);
+
+        const activeQueueData = queueDataArray && queueDataArray.length > 0 ? queueDataArray[0] : null;
 
         if (queueError) {
           console.error("Error fetching active queue:", queueError);
