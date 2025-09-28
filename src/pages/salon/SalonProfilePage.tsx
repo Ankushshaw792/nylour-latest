@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
+import NotificationControls from "@/components/salon/NotificationControls";
 
 interface QueueStats {
   currentWaitTime: number;
@@ -41,6 +42,7 @@ const SalonProfilePage = () => {
     capacity: 12
   });
   const [customers, setCustomers] = useState<CustomerCheckIn[]>([]);
+  const [salon, setSalon] = useState<any>(null);
 
   useEffect(() => {
     const fetchSalonData = async () => {
@@ -48,13 +50,14 @@ const SalonProfilePage = () => {
 
       try {
         // Get salon ID
-        const { data: salon } = await supabase
+        const { data: salonData } = await supabase
           .from('salons')
-          .select('id')
+          .select('*')
           .eq('owner_id', user.id)
           .maybeSingle();
 
-        if (!salon) return;
+        if (!salonData) return;
+        setSalon(salonData);
 
         // Fetch queue entries for check-in list
         const { data: queueData } = await supabase
@@ -69,7 +72,7 @@ const SalonProfilePage = () => {
               name
             )
           `)
-          .eq('salon_id', salon.id)
+          .eq('salon_id', salonData.id)
           .in('status', ['waiting', 'in_progress'])
           .order('joined_at')
           .limit(5);
@@ -328,6 +331,11 @@ const SalonProfilePage = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Notification Controls */}
+        {salon && (
+          <NotificationControls salonId={salon.id} />
+        )}
 
         {/* Quick Actions */}
         <Card>

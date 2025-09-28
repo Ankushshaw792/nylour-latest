@@ -26,15 +26,36 @@ const NotificationControls: React.FC<NotificationControlsProps> = ({ salonId, cl
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.rpc('send_custom_notification', {
-        p_salon_id: salonId,
-        p_message: customMessage,
-        p_title: customTitle || 'Message from Salon'
-      });
+      // Get all waiting customers for this salon
+      const { data: queueEntries, error: queueError } = await supabase
+        .from('queue_entries')
+        .select('customer_id, id')
+        .eq('salon_id', salonId)
+        .eq('status', 'waiting');
 
-      if (error) throw error;
+      if (queueError) throw queueError;
 
-      toast.success('Notification sent to all waiting customers');
+      if (!queueEntries || queueEntries.length === 0) {
+        toast.info('No customers currently waiting');
+        return;
+      }
+
+      // Send notifications to all waiting customers
+      const notifications = queueEntries.map(entry => ({
+        user_id: entry.customer_id,
+        title: customTitle || 'Message from Salon',
+        message: customMessage,
+        type: 'general' as const,
+        related_id: entry.id
+      }));
+
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert(notifications);
+
+      if (notificationError) throw notificationError;
+
+      toast.success(`Notification sent to ${queueEntries.length} waiting customers`);
       setCustomMessage('');
       setCustomTitle('');
     } catch (error) {
@@ -48,14 +69,36 @@ const NotificationControls: React.FC<NotificationControlsProps> = ({ salonId, cl
   const sendQuickNotification = async (message: string, title: string) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.rpc('send_custom_notification', {
-        p_salon_id: salonId,
-        p_message: message,
-        p_title: title
-      });
+      // Get all waiting customers for this salon
+      const { data: queueEntries, error: queueError } = await supabase
+        .from('queue_entries')
+        .select('customer_id, id')
+        .eq('salon_id', salonId)
+        .eq('status', 'waiting');
 
-      if (error) throw error;
-      toast.success(`"${title}" sent to all waiting customers`);
+      if (queueError) throw queueError;
+
+      if (!queueEntries || queueEntries.length === 0) {
+        toast.info('No customers currently waiting');
+        return;
+      }
+
+      // Send notifications to all waiting customers
+      const notifications = queueEntries.map(entry => ({
+        user_id: entry.customer_id,
+        title: title,
+        message: message,
+        type: 'general' as const,
+        related_id: entry.id
+      }));
+
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert(notifications);
+
+      if (notificationError) throw notificationError;
+
+      toast.success(`"${title}" sent to ${queueEntries.length} waiting customers`);
     } catch (error) {
       console.error('Error sending notification:', error);
       toast.error('Failed to send notification');

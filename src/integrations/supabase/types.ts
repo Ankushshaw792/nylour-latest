@@ -542,6 +542,14 @@ export type Database = {
         Args: { p_message?: string; p_salon_id: string }
         Returns: undefined
       }
+      send_custom_notification: {
+        Args: { p_message: string; p_salon_id: string; p_title?: string }
+        Returns: undefined
+      }
+      send_proximity_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       update_queue_estimated_times: {
         Args: Record<PropertyKey, never>
         Returns: undefined

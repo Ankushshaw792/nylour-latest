@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
-import { Calendar, Clock, MapPin, Phone, User, Timer, X } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Phone, MapPin, Clock, Calendar, DollarSign, Users, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import QueueTimer from '@/components/queue/QueueTimer';
 
 interface BookingSummaryDialogProps {
   booking: any;
@@ -196,27 +198,11 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
           {queueEntry && queueEntry.status === "waiting" && (
             <>
               <Separator />
-              <div className="bg-primary/10 p-4 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-foreground">Queue Status</h4>
-                  <Badge variant="outline" className="text-primary border-primary">
-                    Live
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Position</span>
-                    <span className="font-bold text-primary text-lg">#{queueEntry.queue_number}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Estimated Wait</span>
-                    <div className="flex items-center gap-1">
-                      <Timer className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-primary">{queueEntry.estimated_wait_time || 0} min</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <QueueTimer 
+                salonId={booking.salon_id} 
+                customerId={booking.customer_id}
+                className="bg-primary/10 border-primary/20"
+              />
             </>
           )}
 
