@@ -507,6 +507,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_dynamic_wait_time: {
+        Args: { p_customer_id: string; p_salon_id: string }
+        Returns: number
+      }
       calculate_queue_position: {
         Args: { p_customer_id: string; p_salon_id: string }
         Returns: number
