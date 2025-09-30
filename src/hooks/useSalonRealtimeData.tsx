@@ -72,7 +72,9 @@ export const useSalonRealtimeData = () => {
         .from('salons')
         .select('id, name, is_online, accepts_bookings, current_wait_time, max_queue_size')
         .eq('owner_id', user.id)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
       if (salonError) throw salonError;
       if (!salonData) throw new Error('No salon found for this owner');
