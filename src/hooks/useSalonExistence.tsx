@@ -22,6 +22,8 @@ export const useSalonExistence = () => {
           .from('salons')
           .select('id')
           .eq('owner_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (error) {
