@@ -189,9 +189,10 @@ export const SalonRegistrationForm = () => {
       
       toast.success("Salon registration completed successfully!");
       navigate('/salon-dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
-      toast.error("Failed to submit registration. Please try again.");
+      const errorMessage = error?.message || 'Failed to submit registration. Please try again.';
+      toast.error(`Registration failed: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
