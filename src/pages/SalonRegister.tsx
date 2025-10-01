@@ -7,26 +7,47 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SalonAuthSheet } from "@/components/auth/SalonAuthSheet";
 import { SalonRegistrationForm } from "@/components/salon/SalonRegistrationForm";
+import { useSalonExistence } from "@/hooks/useSalonExistence";
 
 export default function SalonRegister() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { hasSalon, loading: salonLoading } = useSalonExistence();
   const [showAuth, setShowAuth] = useState(false);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
 
-  // Check if user is authenticated and redirect to registration form
+  // Check if user has a salon and redirect to dashboard
   useEffect(() => {
-    if (user && !loading) {
+    if (!loading && !salonLoading && user && hasSalon) {
+      navigate('/salon-dashboard');
+    }
+  }, [user, loading, hasSalon, salonLoading, navigate]);
+
+  // Check if user is authenticated but no salon, show registration form
+  useEffect(() => {
+    if (user && !loading && !salonLoading && !hasSalon) {
       setShowRegistrationForm(true);
     }
-  }, [user, loading]);
+  }, [user, loading, hasSalon, salonLoading]);
 
   const handleAuthSuccess = () => {
     setShowAuth(false);
     setShowRegistrationForm(true);
   };
 
-  // If user is authenticated, show registration form
+  // Show loading state
+  if (loading || salonLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is authenticated and has no salon, show registration form
   if (showRegistrationForm) {
     return <SalonRegistrationForm />;
   }
