@@ -1,80 +1,40 @@
-import { useState } from "react";
-import { Calendar, Clock, User, Check, X, Phone, Filter } from "lucide-react";
+import { Calendar, Clock, User, Check, X, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
-
-// Mock data for bookings
-const initialBookings = [
-  {
-    id: 1,
-    customerName: "Rahul Kumar",
-    phone: "+91 98765 43210",
-    service: "Haircut",
-    time: "10:30 AM",
-    date: "Today",
-    status: "pending",
-    amount: "₹309"
-  },
-  {
-    id: 2,
-    customerName: "Priya Singh",
-    phone: "+91 98765 43211",
-    service: "Beard Trim", 
-    time: "11:00 AM",
-    date: "Today",
-    status: "confirmed",
-    amount: "₹159"
-  },
-  {
-    id: 3,
-    customerName: "Amit Sharma",
-    phone: "+91 98765 43212",
-    service: "Hair Wash",
-    time: "2:30 PM",
-    date: "Today",
-    status: "pending",
-    amount: "₹109"
-  },
-  {
-    id: 4,
-    customerName: "Sneha Patel",
-    phone: "+91 98765 43213",
-    service: "Haircut",
-    time: "10:00 AM",
-    date: "Tomorrow",
-    status: "confirmed",
-    amount: "₹309"
-  }
-];
+import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format, isToday, isFuture } from "date-fns";
 
 const BookingsOverview = () => {
-  const [bookings, setBookings] = useState(initialBookings);
-  
-  const handleAcceptBooking = (bookingId: number) => {
-    setBookings(prev => 
-      prev.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, status: 'confirmed' }
-          : booking
-      )
-    );
-  };
+  const { user, loading: authLoading } = useRequireAuth();
+  const { bookings, loading, acceptBooking, rejectBooking } = useSalonRealtimeData();
 
-  const handleRejectBooking = (bookingId: number) => {
-    setBookings(prev => 
-      prev.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, status: 'rejected' }
-          : booking
-      )
+  if (authLoading || loading) {
+    return (
+      <SalonDashboardLayout title="Online Bookings" description="Manage customer appointments">
+        <div className="p-4 space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </SalonDashboardLayout>
     );
-  };
+  }
 
-  const todayBookings = bookings.filter(b => b.date === 'Today');
-  const upcomingBookings = bookings.filter(b => b.date !== 'Today');
+  const todayBookings = bookings.filter(b => {
+    const bookingDate = new Date(b.booking_date);
+    return isToday(bookingDate);
+  });
+
+  const upcomingBookings = bookings.filter(b => {
+    const bookingDate = new Date(b.booking_date);
+    return isFuture(bookingDate) && !isToday(bookingDate);
+  });
+
   const pendingBookings = bookings.filter(b => b.status === 'pending');
 
   return (
@@ -97,8 +57,8 @@ const BookingsOverview = () => {
                 <BookingCard
                   key={booking.id}
                   booking={booking}
-                  onAccept={handleAcceptBooking}
-                  onReject={handleRejectBooking}
+                  onAccept={acceptBooking}
+                  onReject={rejectBooking}
                 />
               ))
             ) : (
@@ -113,8 +73,8 @@ const BookingsOverview = () => {
                 <BookingCard
                   key={booking.id}
                   booking={booking}
-                  onAccept={handleAcceptBooking}
-                  onReject={handleRejectBooking}
+                  onAccept={acceptBooking}
+                  onReject={rejectBooking}
                 />
               ))
             ) : (
@@ -129,8 +89,8 @@ const BookingsOverview = () => {
                 <BookingCard
                   key={booking.id}
                   booking={booking}
-                  onAccept={handleAcceptBooking}
-                  onReject={handleRejectBooking}
+                  onAccept={acceptBooking}
+                  onReject={rejectBooking}
                 />
               ))
             ) : (
@@ -146,11 +106,20 @@ const BookingsOverview = () => {
 // Booking Card Component
 interface BookingCardProps {
   booking: any;
-  onAccept: (id: number) => void;
-  onReject: (id: number) => void;
+  onAccept: (id: string) => void;
+  onReject: (id: string) => void;
 }
 
 const BookingCard = ({ booking, onAccept, onReject }: BookingCardProps) => {
+  const customerName = booking.customers 
+    ? `${booking.customers.first_name || ''} ${booking.customers.last_name || ''}`.trim() || 'Walk-in Customer'
+    : 'Unknown';
+  
+  const serviceName = booking.salon_services?.services?.name || 'Service';
+  const phone = booking.customers?.phone || 'N/A';
+  const bookingDate = format(new Date(booking.booking_date), 'MMM dd, yyyy');
+  const bookingTime = booking.booking_time.slice(0, 5);
+  
   return (
     <Card className="card-hover">
       <CardContent className="p-4">
@@ -164,8 +133,8 @@ const BookingCard = ({ booking, onAccept, onReject }: BookingCardProps) => {
           <div className="flex-1">
             <div className="flex items-start justify-between mb-2">
               <div>
-                <h4 className="font-semibold">{booking.customerName}</h4>
-                <p className="text-sm text-muted-foreground">{booking.service}</p>
+                <h4 className="font-semibold">{customerName}</h4>
+                <p className="text-sm text-muted-foreground">{serviceName}</p>
               </div>
               <Badge 
                 variant={
@@ -181,20 +150,20 @@ const BookingCard = ({ booking, onAccept, onReject }: BookingCardProps) => {
             <div className="flex items-center gap-4 mb-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                <span>{booking.time}</span>
+                <span>{bookingTime}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                <span>{booking.date}</span>
+                <span>{bookingDate}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Phone className="h-4 w-4" />
-                <span>{booking.phone}</span>
+                <span>{phone}</span>
               </div>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-primary">{booking.amount}</span>
+              <span className="font-semibold text-primary">₹{booking.total_price}</span>
               
               {booking.status === 'pending' && (
                 <div className="flex gap-2">
@@ -208,7 +177,6 @@ const BookingCard = ({ booking, onAccept, onReject }: BookingCardProps) => {
                   </Button>
                   <Button
                     size="sm"
-                    variant="success"
                     onClick={() => onAccept(booking.id)}
                   >
                     <Check className="h-4 w-4 mr-1" />
