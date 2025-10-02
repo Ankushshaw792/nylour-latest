@@ -41,8 +41,8 @@ export const SalonDashboardLayout = ({ children, title, description }: SalonDash
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Premium Fixed Header with Glassmorphism */}
-      <div className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50 backdrop-blur-xl bg-gradient-hero/95 shadow-lg">
+      {/* Premium Fixed Header with Brand Gradient */}
+      <div className="fixed top-0 left-0 right-0 z-50 border-b border-white/20 backdrop-blur-xl shadow-lg" style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(351 83% 74%))' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             
@@ -69,19 +69,19 @@ export const SalonDashboardLayout = ({ children, title, description }: SalonDash
             <div className="flex items-center gap-3 sm:gap-4">
               
               {/* Online/Offline Status */}
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
+              <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-full px-4 py-2.5 border border-white/30 shadow-md">
                 <Badge 
                   variant={salon?.is_online ? "default" : "secondary"}
-                  className={`gap-1.5 ${
+                  className={`gap-1.5 px-3 py-1 ${
                     salon?.is_online 
-                      ? "bg-success/20 text-success-foreground border border-success/30" 
-                      : "bg-muted/20 text-muted-foreground border border-muted/30"
+                      ? "bg-green-500/90 text-white border-0 shadow-sm" 
+                      : "bg-gray-400/90 text-white border-0 shadow-sm"
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full animate-pulse ${
-                    salon?.is_online ? "bg-success" : "bg-muted-foreground"
+                  <span className={`w-2 h-2 rounded-full ${
+                    salon?.is_online ? "bg-white animate-pulse" : "bg-white/70"
                   }`} />
-                  <span className="text-xs font-medium text-white">
+                  <span className="text-xs font-semibold">
                     {salon?.is_online ? "Online" : "Offline"}
                   </span>
                 </Badge>
@@ -90,7 +90,7 @@ export const SalonDashboardLayout = ({ children, title, description }: SalonDash
                   checked={salon?.is_online || false}
                   onCheckedChange={handleToggleOnline}
                   disabled={loading}
-                  className="data-[state=checked]:bg-success"
+                  className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-400/80"
                 />
               </div>
 
