@@ -134,9 +134,9 @@
 }
 
 @layer components {
-  /* Glass morphism effect */
+  /* Glass morphism effect - Premium version */
   .glass {
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(16px) saturate(180%);
     background: hsl(var(--card) / 0.8);
     border: 1px solid hsl(var(--border) / 0.2);
   }
