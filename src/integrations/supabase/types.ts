@@ -348,6 +348,7 @@ export type Database = {
           created_at: string
           duration: number
           id: string
+          image_url: string | null
           is_active: boolean
           price: number
           salon_id: string
@@ -357,6 +358,7 @@ export type Database = {
           created_at?: string
           duration?: number
           id?: string
+          image_url?: string | null
           is_active?: boolean
           price: number
           salon_id: string
@@ -366,6 +368,7 @@ export type Database = {
           created_at?: string
           duration?: number
           id?: string
+          image_url?: string | null
           is_active?: boolean
           price?: number
           salon_id?: string
