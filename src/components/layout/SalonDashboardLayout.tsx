@@ -42,7 +42,7 @@ export const SalonDashboardLayout = ({ children, title, description }: SalonDash
   return (
     <div className="min-h-screen bg-background">
       {/* Premium Fixed Header with Brand Gradient */}
-      <div className="fixed top-0 left-0 right-0 z-50 border-b border-white/20 backdrop-blur-xl shadow-lg" style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(351 83% 74%))' }}>
+      <div className="fixed top-0 left-0 right-0 z-[60] brand-gradient border-b border-white/20 shadow-lg text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             
