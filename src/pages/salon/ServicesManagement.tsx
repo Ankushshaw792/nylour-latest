@@ -26,18 +26,28 @@ interface Service {
   };
 }
 
+interface AvailableService {
+  id: string;
+  name: string;
+  description: string | null;
+  default_duration: number;
+}
+
 const ServicesManagement = () => {
   const { user, loading: authLoading } = useRequireAuth();
   const { salon, loading: salonLoading } = useSalonRealtimeData();
   const [services, setServices] = useState<Service[]>([]);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [availableServices, setAvailableServices] = useState<AvailableService[]>([]);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     price: 0,
     duration: 30,
     image_url: null as string | null,
   });
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
 
   // Fetch salon services
   const fetchServices = async () => {
@@ -63,10 +73,25 @@ const ServicesManagement = () => {
     }
   };
 
+  // Fetch available services from the services table
+  const fetchAvailableServices = async () => {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching available services:', error);
+    } else {
+      setAvailableServices(data || []);
+    }
+  };
+
   // Load services when salon is ready
   useEffect(() => {
     if (salon?.id) {
       fetchServices();
+      fetchAvailableServices();
     }
   }, [salon?.id]);
 
@@ -162,6 +187,63 @@ const ServicesManagement = () => {
     }
   };
 
+  const handleAddNewService = async () => {
+    if (!selectedServiceId || !salon?.id) {
+      toast.error('Please select a service');
+      return;
+    }
+
+    if (formData.price <= 0) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('salon_services')
+      .insert({
+        salon_id: salon.id,
+        service_id: selectedServiceId,
+        price: formData.price,
+        duration: formData.duration,
+        image_url: formData.image_url,
+      });
+
+    if (error) {
+      console.error('Error adding service:', error);
+      toast.error('Failed to add service');
+    } else {
+      toast.success('Service added successfully');
+      setIsAddDialogOpen(false);
+      setSelectedServiceId("");
+      setFormData({ price: 0, duration: 30, image_url: null });
+      fetchServices();
+    }
+  };
+
+  const handleOpenAddDialog = () => {
+    setFormData({ price: 0, duration: 30, image_url: null });
+    setSelectedServiceId("");
+    setIsAddDialogOpen(true);
+  };
+
+  const handleServiceSelect = (serviceId: string) => {
+    setSelectedServiceId(serviceId);
+    const selectedService = availableServices.find(s => s.id === serviceId);
+    if (selectedService) {
+      setFormData({
+        price: 0,
+        duration: selectedService.default_duration,
+        image_url: null,
+      });
+    }
+  };
+
+  // Filter out services that salon already has
+  const getUnusedServices = () => {
+    const existingServiceIds = services.map(s => s.service_id);
+    return availableServices.filter(s => !existingServiceIds.includes(s.id));
+  };
+
   if (authLoading || salonLoading) {
     return (
       <SalonDashboardLayout title="Services" description="Manage your salon services">
@@ -192,52 +274,66 @@ const ServicesManagement = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {services.map((service) => (
-              <Card key={service.id} className="overflow-hidden">
-                <div className="relative h-48 bg-muted">
-                  {service.image_url ? (
-                    <img
-                      src={service.image_url}
-                      alt={service.services.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Scissors className="h-16 w-16 text-muted-foreground" />
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {services.map((service) => (
+                <Card key={service.id} className="overflow-hidden">
+                  <div className="relative h-48 bg-muted">
+                    {service.image_url ? (
+                      <img
+                        src={service.image_url}
+                        alt={service.services.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Scissors className="h-16 w-16 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>{service.services.name}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditService(service)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Price:</span>
+                      <span className="font-medium">${service.price}</span>
                     </div>
-                  )}
-                </div>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{service.services.name}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditService(service)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Price:</span>
-                    <span className="font-medium">${service.price}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Duration:</span>
-                    <span className="font-medium">{service.duration} min</span>
-                  </div>
-                  {service.services.description && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {service.services.description}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="font-medium">{service.duration} min</span>
+                    </div>
+                    {service.services.description && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {service.services.description}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            
+            {/* Add More Services Button */}
+            <div className="flex justify-center mt-6">
+              <Button 
+                onClick={handleOpenAddDialog}
+                size="lg"
+                className="gap-2"
+              >
+                <Plus className="h-5 w-5" />
+                Add More Services
+              </Button>
+            </div>
+          </>
         )}
       </div>
 
@@ -329,6 +425,116 @@ const ServicesManagement = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Service Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Service</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="service-select">Select Service</Label>
+              <select
+                id="service-select"
+                className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                value={selectedServiceId}
+                onChange={(e) => handleServiceSelect(e.target.value)}
+              >
+                <option value="">Choose a service...</option>
+                {getUnusedServices().map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
+              {getUnusedServices().length === 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  All available services have been added
+                </p>
+              )}
+            </div>
+
+            {selectedServiceId && (
+              <>
+                <div>
+                  <Label htmlFor="add-price">Price ($)</Label>
+                  <Input
+                    id="add-price"
+                    type="number"
+                    placeholder="Enter price"
+                    value={formData.price || ""}
+                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="add-duration">Duration (minutes)</Label>
+                  <Input
+                    id="add-duration"
+                    type="number"
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 30 })}
+                  />
+                </div>
+
+                <div>
+                  <Label>Service Image (Optional)</Label>
+                  {formData.image_url ? (
+                    <div className="relative">
+                      <img
+                        src={formData.image_url}
+                        alt="Service"
+                        className="w-full h-48 object-cover rounded-md"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => setFormData({ ...formData, image_url: null })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed rounded-md p-8 text-center">
+                      <Upload className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                      <Label htmlFor="add-image-upload" className="cursor-pointer">
+                        <span className="text-sm text-primary hover:underline">
+                          Click to upload image
+                        </span>
+                        <Input
+                          id="add-image-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageUpload}
+                          disabled={uploading}
+                        />
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        PNG, JPG, WEBP up to 5MB
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleAddNewService} 
+                disabled={!selectedServiceId || uploading || formData.price <= 0}
+              >
+                Add Service
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </SalonDashboardLayout>

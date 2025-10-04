@@ -21,6 +21,7 @@ interface SalonService {
   price: number;
   duration: number;
   image?: string;
+  image_url?: string | null;
   icon: any;
 }
 
@@ -66,6 +67,7 @@ const SalonDetails = () => {
               id,
               price,
               duration,
+              image_url,
               services (
                 id,
                 name,
@@ -111,7 +113,8 @@ const SalonDetails = () => {
           name: salonService.services.name,
           price: salonService.price,
           duration: salonService.duration,
-          image: serviceImages[index % serviceImages.length],
+          image_url: salonService.image_url, // Custom uploaded image
+          image: serviceImages[index % serviceImages.length], // Fallback default image
           icon: serviceIcons[index % serviceIcons.length]
         })) || [];
 
@@ -274,7 +277,7 @@ const SalonDetails = () => {
                       {/* Service Image */}
                       <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
                         <img 
-                          src={service.image || haircutImage} 
+                          src={service.image_url || service.image || haircutImage} 
                           alt={service.name}
                           className="w-full h-full object-cover"
                         />
