@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
 import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
@@ -64,11 +64,11 @@ const ServicesManagement = () => {
   };
 
   // Load services when salon is ready
-  useState(() => {
+  useEffect(() => {
     if (salon?.id) {
       fetchServices();
     }
-  });
+  }, [salon?.id]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
