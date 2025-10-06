@@ -22,9 +22,15 @@ interface Booking {
     first_name: string | null;
     last_name: string | null;
     phone: string | null;
+    avatar_url: string | null;
   } | null;
-  services?: {
-    name: string;
+  salon_services?: {
+    price: number;
+    duration: number;
+    services: {
+      name: string;
+      default_duration: number;
+    } | null;
   } | null;
 }
 
@@ -80,21 +86,18 @@ export const useSalonRealtimeData = () => {
       if (!salonData) throw new Error('No salon found for this owner');
       setSalon(salonData);
 
-      // Fetch bookings for today
+      // Fetch bookings for today with customer and service details
       const today = new Date().toISOString().split('T')[0];
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
-          id,
-          customer_id,
-          service_id,
-          booking_date,
-          booking_time,
-          status,
-          total_price,
-          queue_position,
-          customer_notes,
-          is_walk_in
+          *,
+          customers(first_name, last_name, phone, avatar_url),
+          salon_services(
+            price,
+            duration,
+            services(name, default_duration)
+          )
         `)
         .eq('salon_id', salonData.id)
         .eq('booking_date', today)
@@ -104,13 +107,8 @@ export const useSalonRealtimeData = () => {
         console.error('Bookings fetch error:', bookingsError);
         setBookings([]);
       } else {
-        // Map the raw data to include proper types
-        const mappedBookings: Booking[] = (bookingsData || []).map(booking => ({
-          ...booking,
-          customers: null, // Will fetch separately if needed
-          services: null  // Will fetch separately if needed
-        }));
-        setBookings(mappedBookings);
+        // Type assertion needed due to complex joined types
+        setBookings((bookingsData || []) as any);
       }
 
       // Fetch queue entries - simplified
@@ -344,6 +342,35 @@ export const useSalonRealtimeData = () => {
     }
   }, [salon]);
 
+  // Send reminder to specific customer
+  const sendReminder = useCallback(async (customerId: string, bookingId: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: customerId,
+          title: 'Your turn is coming up!',
+          message: 'Please be ready. Your service will begin shortly.',
+          type: 'queue_update',
+          related_id: bookingId
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Reminder sent to customer",
+      });
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send reminder",
+        variant: "destructive",
+      });
+    }
+  }, []);
+
   // Notify next customer
   const notifyNextCustomer = useCallback(async (message?: string) => {
     if (!salon) return;
@@ -430,6 +457,7 @@ export const useSalonRealtimeData = () => {
     startService,
     completeService,
     addWalkInCustomer,
+    sendReminder,
     notifyNextCustomer,
     refetch: fetchSalonData
   };
