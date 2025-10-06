@@ -38,22 +38,11 @@ const BookingsOverview = () => {
   const [walkInService, setWalkInService] = useState("");
   const [availableServices, setAvailableServices] = useState<Array<{ id: string; name: string }>>([]);
 
-  if (authLoading || loading) {
-    return (
-      <SalonDashboardLayout title="Online Bookings" description="Manage customer appointments">
-        <div className="p-4 space-y-4">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-      </SalonDashboardLayout>
-    );
-  }
-
-  // Fetch available services for manual booking
+  // Fetch available services for manual booking - MUST be before any returns
   useEffect(() => {
+    if (!salon?.id) return;
+    
     const fetchServices = async () => {
-      if (!salon?.id) return;
       const { data } = await supabase
         .from('salon_services')
         .select('service_id, services(name)')
@@ -69,6 +58,19 @@ const BookingsOverview = () => {
     };
     fetchServices();
   }, [salon?.id]);
+
+  // Early return AFTER all hooks
+  if (authLoading || loading) {
+    return (
+      <SalonDashboardLayout title="Online Bookings" description="Manage customer appointments">
+        <div className="p-4 space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </SalonDashboardLayout>
+    );
+  }
 
   const handleAddWalkIn = async () => {
     if (!walkInName || !walkInPhone || !walkInService) return;
