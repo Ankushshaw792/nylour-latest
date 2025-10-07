@@ -585,7 +585,7 @@ export type Database = {
         | "failed"
         | "refunded"
         | "cancelled"
-      queue_status: "waiting" | "in_progress" | "completed"
+      queue_status: "waiting" | "in_progress" | "completed" | "in_service"
       salon_status: "pending" | "approved" | "suspended"
       user_role: "admin" | "salon_owner" | "customer"
     }
@@ -740,7 +740,7 @@ export const Constants = {
         "refunded",
         "cancelled",
       ],
-      queue_status: ["waiting", "in_progress", "completed"],
+      queue_status: ["waiting", "in_progress", "completed", "in_service"],
       salon_status: ["pending", "approved", "suspended"],
       user_role: ["admin", "salon_owner", "customer"],
     },
