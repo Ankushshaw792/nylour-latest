@@ -21,7 +21,7 @@ export type Database = {
           booking_date: string
           booking_time: string
           created_at: string
-          customer_id: string
+          customer_id: string | null
           customer_notes: string | null
           duration: number
           estimated_service_time: number | null
@@ -43,7 +43,7 @@ export type Database = {
           booking_date: string
           booking_time: string
           created_at?: string
-          customer_id: string
+          customer_id?: string | null
           customer_notes?: string | null
           duration?: number
           estimated_service_time?: number | null
@@ -65,7 +65,7 @@ export type Database = {
           booking_date?: string
           booking_time?: string
           created_at?: string
-          customer_id?: string
+          customer_id?: string | null
           customer_notes?: string | null
           duration?: number
           estimated_service_time?: number | null
