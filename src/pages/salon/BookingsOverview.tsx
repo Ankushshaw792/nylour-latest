@@ -43,17 +43,27 @@ const BookingsOverview = () => {
     if (!salon?.id) return;
     
     const fetchServices = async () => {
-      const { data } = await supabase
+      // First get service IDs from salon_services
+      const { data: salonServices } = await supabase
         .from('salon_services')
-        .select('service_id, services(name)')
+        .select('service_id')
         .eq('salon_id', salon.id)
         .eq('is_active', true);
       
-      if (data) {
-        setAvailableServices(data.map(s => ({
-          id: s.service_id,
-          name: s.services?.name || 'Service'
-        })));
+      if (salonServices && salonServices.length > 0) {
+        // Then fetch service details
+        const serviceIds = salonServices.map(s => s.service_id);
+        const { data: services } = await supabase
+          .from('services')
+          .select('id, name')
+          .in('id', serviceIds);
+        
+        if (services) {
+          setAvailableServices(services.map(s => ({
+            id: s.id,
+            name: s.name
+          })));
+        }
       }
     };
     fetchServices();

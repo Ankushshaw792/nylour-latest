@@ -86,19 +86,11 @@ export const useSalonRealtimeData = () => {
       if (!salonData) throw new Error('No salon found for this owner');
       setSalon(salonData);
 
-      // Fetch bookings for today with customer and service details
+      // Fetch bookings for today - simple fetch without joins
       const today = new Date().toISOString().split('T')[0];
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
-        .select(`
-          *,
-          customers(first_name, last_name, phone, avatar_url),
-          salon_services(
-            price,
-            duration,
-            services(name, default_duration)
-          )
-        `)
+        .select('*')
         .eq('salon_id', salonData.id)
         .eq('booking_date', today)
         .order('created_at', { ascending: true });
@@ -106,9 +98,53 @@ export const useSalonRealtimeData = () => {
       if (bookingsError) {
         console.error('Bookings fetch error:', bookingsError);
         setBookings([]);
+      } else if (bookingsData) {
+        // Enrich bookings with customer and service data
+        const enrichedBookings = await Promise.all(
+          bookingsData.map(async (booking) => {
+            let customerData = null;
+            let serviceData = null;
+
+            // Fetch customer data only if customer_id exists (not walk-in)
+            if (booking.customer_id) {
+              const { data: customer } = await supabase
+                .from('customers')
+                .select('first_name, last_name, phone, avatar_url')
+                .eq('user_id', booking.customer_id)
+                .maybeSingle();
+              customerData = customer;
+            }
+
+            // Fetch service data
+            const { data: service } = await supabase
+              .from('services')
+              .select('name, default_duration')
+              .eq('id', booking.service_id)
+              .maybeSingle();
+
+            const { data: salonService } = await supabase
+              .from('salon_services')
+              .select('price, duration')
+              .eq('salon_id', salonData.id)
+              .eq('service_id', booking.service_id)
+              .maybeSingle();
+
+            serviceData = service && salonService ? {
+              price: salonService.price,
+              duration: salonService.duration,
+              services: service
+            } : null;
+
+            return {
+              ...booking,
+              customers: customerData,
+              salon_services: serviceData
+            };
+          })
+        );
+        setBookings(enrichedBookings as any);
       } else {
-        // Type assertion needed due to complex joined types
-        setBookings((bookingsData || []) as any);
+        setBookings([]);
       }
 
       // Fetch queue entries - simplified
@@ -291,15 +327,6 @@ export const useSalonRealtimeData = () => {
     if (!salon) return;
 
     try {
-      // Try to find existing customer by phone
-      const { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('user_id')
-        .eq('phone', customerData.phone)
-        .maybeSingle();
-
-      let customerId = existingCustomer?.user_id || null;
-
       // Get service price for the booking
       const { data: serviceData } = await supabase
         .from('salon_services')
@@ -310,11 +337,11 @@ export const useSalonRealtimeData = () => {
 
       const servicePrice = serviceData?.price || 0;
 
-      // Create booking - with or without customer_id for walk-ins
+      // Create booking - ALWAYS null customer_id for walk-ins to keep them salon-only
       const { error: bookingError } = await supabase
         .from('bookings')
         .insert({
-          customer_id: customerId,
+          customer_id: null, // Always null for walk-ins
           salon_id: salon.id,
           service_id: customerData.service_id,
           booking_date: new Date().toISOString().split('T')[0],
@@ -322,7 +349,7 @@ export const useSalonRealtimeData = () => {
           status: 'confirmed' as BookingStatus,
           total_price: servicePrice,
           is_walk_in: true,
-          customer_notes: customerId ? null : `Walk-in: ${customerData.name} - ${customerData.phone}`,
+          customer_notes: `Walk-in: ${customerData.name} - ${customerData.phone}`,
           duration: 30
         });
 
