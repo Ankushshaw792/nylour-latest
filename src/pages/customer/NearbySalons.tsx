@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Star, Clock, ChevronDown, Mic, Filter, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Search, MapPin, Clock, ChevronDown, Mic, Filter, SlidersHorizontal, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { Button } from "@/components/ui/button";
 import { AuthSheet } from "@/components/auth/AuthSheet";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
+import { SalonStatusBadge } from "@/components/salon/SalonStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -268,11 +269,7 @@ const NearbySalons = () => {
                       alt={`${salon.name} salon exterior view - ${salon.address}`}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-3 right-3 flex items-center gap-2">
-                      <div className="bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium">{salon.rating}</span>
-                      </div>
+                    <div className="absolute top-3 right-3">
                       <FavoriteButton salonId={salon.id} size="sm" />
                     </div>
                     <Badge 
@@ -286,13 +283,14 @@ const NearbySalons = () => {
                   {/* Salon Info */}
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-2">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="text-lg font-semibold text-foreground mb-1">{salon.name}</h3>
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
                           <MapPin className="h-4 w-4" />
                           {salon.address}
                         </p>
                       </div>
+                      <SalonStatusBadge salonId={salon.id} />
                     </div>
 
                     <div className="flex items-center justify-between mb-3">
@@ -301,19 +299,27 @@ const NearbySalons = () => {
                           <Clock className="h-4 w-4 text-primary" />
                           <span className="text-primary font-medium">{salon.waitTime}</span>
                         </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
-                          <span>{salon.distance}</span>
-                        </div>
+                        <span className="text-muted-foreground text-sm">{salon.distance} away</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-border">
+                    <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">{salon.primaryService}</p>
-                        <p className="text-lg font-semibold text-primary">{salon.servicePrice}</p>
+                        <p className="text-lg font-bold text-foreground">{salon.servicePrice}</p>
                       </div>
-                      <Button size="sm" className="ml-4">
+                      <Button
+                        size="sm"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (user) {
+                            navigate(`/salon/${salon.id}`);
+                          } else {
+                            setAuthSheetOpen(true);
+                          }
+                        }}
+                      >
                         Book Now
                       </Button>
                     </div>

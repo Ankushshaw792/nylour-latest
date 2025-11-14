@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Smartphone, Bell, Users, Edit } from "lucide-react";
+import { ArrowLeft, Smartphone, Bell, Users, Edit, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
+import { BookingSummaryCard } from "@/components/bookings/BookingSummaryCard";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useActiveBooking } from "@/hooks/useActiveBooking";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,6 +20,7 @@ const BookingScreen = () => {
   const navigate = useNavigate();
   const { user, loading } = useRequireAuth();
   const { items, totalPrice } = useCart();
+  const { hasActiveBooking, activeBooking, isLoading: bookingCheckLoading } = useActiveBooking(user?.id || null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -42,7 +46,7 @@ const BookingScreen = () => {
     fetchUserProfile();
   }, [user]);
 
-  if (loading) {
+  if (loading || bookingCheckLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
@@ -105,9 +109,20 @@ const BookingScreen = () => {
       bottomButtonProps={{
         text: isProcessing ? "Processing..." : "Confirm Booking",
         onClick: handleBooking,
-        disabled: isProcessing || !contactName.trim() || !contactPhone.trim()
+        disabled: isProcessing || !contactName.trim() || !contactPhone.trim() || hasActiveBooking
       }}
     >
+      {/* Active Booking Warning */}
+      {hasActiveBooking && (
+        <Alert variant="destructive" className="m-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            You already have an active booking at {activeBooking?.salons?.name}. 
+            Please complete or cancel it before booking another salon.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Hero Section */}
       <div className="bg-gradient-hero text-white p-4">        
         <div className="text-center">
@@ -117,48 +132,16 @@ const BookingScreen = () => {
       </div>
 
       <div className="p-4 space-y-4">
-        {/* 1. Booking Summary Section */}
-        <Card>
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-lg mb-4">Booking Summary</h3>
-            
-            {/* Services List */}
-            <div className="space-y-3 mb-4">
-              {items.map((item) => (
-                <div key={item.id} className="flex justify-between items-center">
-                  <div className="flex-1">
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">{item.duration} • Qty: {item.quantity}</p>
-                  </div>
-                  <span className="font-medium">₹{item.price * item.quantity}</span>
-                </div>
-              ))}
-            </div>
+        {/* Booking Summary Card */}
+        {items.length > 0 && (
+          <BookingSummaryCard
+            serviceName={items[0]?.name || "Service"}
+            servicePrice={totalPrice}
+            bookingFee={bookingFee}
+          />
+        )}
 
-            <Separator className="my-4" />
-            
-            {/* Live Position and Wait Time */}
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 p-4 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Users className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Your current live position</p>
-                    <p className="text-2xl font-bold text-blue-600">#3 in queue</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-muted-foreground">Estimated wait time</p>
-                  <p className="text-2xl font-bold text-green-600">25 min</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 2. Contact Details Section */}
+        {/* Contact Details Section */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">

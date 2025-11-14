@@ -148,7 +148,7 @@ const ProfilePage = () => {
         {/* User Info Header */}
         <Card className="border border-border bg-white mb-6">
           <CardContent className="p-6">
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-4 mb-4 relative">
               <Avatar className="h-20 w-20">
                 <AvatarImage src={profile?.avatar_url} alt="Profile" />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xl">
@@ -156,15 +156,16 @@ const ProfilePage = () => {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-xl font-bold text-foreground">{getDisplayName()}</h2>
-                  <Badge variant="secondary" className="text-xs">Premium Member</Badge>
-                </div>
+                <h2 className="text-xl font-bold text-foreground mb-1">{getDisplayName()}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)} className="gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsEditDialogOpen(true)} 
+                className="absolute top-0 right-0"
+              >
                 <Edit className="h-4 w-4" />
-                Edit Profile
               </Button>
             </div>
           </CardContent>
@@ -180,14 +181,14 @@ const ProfilePage = () => {
           </Card>
           <Card className="border border-border bg-white">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-foreground">4.8</div>
-              <div className="text-xs text-muted-foreground">Avg Rating</div>
+              <div className="text-2xl font-bold text-foreground">₹{profile?.total_spent || 0}</div>
+              <div className="text-xs text-muted-foreground">Total Spent</div>
             </CardContent>
           </Card>
           <Card className="border border-border bg-white">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-foreground">₹{profile?.total_spent || 0}</div>
-              <div className="text-xs text-muted-foreground">Total Spent</div>
+              <div className="text-2xl font-bold text-foreground">{profile?.cancellation_count || 0}</div>
+              <div className="text-xs text-muted-foreground">Cancellations</div>
             </CardContent>
           </Card>
         </div>
