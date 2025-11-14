@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { CheckCircle2, Clock, MapPin, Phone, Calendar } from "lucide-react";
+import { CheckCircle2, Clock, MapPin, Phone, Calendar, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import QueueTimer from "@/components/queue/QueueTimer";
+import { CancellationDialog } from "@/components/bookings/CancellationDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -14,6 +17,8 @@ const BookingConfirmation = () => {
   const { user, loading } = useRequireAuth();
   const [booking, setBooking] = useState<any>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [customerProfile, setCustomerProfile] = useState<any>(null);
 
   // Fetch booking data
   useEffect(() => {
@@ -21,6 +26,15 @@ const BookingConfirmation = () => {
       if (!user || !bookingId) return;
 
       try {
+        // Fetch customer profile for cancellation count
+        const { data: profileData } = await supabase
+          .from("customers")
+          .select("cancellation_count")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        setCustomerProfile(profileData);
+
         // Fetch booking with basic data
         const { data: bookingData, error } = await supabase
           .from("bookings")
@@ -148,31 +162,16 @@ const BookingConfirmation = () => {
           </CardContent>
         </Card>
 
-        {/* Queue Status */}
-        {queueEntry && (
-          <Card className="bg-gradient-card">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">Your Position in Queue</h3>
-                  <div className="flex items-center gap-4">
-                    <Badge variant="secondary" className="text-lg font-bold px-3 py-1">
-                      #{queueEntry.queue_number}
-                    </Badge>
-                    <span className="text-muted-foreground">
-                      Est. {queueEntry.estimated_wait_time || 0} min
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Queue Status with Real-Time Timer */}
+        {queueEntry && user && (
+          <QueueTimer 
+            salonId={booking.salon_id} 
+            customerId={user.id}
+            className="mb-4"
+          />
         )}
 
-        {/* SMS Alert Info */}
+        {/* Salon Contact */}
         <Card className="bg-success/10 border-success/20">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
@@ -212,22 +211,37 @@ const BookingConfirmation = () => {
             variant="gradient"
             size="xl"
             className="w-full"
-            onClick={() => navigate(`/queue-status/${booking.id}`)}
+            onClick={() => navigate('/queue-status')}
           >
-            <Calendar className="h-5 w-5 mr-2" />
-            Track Your Queue Status
+            <Clock className="h-5 w-5 mr-2" />
+            View Live Queue
           </Button>
           
           <Button
-            variant="mobile-outline"
+            variant="destructive"
             size="xl"
             className="w-full"
-            onClick={() => navigate('/')}
+            onClick={() => setIsCancelDialogOpen(true)}
           >
-            Book Another Salon
+            Cancel Booking
           </Button>
         </div>
       </div>
+
+      {/* Cancellation Dialog */}
+      {bookingId && user && (
+        <CancellationDialog
+          isOpen={isCancelDialogOpen}
+          onClose={() => setIsCancelDialogOpen(false)}
+          bookingId={bookingId}
+          customerId={user.id}
+          cancellationCount={customerProfile?.cancellation_count || 0}
+          onCancellationComplete={() => {
+            toast.success('Booking cancelled successfully');
+            navigate('/bookings');
+          }}
+        />
+      )}
     </div>
   );
 };

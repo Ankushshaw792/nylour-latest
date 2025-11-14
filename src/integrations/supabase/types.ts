@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_cancellations: {
+        Row: {
+          booking_id: string
+          cancellation_fee: number
+          cancelled_at: string
+          created_at: string
+          customer_id: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          booking_id: string
+          cancellation_fee?: number
+          cancelled_at?: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          booking_id?: string
+          cancellation_fee?: number
+          cancelled_at?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_cancellations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           actual_end_time: string | null
@@ -102,6 +140,7 @@ export type Database = {
         Row: {
           address: string | null
           avatar_url: string | null
+          cancellation_count: number | null
           created_at: string | null
           favorite_services: Json | null
           first_name: string | null
@@ -111,6 +150,7 @@ export type Database = {
           notification_preferences: Json | null
           phone: string | null
           preferred_time: string | null
+          total_cancellation_fees: number | null
           total_spent: number | null
           total_visits: number | null
           updated_at: string | null
@@ -119,6 +159,7 @@ export type Database = {
         Insert: {
           address?: string | null
           avatar_url?: string | null
+          cancellation_count?: number | null
           created_at?: string | null
           favorite_services?: Json | null
           first_name?: string | null
@@ -128,6 +169,7 @@ export type Database = {
           notification_preferences?: Json | null
           phone?: string | null
           preferred_time?: string | null
+          total_cancellation_fees?: number | null
           total_spent?: number | null
           total_visits?: number | null
           updated_at?: string | null
@@ -136,6 +178,7 @@ export type Database = {
         Update: {
           address?: string | null
           avatar_url?: string | null
+          cancellation_count?: number | null
           created_at?: string | null
           favorite_services?: Json | null
           first_name?: string | null
@@ -145,6 +188,7 @@ export type Database = {
           notification_preferences?: Json | null
           phone?: string | null
           preferred_time?: string | null
+          total_cancellation_fees?: number | null
           total_spent?: number | null
           total_visits?: number | null
           updated_at?: string | null
@@ -510,6 +554,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_cancellation_fee: {
+        Args: { p_booking_id: string; p_customer_id: string; p_reason?: string }
+        Returns: undefined
+      }
       calculate_dynamic_wait_time: {
         Args: { p_customer_id: string; p_salon_id: string }
         Returns: number
@@ -518,12 +566,13 @@ export type Database = {
         Args: { p_customer_id: string; p_salon_id: string }
         Returns: number
       }
-      expire_old_queue_entries: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
+      check_active_booking: {
+        Args: { p_customer_id: string }
+        Returns: boolean
       }
+      expire_old_queue_entries: { Args: never; Returns: undefined }
       get_current_user_role: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
       has_role: {
@@ -533,14 +582,8 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_salon_owner_of: {
-        Args: { p_salon_id: string }
-        Returns: boolean
-      }
+      is_admin: { Args: never; Returns: boolean }
+      is_salon_owner_of: { Args: { p_salon_id: string }; Returns: boolean }
       notify_next_customer: {
         Args: { p_message?: string; p_salon_id: string }
         Returns: undefined
@@ -549,18 +592,9 @@ export type Database = {
         Args: { p_message: string; p_salon_id: string; p_title?: string }
         Returns: undefined
       }
-      send_proximity_notifications: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      update_queue_estimated_times: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      update_user_stats: {
-        Args: { p_user_id: string }
-        Returns: undefined
-      }
+      send_proximity_notifications: { Args: never; Returns: undefined }
+      update_queue_estimated_times: { Args: never; Returns: undefined }
+      update_user_stats: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
       booking_status:
