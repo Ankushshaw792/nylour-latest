@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, MapPin, Star, Phone, X, Timer } from "lucide-react";
+import { Calendar, Clock, MapPin, Star, Phone, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ const BookingsPage = () => {
   const [pastBookings, setPastBookings] = useState<any[]>([]);
   const [activeRating, setActiveRating] = useState<{[key: string]: number}>({});
   const [dataLoading, setDataLoading] = useState(true);
-  const [timeRemaining, setTimeRemaining] = useState<{[key: string]: number}>({});
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
 
@@ -28,10 +27,9 @@ const BookingsPage = () => {
       if (!user) return;
 
       try {
-        // Fetch current bookings with basic data (within 1 hour)
-        const oneHourAgo = new Date();
-        oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+        const today = new Date().toISOString().split('T')[0];
         
+        // Fetch CURRENT bookings - based on status and booking_date
         const { data: currentData, error: currentError } = await supabase
           .from("bookings")
           .select(`
@@ -43,8 +41,8 @@ const BookingsPage = () => {
             )
           `)
           .eq("customer_id", user.id)
-          .in("status", ["pending", "confirmed"])
-          .gte("created_at", oneHourAgo.toISOString())
+          .in("status", ["pending", "confirmed", "in_progress"])
+          .gte("booking_date", today)
           .order("booking_date", { ascending: true });
 
         if (currentError) {
@@ -73,24 +71,13 @@ const BookingsPage = () => {
             service_name: servicesData?.find(s => s.id === booking.service_id)?.name || "Service",
             queue_entry: queueData?.find(q => q.salon_id === booking.salon_id)
           }));
-
-          // Calculate time remaining for each booking
-          const timeRemainingMap: {[key: string]: number} = {};
-          enrichedCurrent.forEach(booking => {
-            const createdAt = new Date(booking.created_at);
-            const expiryTime = new Date(createdAt.getTime() + 60 * 60 * 1000); // 1 hour from creation
-            const now = new Date();
-            const remaining = Math.max(0, Math.floor((expiryTime.getTime() - now.getTime()) / 1000));
-            timeRemainingMap[booking.id] = remaining;
-          });
           
           setCurrentBookings(enrichedCurrent);
-          setTimeRemaining(timeRemainingMap);
         } else {
           setCurrentBookings([]);
         }
 
-        // Fetch past bookings with basic data (including expired ones)
+        // Fetch PAST bookings - completed/cancelled OR old dates
         const { data: pastData, error: pastError } = await supabase
           .from("bookings")
           .select(`
@@ -102,26 +89,10 @@ const BookingsPage = () => {
             )
           `)
           .eq("customer_id", user.id)
-          .in("status", ["completed", "cancelled"])
+          .or(`status.in.(completed,cancelled),booking_date.lt.${today}`)
           .order("booking_date", { ascending: false });
 
-        // Also fetch expired bookings (older than 1 hour)
-        const { data: expiredData } = await supabase
-          .from("bookings")
-          .select(`
-            *,
-            salons!inner (
-              name,
-              address,
-              phone
-            )
-          `)
-          .eq("customer_id", user.id)
-          .in("status", ["pending", "confirmed"])
-          .lt("created_at", oneHourAgo.toISOString())
-          .order("booking_date", { ascending: false });
-
-        const allPastData = [...(pastData || []), ...(expiredData || [])];
+        const allPastData = pastData || [];
 
         if (pastError) {
           console.error("Error fetching past bookings:", pastError);
@@ -191,41 +162,6 @@ const BookingsPage = () => {
       supabase.removeChannel(subscription);
     };
   }, [user]);
-
-  // Countdown timer effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeRemaining(prev => {
-        const updated = { ...prev };
-        let hasExpired = false;
-        
-        Object.keys(updated).forEach(bookingId => {
-          if (updated[bookingId] > 0) {
-            updated[bookingId] -= 1;
-          } else if (updated[bookingId] === 0) {
-            hasExpired = true;
-          }
-        });
-        
-        // Refresh bookings if any expired
-        if (hasExpired && user) {
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
-        }
-        
-        return updated;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [user]);
-
-  const formatTimeRemaining = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
 
   if (loading || dataLoading) {
     return (
@@ -340,19 +276,9 @@ const BookingsPage = () => {
                         <h3 className="font-semibold text-foreground">{salon.name}</h3>
                         <p className="text-sm text-muted-foreground">{service}</p>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge variant={booking.status === "confirmed" ? "default" : "secondary"}>
-                          {booking.status === "confirmed" ? "Confirmed" : "Pending"}
-                        </Badge>
-                        {timeRemaining[booking.id] > 0 && (
-                          <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
-                            timeRemaining[booking.id] < 600 ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'
-                          }`}>
-                            <Timer className="h-3 w-3" />
-                            <span>{formatTimeRemaining(timeRemaining[booking.id])}</span>
-                          </div>
-                        )}
-                      </div>
+                      <Badge variant={booking.status === "confirmed" ? "default" : booking.status === "in_progress" ? "default" : "secondary"}>
+                        {booking.status === "confirmed" ? "Confirmed" : booking.status === "in_progress" ? "In Progress" : "Pending"}
+                      </Badge>
                     </div>
 
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
