@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 interface LocationState {
   latitude: number | null;
@@ -31,30 +31,31 @@ interface SearchResult {
 
 const LOCATION_STORAGE_KEY = "user_location";
 
-export function useUserLocation() {
-  const [location, setLocation] = useState<LocationState>(() => {
-    const stored = localStorage.getItem(LOCATION_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        return { ...parsed, loading: false, error: null, permissionDenied: false };
-      } catch {
-        // Ignore parse errors
-      }
+const getInitialLocation = (): LocationState => {
+  const stored = localStorage.getItem(LOCATION_STORAGE_KEY);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      return { ...parsed, loading: false, error: null, permissionDenied: false };
+    } catch {
+      // Ignore parse errors
     }
-    return {
-      latitude: null,
-      longitude: null,
-      address: "",
-      area: "",
-      city: "",
-      pincode: "",
-      loading: false,
-      error: null,
-      permissionDenied: false,
-    };
-  });
+  }
+  return {
+    latitude: null,
+    longitude: null,
+    address: "",
+    area: "",
+    city: "",
+    pincode: "",
+    loading: false,
+    error: null,
+    permissionDenied: false,
+  };
+};
 
+export function useUserLocation() {
+  const [location, setLocation] = useState<LocationState>(getInitialLocation);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
 
