@@ -10,116 +10,64 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.12 (cd3cf9e)"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
-      booking_cancellations: {
-        Row: {
-          booking_id: string
-          cancellation_fee: number
-          cancelled_at: string
-          created_at: string
-          customer_id: string
-          id: string
-          reason: string | null
-        }
-        Insert: {
-          booking_id: string
-          cancellation_fee?: number
-          cancelled_at?: string
-          created_at?: string
-          customer_id: string
-          id?: string
-          reason?: string | null
-        }
-        Update: {
-          booking_id?: string
-          cancellation_fee?: number
-          cancelled_at?: string
-          created_at?: string
-          customer_id?: string
-          id?: string
-          reason?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "booking_cancellations_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       bookings: {
         Row: {
-          actual_end_time: string | null
-          actual_start_time: string | null
           booking_date: string
-          booking_time: string
+          booking_time: string | null
           created_at: string
           customer_id: string | null
-          customer_notes: string | null
-          duration: number
-          estimated_service_time: number | null
+          duration: number | null
           id: string
-          is_walk_in: boolean | null
           notes: string | null
-          payment_status: Database["public"]["Enums"]["payment_status"] | null
-          queue_position: number | null
-          salon_id: string
-          salon_notes: string | null
-          service_id: string
-          status: Database["public"]["Enums"]["booking_status"]
-          total_price: number
+          reviewed: boolean | null
+          salon_id: string | null
+          service_id: string | null
+          status: string | null
+          total_price: number | null
           updated_at: string
         }
         Insert: {
-          actual_end_time?: string | null
-          actual_start_time?: string | null
           booking_date: string
-          booking_time: string
+          booking_time?: string | null
           created_at?: string
           customer_id?: string | null
-          customer_notes?: string | null
-          duration?: number
-          estimated_service_time?: number | null
+          duration?: number | null
           id?: string
-          is_walk_in?: boolean | null
           notes?: string | null
-          payment_status?: Database["public"]["Enums"]["payment_status"] | null
-          queue_position?: number | null
-          salon_id: string
-          salon_notes?: string | null
-          service_id: string
-          status?: Database["public"]["Enums"]["booking_status"]
-          total_price: number
+          reviewed?: boolean | null
+          salon_id?: string | null
+          service_id?: string | null
+          status?: string | null
+          total_price?: number | null
           updated_at?: string
         }
         Update: {
-          actual_end_time?: string | null
-          actual_start_time?: string | null
           booking_date?: string
-          booking_time?: string
+          booking_time?: string | null
           created_at?: string
           customer_id?: string | null
-          customer_notes?: string | null
-          duration?: number
-          estimated_service_time?: number | null
+          duration?: number | null
           id?: string
-          is_walk_in?: boolean | null
           notes?: string | null
-          payment_status?: Database["public"]["Enums"]["payment_status"] | null
-          queue_position?: number | null
-          salon_id?: string
-          salon_notes?: string | null
-          service_id?: string
-          status?: Database["public"]["Enums"]["booking_status"]
-          total_price?: number
+          reviewed?: boolean | null
+          salon_id?: string | null
+          service_id?: string | null
+          status?: string | null
+          total_price?: number | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_salon_id_fkey"
             columns: ["salon_id"]
@@ -131,7 +79,7 @@ export type Database = {
             foreignKeyName: "bookings_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
-            referencedRelation: "services"
+            referencedRelation: "salon_services"
             referencedColumns: ["id"]
           },
         ]
@@ -139,60 +87,45 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
-          avatar_url: string | null
           cancellation_count: number | null
-          created_at: string | null
-          favorite_services: Json | null
+          created_at: string
+          email: string | null
+          favorite_services: string[] | null
           first_name: string | null
-          gender: string | null
           id: string
           last_name: string | null
-          notification_preferences: Json | null
           phone: string | null
           preferred_time: string | null
-          total_cancellation_fees: number | null
-          total_spent: number | null
-          total_visits: number | null
-          updated_at: string | null
-          user_id: string
+          updated_at: string
+          user_id: string | null
         }
         Insert: {
           address?: string | null
-          avatar_url?: string | null
           cancellation_count?: number | null
-          created_at?: string | null
-          favorite_services?: Json | null
+          created_at?: string
+          email?: string | null
+          favorite_services?: string[] | null
           first_name?: string | null
-          gender?: string | null
           id?: string
           last_name?: string | null
-          notification_preferences?: Json | null
           phone?: string | null
           preferred_time?: string | null
-          total_cancellation_fees?: number | null
-          total_spent?: number | null
-          total_visits?: number | null
-          updated_at?: string | null
-          user_id: string
+          updated_at?: string
+          user_id?: string | null
         }
         Update: {
           address?: string | null
-          avatar_url?: string | null
           cancellation_count?: number | null
-          created_at?: string | null
-          favorite_services?: Json | null
+          created_at?: string
+          email?: string | null
+          favorite_services?: string[] | null
           first_name?: string | null
-          gender?: string | null
           id?: string
           last_name?: string | null
-          notification_preferences?: Json | null
           phone?: string | null
           preferred_time?: string | null
-          total_cancellation_fees?: number | null
-          total_spent?: number | null
-          total_visits?: number | null
-          updated_at?: string | null
-          user_id?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -200,106 +133,125 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          salon_id: string
-          user_id: string
+          salon_id: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
-          salon_id: string
-          user_id: string
+          salon_id?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
-          salon_id?: string
-          user_id?: string
+          salon_id?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "favorites_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
           created_at: string
           id: string
-          is_read: boolean
+          is_read: boolean | null
           message: string
           related_id: string | null
           title: string
-          type: Database["public"]["Enums"]["notification_type"]
-          updated_at: string
-          user_id: string
+          type: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
-          is_read?: boolean
+          is_read?: boolean | null
           message: string
           related_id?: string | null
           title: string
-          type?: Database["public"]["Enums"]["notification_type"]
-          updated_at?: string
-          user_id: string
+          type?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
-          is_read?: boolean
+          is_read?: boolean | null
           message?: string
           related_id?: string | null
           title?: string
-          type?: Database["public"]["Enums"]["notification_type"]
-          updated_at?: string
-          user_id?: string
+          type?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
       queue_entries: {
         Row: {
-          actual_wait_time: number | null
-          completed_at: string | null
-          customer_id: string
+          booking_id: string | null
+          called_time: string | null
+          check_in_time: string | null
+          created_at: string
+          customer_id: string | null
           estimated_wait_time: number | null
-          expires_at: string | null
           id: string
-          joined_at: string
-          notification_sent: Json | null
-          queue_number: number
-          salon_id: string
-          service_id: string
-          started_at: string | null
-          status: Database["public"]["Enums"]["queue_status"]
+          position: number
+          salon_id: string | null
+          service_end_time: string | null
+          service_start_time: string | null
+          status: string | null
+          updated_at: string
         }
         Insert: {
-          actual_wait_time?: number | null
-          completed_at?: string | null
-          customer_id: string
+          booking_id?: string | null
+          called_time?: string | null
+          check_in_time?: string | null
+          created_at?: string
+          customer_id?: string | null
           estimated_wait_time?: number | null
-          expires_at?: string | null
           id?: string
-          joined_at?: string
-          notification_sent?: Json | null
-          queue_number: number
-          salon_id: string
-          service_id: string
-          started_at?: string | null
-          status?: Database["public"]["Enums"]["queue_status"]
+          position: number
+          salon_id?: string | null
+          service_end_time?: string | null
+          service_start_time?: string | null
+          status?: string | null
+          updated_at?: string
         }
         Update: {
-          actual_wait_time?: number | null
-          completed_at?: string | null
-          customer_id?: string
+          booking_id?: string | null
+          called_time?: string | null
+          check_in_time?: string | null
+          created_at?: string
+          customer_id?: string | null
           estimated_wait_time?: number | null
-          expires_at?: string | null
           id?: string
-          joined_at?: string
-          notification_sent?: Json | null
-          queue_number?: number
-          salon_id?: string
-          service_id?: string
-          started_at?: string | null
-          status?: Database["public"]["Enums"]["queue_status"]
+          position?: number
+          salon_id?: string | null
+          service_end_time?: string | null
+          service_start_time?: string | null
+          status?: string | null
+          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "queue_entries_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_entries_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "queue_entries_salon_id_fkey"
             columns: ["salon_id"]
@@ -307,11 +259,56 @@ export type Database = {
             referencedRelation: "salons"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      reviews: {
+        Row: {
+          booking_id: string | null
+          comment: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          rating: number
+          salon_id: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          comment?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          rating: number
+          salon_id?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          comment?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          rating?: number
+          salon_id?: string | null
+        }
+        Relationships: [
           {
-            foreignKeyName: "queue_entries_service_id_fkey"
-            columns: ["service_id"]
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
             isOneToOne: false
-            referencedRelation: "services"
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
             referencedColumns: ["id"]
           },
         ]
@@ -322,27 +319,27 @@ export type Database = {
           created_at: string
           day_of_week: number
           id: string
-          is_closed: boolean
+          is_closed: boolean | null
           open_time: string
-          salon_id: string
+          salon_id: string | null
         }
         Insert: {
           close_time: string
           created_at?: string
           day_of_week: number
           id?: string
-          is_closed?: boolean
+          is_closed?: boolean | null
           open_time: string
-          salon_id: string
+          salon_id?: string | null
         }
         Update: {
           close_time?: string
           created_at?: string
           day_of_week?: number
           id?: string
-          is_closed?: boolean
+          is_closed?: boolean | null
           open_time?: string
-          salon_id?: string
+          salon_id?: string | null
         }
         Relationships: [
           {
@@ -354,69 +351,33 @@ export type Database = {
           },
         ]
       }
-      salon_owners: {
-        Row: {
-          created_at: string | null
-          first_name: string | null
-          id: string
-          last_name: string | null
-          phone: string | null
-          status: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          phone?: string | null
-          status?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          phone?: string | null
-          status?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       salon_services: {
         Row: {
           created_at: string
           duration: number
           id: string
-          image_url: string | null
-          is_active: boolean
+          is_active: boolean | null
           price: number
-          salon_id: string
-          service_id: string
+          salon_id: string | null
+          service_id: string | null
         }
         Insert: {
           created_at?: string
           duration?: number
           id?: string
-          image_url?: string | null
-          is_active?: boolean
+          is_active?: boolean | null
           price: number
-          salon_id: string
-          service_id: string
+          salon_id?: string | null
+          service_id?: string | null
         }
         Update: {
           created_at?: string
           duration?: number
           id?: string
-          image_url?: string | null
-          is_active?: boolean
+          is_active?: boolean | null
           price?: number
-          salon_id?: string
-          service_id?: string
+          salon_id?: string | null
+          service_id?: string | null
         }
         Relationships: [
           {
@@ -437,115 +398,97 @@ export type Database = {
       }
       salons: {
         Row: {
-          accepts_bookings: boolean | null
-          address: string
-          admin_approved: boolean | null
-          approved_at: string | null
-          approved_by: string | null
+          accepts_walkins: boolean | null
+          address: string | null
+          avg_service_time: number | null
+          city: string | null
           created_at: string
-          current_wait_time: number | null
           description: string | null
           email: string | null
           id: string
           image_url: string | null
           is_active: boolean | null
-          is_online: boolean | null
-          last_activity: string | null
+          latitude: number | null
+          longitude: number | null
           max_queue_size: number | null
           name: string
-          owner_id: string
-          phone: string
-          status: Database["public"]["Enums"]["salon_status"]
+          owner_id: string | null
+          phone: string | null
+          rating: number | null
+          total_reviews: number | null
           updated_at: string
         }
         Insert: {
-          accepts_bookings?: boolean | null
-          address: string
-          admin_approved?: boolean | null
-          approved_at?: string | null
-          approved_by?: string | null
+          accepts_walkins?: boolean | null
+          address?: string | null
+          avg_service_time?: number | null
+          city?: string | null
           created_at?: string
-          current_wait_time?: number | null
           description?: string | null
           email?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
-          is_online?: boolean | null
-          last_activity?: string | null
+          latitude?: number | null
+          longitude?: number | null
           max_queue_size?: number | null
           name: string
-          owner_id: string
-          phone: string
-          status?: Database["public"]["Enums"]["salon_status"]
+          owner_id?: string | null
+          phone?: string | null
+          rating?: number | null
+          total_reviews?: number | null
           updated_at?: string
         }
         Update: {
-          accepts_bookings?: boolean | null
-          address?: string
-          admin_approved?: boolean | null
-          approved_at?: string | null
-          approved_by?: string | null
+          accepts_walkins?: boolean | null
+          address?: string | null
+          avg_service_time?: number | null
+          city?: string | null
           created_at?: string
-          current_wait_time?: number | null
           description?: string | null
           email?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
-          is_online?: boolean | null
-          last_activity?: string | null
+          latitude?: number | null
+          longitude?: number | null
           max_queue_size?: number | null
           name?: string
-          owner_id?: string
-          phone?: string
-          status?: Database["public"]["Enums"]["salon_status"]
+          owner_id?: string | null
+          phone?: string | null
+          rating?: number | null
+          total_reviews?: number | null
           updated_at?: string
         }
         Relationships: []
       }
       services: {
         Row: {
+          category: string | null
           created_at: string
-          default_duration: number
+          default_duration: number | null
+          default_price: number | null
           description: string | null
           id: string
           name: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
-          default_duration?: number
+          default_duration?: number | null
+          default_price?: number | null
           description?: string | null
           id?: string
           name: string
         }
         Update: {
+          category?: string | null
           created_at?: string
-          default_duration?: number
+          default_duration?: number | null
+          default_price?: number | null
           description?: string | null
           id?: string
           name?: string
-        }
-        Relationships: []
-      }
-      user_roles: {
-        Row: {
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["user_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          user_id?: string
         }
         Relationships: []
       }
@@ -555,73 +498,24 @@ export type Database = {
     }
     Functions: {
       apply_cancellation_fee: {
-        Args: { p_booking_id: string; p_customer_id: string; p_reason?: string }
+        Args: { p_booking_id: string; p_customer_id: string; p_reason: string }
         Returns: undefined
       }
-      calculate_dynamic_wait_time: {
-        Args: { p_customer_id: string; p_salon_id: string }
-        Returns: number
-      }
-      calculate_queue_position: {
-        Args: { p_customer_id: string; p_salon_id: string }
+      calculate_wait_time: {
+        Args: { p_position: number; p_salon_id: string }
         Returns: number
       }
       check_active_booking: {
         Args: { p_customer_id: string }
         Returns: boolean
       }
-      expire_old_queue_entries: { Args: never; Returns: undefined }
-      get_current_user_role: {
-        Args: never
-        Returns: Database["public"]["Enums"]["user_role"]
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["user_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_admin: { Args: never; Returns: boolean }
-      is_salon_owner_of: { Args: { p_salon_id: string }; Returns: boolean }
       notify_next_customer: {
         Args: { p_message?: string; p_salon_id: string }
         Returns: undefined
       }
-      send_custom_notification: {
-        Args: { p_message: string; p_salon_id: string; p_title?: string }
-        Returns: undefined
-      }
-      send_proximity_notifications: { Args: never; Returns: undefined }
-      update_queue_estimated_times: { Args: never; Returns: undefined }
-      update_user_stats: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
-      booking_status:
-        | "pending"
-        | "confirmed"
-        | "completed"
-        | "cancelled"
-        | "rejected"
-        | "in_progress"
-      notification_type:
-        | "booking_confirmation"
-        | "booking_reminder"
-        | "queue_update"
-        | "payment_receipt"
-        | "queue_ready"
-        | "booking_cancelled"
-        | "general"
-      payment_status:
-        | "pending"
-        | "processing"
-        | "completed"
-        | "failed"
-        | "refunded"
-        | "cancelled"
-      queue_status: "waiting" | "in_progress" | "completed" | "in_service"
-      salon_status: "pending" | "approved" | "suspended"
-      user_role: "admin" | "salon_owner" | "customer"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -748,35 +642,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      booking_status: [
-        "pending",
-        "confirmed",
-        "completed",
-        "cancelled",
-        "rejected",
-        "in_progress",
-      ],
-      notification_type: [
-        "booking_confirmation",
-        "booking_reminder",
-        "queue_update",
-        "payment_receipt",
-        "queue_ready",
-        "booking_cancelled",
-        "general",
-      ],
-      payment_status: [
-        "pending",
-        "processing",
-        "completed",
-        "failed",
-        "refunded",
-        "cancelled",
-      ],
-      queue_status: ["waiting", "in_progress", "completed", "in_service"],
-      salon_status: ["pending", "approved", "suspended"],
-      user_role: ["admin", "salon_owner", "customer"],
-    },
+    Enums: {},
   },
 } as const

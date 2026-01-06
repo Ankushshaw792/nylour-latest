@@ -65,11 +65,30 @@ const BookingsPage = () => {
             .in("customer_id", [user.id])
             .eq("status", "waiting");
 
-          // Merge service and queue data
-          const enrichedCurrent = currentData.map(booking => ({
-            ...booking,
-            service_name: servicesData?.find(s => s.id === booking.service_id)?.name || "Service",
-            queue_entry: queueData?.find(q => q.salon_id === booking.salon_id)
+          // Calculate actual queue position for each entry
+          const enrichedCurrent = await Promise.all(currentData.map(async (booking) => {
+            const queueEntry = queueData?.find(q => q.salon_id === booking.salon_id);
+            let actualPosition = null;
+            let estimatedWait = null;
+
+            if (queueEntry) {
+              // Get count of entries ahead in the same salon
+              const { count } = await supabase
+                .from("queue_entries")
+                .select("*", { count: "exact", head: true })
+                .eq("salon_id", queueEntry.salon_id)
+                .eq("status", "waiting")
+                .lt("position", queueEntry.position);
+
+              actualPosition = (count || 0) + 1;
+              estimatedWait = queueEntry.estimated_wait_time || actualPosition * 15;
+            }
+
+            return {
+              ...booking,
+              service_name: servicesData?.find(s => s.id === booking.service_id)?.name || "Service",
+              queue_entry: queueEntry ? { ...queueEntry, actualPosition, estimatedWait } : null
+            };
           }));
           
           setCurrentBookings(enrichedCurrent);
@@ -300,8 +319,8 @@ const BookingsPage = () => {
                             <p className="text-xs text-muted-foreground">Estimated wait time</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xl font-bold text-primary">#{queueEntry.queue_number}</p>
-                            <p className="text-sm text-primary">{queueEntry.estimated_wait_time || 0} min</p>
+                            <p className="text-xl font-bold text-primary">#{queueEntry.actualPosition || 1}</p>
+                            <p className="text-sm text-primary">{queueEntry.estimatedWait || 0} min</p>
                           </div>
                         </div>
                       </div>
