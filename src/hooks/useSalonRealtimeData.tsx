@@ -219,12 +219,31 @@ export const useSalonRealtimeData = () => {
   // Accept booking
   const acceptBooking = useCallback(async (bookingId: string) => {
     try {
+      // Get booking details for notification
+      const { data: bookingData } = await supabase
+        .from('bookings')
+        .select('customer_id, salon_id, salons(name)')
+        .eq('id', bookingId)
+        .single();
+
       const { error } = await supabase
         .from('bookings')
         .update({ status: 'confirmed' })
         .eq('id', bookingId);
 
       if (error) throw error;
+
+      // Send notification to customer
+      if (bookingData?.customer_id) {
+        const salonName = (bookingData.salons as any)?.name || 'The salon';
+        await supabase.from('notifications').insert({
+          user_id: bookingData.customer_id,
+          title: 'Booking Confirmed! ✓',
+          message: `${salonName} has accepted your booking. Get ready for your appointment!`,
+          type: 'booking_confirmation',
+          related_id: bookingId
+        });
+      }
 
       toast({
         title: "Success",
@@ -243,12 +262,31 @@ export const useSalonRealtimeData = () => {
   // Reject booking
   const rejectBooking = useCallback(async (bookingId: string) => {
     try {
+      // Get booking details for notification
+      const { data: bookingData } = await supabase
+        .from('bookings')
+        .select('customer_id, salon_id, salons(name)')
+        .eq('id', bookingId)
+        .single();
+
       const { error } = await supabase
         .from('bookings')
         .update({ status: 'rejected' })
         .eq('id', bookingId);
 
       if (error) throw error;
+
+      // Send notification to customer
+      if (bookingData?.customer_id) {
+        const salonName = (bookingData.salons as any)?.name || 'The salon';
+        await supabase.from('notifications').insert({
+          user_id: bookingData.customer_id,
+          title: 'Booking Not Available',
+          message: `Sorry, ${salonName} couldn't accommodate your booking. Please try another time slot.`,
+          type: 'booking_cancelled',
+          related_id: bookingId
+        });
+      }
 
       toast({
         title: "Success",
@@ -267,6 +305,13 @@ export const useSalonRealtimeData = () => {
   // Start service
   const startService = useCallback(async (bookingId: string) => {
     try {
+      // Get booking details for notification
+      const { data: bookingData } = await supabase
+        .from('bookings')
+        .select('customer_id, salon_id, salons(name)')
+        .eq('id', bookingId)
+        .single();
+
       const { error } = await supabase
         .from('bookings')
         .update({ 
@@ -276,6 +321,26 @@ export const useSalonRealtimeData = () => {
         .eq('id', bookingId);
 
       if (error) throw error;
+
+      // Update queue entry status if exists
+      if (bookingData?.customer_id) {
+        await supabase
+          .from('queue_entries')
+          .update({ status: 'in_service' })
+          .eq('customer_id', bookingData.customer_id)
+          .eq('salon_id', bookingData.salon_id)
+          .eq('status', 'waiting');
+
+        // Send notification
+        const salonName = (bookingData.salons as any)?.name || 'The salon';
+        await supabase.from('notifications').insert({
+          user_id: bookingData.customer_id,
+          title: 'Service Started! 💇',
+          message: `Your service at ${salonName} has begun. Enjoy!`,
+          type: 'queue_update',
+          related_id: bookingId
+        });
+      }
 
       toast({
         title: "Success",
@@ -294,6 +359,13 @@ export const useSalonRealtimeData = () => {
   // Complete service
   const completeService = useCallback(async (bookingId: string) => {
     try {
+      // Get booking details for notification
+      const { data: bookingData } = await supabase
+        .from('bookings')
+        .select('customer_id, salon_id, salons(name)')
+        .eq('id', bookingId)
+        .single();
+
       const { error } = await supabase
         .from('bookings')
         .update({ 
@@ -303,6 +375,26 @@ export const useSalonRealtimeData = () => {
         .eq('id', bookingId);
 
       if (error) throw error;
+
+      // Update queue entry status if exists
+      if (bookingData?.customer_id) {
+        await supabase
+          .from('queue_entries')
+          .update({ status: 'completed' })
+          .eq('customer_id', bookingData.customer_id)
+          .eq('salon_id', bookingData.salon_id)
+          .in('status', ['waiting', 'in_service']);
+
+        // Send notification
+        const salonName = (bookingData.salons as any)?.name || 'The salon';
+        await supabase.from('notifications').insert({
+          user_id: bookingData.customer_id,
+          title: 'Service Complete! ⭐',
+          message: `Thanks for visiting ${salonName}! We hope to see you again soon.`,
+          type: 'general',
+          related_id: bookingId
+        });
+      }
 
       toast({
         title: "Success",
