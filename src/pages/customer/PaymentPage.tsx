@@ -24,6 +24,15 @@ const PaymentPage = () => {
     const fetchBookingDetails = async () => {
       if (!bookingId || !user) return;
 
+      // Get customer record for this user
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!customerData) return;
+
       const { data: bookingData } = await supabase
         .from('bookings')
         .select(`
@@ -31,7 +40,7 @@ const PaymentPage = () => {
           salons (name, address)
         `)
         .eq('id', bookingId)
-        .eq('customer_id', user.id)
+        .eq('customer_id', customerData.id)
         .maybeSingle();
 
       if (bookingData) {
@@ -49,38 +58,16 @@ const PaymentPage = () => {
     setIsProcessingPayment(true);
     
     try {
-      // Update booking status to confirmed and payment status to completed
+      // Update booking status to confirmed - the trigger will create the queue entry
       const { error: bookingError } = await supabase
         .from('bookings')
         .update({ 
           status: 'confirmed',
-          payment_status: 'completed',
-          salon_notes: `Payment: ${paymentMethod.toUpperCase()} - ₹10`
+          notes: `Payment: ${paymentMethod.toUpperCase()} - ₹10`
         })
         .eq('id', booking.id);
 
       if (bookingError) throw bookingError;
-
-      // Create queue entry - get next position first
-      const { count: currentCount } = await supabase
-        .from('queue_entries')
-        .select('*', { count: 'exact', head: true })
-        .eq('salon_id', booking.salon_id)
-        .eq('status', 'waiting');
-
-      const nextPosition = (currentCount || 0) + 1;
-
-      const { error: queueError } = await supabase
-        .from('queue_entries')
-        .insert({
-          salon_id: booking.salon_id,
-          customer_id: user.id,
-          booking_id: booking.id,
-          position: nextPosition,
-          status: 'waiting'
-        });
-
-      if (queueError) throw queueError;
 
       toast.success('Payment successful! Your booking is confirmed.');
       navigate(`/booking-confirmation/${booking.id}`);
