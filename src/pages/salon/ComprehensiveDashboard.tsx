@@ -93,21 +93,21 @@ const ComprehensiveDashboard = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <Badge variant="outline" className="text-xs">
-                          #{entry.position}
+                          #{entry.queue_number}
                         </Badge>
                         <h3 className="font-semibold">
                           {entry.customers?.first_name || 'Unknown'} {entry.customers?.last_name || 'Customer'}
                         </h3>
                         <Badge 
-                          variant={entry.status === 'in_service' ? 'default' : 'secondary'}
-                          className={entry.status === 'in_service' ? 'bg-success text-success-foreground' : ''}
+                          variant={entry.status === 'in_progress' ? 'default' : 'secondary'}
+                          className={entry.status === 'in_progress' ? 'bg-success text-success-foreground' : ''}
                         >
-                          {entry.status === 'in_service' ? 'In Progress' : 'Waiting'}
+                          {entry.status === 'in_progress' ? 'In Progress' : 'Waiting'}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">Service</p>
+                      <p className="text-sm text-muted-foreground">{entry.services?.name || 'Service'}</p>
                       <p className="text-xs text-muted-foreground">
-                        Phone: {entry.customers?.phone || 'N/A'} • Joined: {new Date(entry.check_in_time).toLocaleTimeString()}
+                        Phone: {entry.customers?.phone || 'N/A'} • Joined: {new Date(entry.joined_at).toLocaleTimeString()}
                       </p>
                     </div>
                     
@@ -130,7 +130,7 @@ const ComprehensiveDashboard = () => {
                       </Button>
                     )}
                     
-                    {entry.status === 'in_service' && (
+                    {entry.status === 'in_progress' && (
                       <Button 
                         variant="default" 
                         size="sm"

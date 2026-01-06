@@ -12,8 +12,9 @@ export interface Favorite {
     id: string;
     name: string;
     address: string;
-    image_url?: string | null;
-  } | null;
+    image_url?: string;
+    is_online: boolean;
+  };
 }
 
 export const useFavorites = () => {
@@ -38,7 +39,7 @@ export const useFavorites = () => {
         (favoritesData || []).map(async (favorite) => {
           const { data: salonData } = await supabase
             .from('salons')
-            .select('id, name, address, image_url')
+            .select('id, name, address, image_url, is_online')
             .eq('id', favorite.salon_id)
             .maybeSingle();
           
@@ -85,7 +86,7 @@ export const useFavorites = () => {
       // Fetch salon data
       const { data: salonData } = await supabase
         .from('salons')
-        .select('id, name, address, image_url')
+        .select('id, name, address, image_url, is_online')
         .eq('id', salonId)
         .maybeSingle();
 

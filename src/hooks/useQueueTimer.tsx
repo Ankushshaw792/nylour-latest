@@ -41,16 +41,28 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
         return;
       }
 
-      // Calculate wait time using database function
-      const { data: waitTimeData } = await supabase
-        .rpc('calculate_wait_time', {
+      // Calculate dynamic wait time using database function
+      const { data: waitTimeData, error: waitTimeError } = await supabase
+        .rpc('calculate_dynamic_wait_time', {
           p_salon_id: salonId,
-          p_position: queueEntry.position
+          p_customer_id: customerId
         });
 
-      const estimatedWaitMinutes = waitTimeData || queueEntry.estimated_wait_time || 0;
-      const queuePosition = queueEntry.position || 0;
-      const joinedAt = new Date(queueEntry.check_in_time);
+      // Calculate queue position using database function
+      const { data: positionData, error: positionError } = await supabase
+        .rpc('calculate_queue_position', {
+          p_salon_id: salonId,
+          p_customer_id: customerId
+        });
+
+      if (waitTimeError || positionError) {
+        console.error('Error fetching queue calculations:', waitTimeError || positionError);
+        return;
+      }
+
+      const estimatedWaitMinutes = waitTimeData || 0;
+      const queuePosition = positionData || 0;
+      const joinedAt = new Date(queueEntry.joined_at);
       const actualWaitTime = Math.floor((Date.now() - joinedAt.getTime()) / (1000 * 60));
       const timeRemaining = Math.max(0, estimatedWaitMinutes - actualWaitTime);
 

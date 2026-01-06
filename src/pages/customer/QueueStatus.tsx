@@ -24,13 +24,17 @@ const QueueStatus = () => {
       if (!user) return;
       
       try {
-        // Find user's active queue entry
+        // Call the expire function first to clean up old entries
+        await supabase.rpc('expire_old_queue_entries');
+
+        // Find user's active queue entry (not expired)
         const { data: queueDataArray, error: queueError } = await supabase
           .from("queue_entries")
           .select("*")
           .eq("customer_id", user.id)
           .eq("status", "waiting")
-          .order("check_in_time", { ascending: false })
+          .gt("expires_at", new Date().toISOString())
+          .order("joined_at", { ascending: false })
           .limit(1);
 
         const activeQueueData = queueDataArray && queueDataArray.length > 0 ? queueDataArray[0] : null;
@@ -73,31 +77,26 @@ const QueueStatus = () => {
         
         console.log("Booking data:", bookingData);
 
-        // Fetch the service name from booking if exists
-        let serviceName = "Service";
-        if (bookingData?.service_id) {
-          const { data: salonServiceData } = await supabase
-            .from("salon_services")
-            .select("services(name)")
-            .eq("id", bookingData.service_id)
-            .maybeSingle();
-          serviceName = (salonServiceData?.services as any)?.name || "Service";
-        }
+        // Fetch the service name
+        const { data: serviceData } = await supabase
+          .from("services")
+          .select("name")
+          .eq("id", activeQueueData.service_id)
+          .maybeSingle();
 
         // Combine the data with service name
         const combinedData = {
           ...activeQueueData,
           bookings: bookingData ? {
             ...bookingData,
-            service_name: serviceName
+            service_name: serviceData?.name || "Service"
           } : null
         };
 
         setQueueEntry(combinedData);
 
-        // Calculate time remaining (1 hour from check-in)
-        const checkInTime = new Date(activeQueueData.check_in_time).getTime();
-        const expiresAt = checkInTime + (60 * 60 * 1000); // 1 hour
+        // Calculate time remaining until expiration
+        const expiresAt = new Date(activeQueueData.expires_at).getTime();
         const now = Date.now();
         const remaining = Math.max(0, expiresAt - now);
         setTimeRemaining(remaining);
@@ -122,12 +121,18 @@ const QueueStatus = () => {
               .select("user_id, first_name, last_name")
               .in("user_id", customerIds);
 
-            // Combine queue members with customer data
+            // Fetch service names for queue members
+            const serviceIds = membersData.map(m => m.service_id).filter(Boolean);
+            const { data: servicesData } = await supabase
+              .from("services")
+              .select("id, name")
+              .in("id", serviceIds);
+
+            // Combine queue members with customer and service data
             const enrichedMembers = membersData.map(member => ({
               ...member,
-              queue_number: member.position,
               customer: customersData?.find(c => c.user_id === member.customer_id),
-              service_name: "Service"
+              service_name: servicesData?.find(s => s.id === member.service_id)?.name || "Service"
             }));
 
             setQueueMembers(enrichedMembers);

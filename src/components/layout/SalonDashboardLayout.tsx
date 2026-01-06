@@ -22,7 +22,7 @@ export const SalonDashboardLayout = ({ children, title, description }: SalonDash
 
   const handleToggleOnline = async () => {
     if (!salon) return;
-    await updateSalonStatus({ is_active: !salon.is_active });
+    await updateSalonStatus({ is_online: !salon.is_online });
   };
 
   const handleProfileClick = () => {
@@ -71,23 +71,23 @@ export const SalonDashboardLayout = ({ children, title, description }: SalonDash
               {/* Online/Offline Status */}
               <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-full px-4 py-2.5 border border-white/30 shadow-md">
                 <Badge 
-                  variant={salon?.is_active ? "default" : "secondary"}
+                  variant={salon?.is_online ? "default" : "secondary"}
                   className={`gap-1.5 px-3 py-1 ${
-                    salon?.is_active 
+                    salon?.is_online 
                       ? "bg-green-500/90 text-white border-0 shadow-sm" 
                       : "bg-gray-400/90 text-white border-0 shadow-sm"
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${
-                    salon?.is_active ? "bg-white animate-pulse" : "bg-white/70"
+                    salon?.is_online ? "bg-white animate-pulse" : "bg-white/70"
                   }`} />
                   <span className="text-xs font-semibold">
-                    {salon?.is_active ? "Active" : "Inactive"}
+                    {salon?.is_online ? "Online" : "Offline"}
                   </span>
                 </Badge>
                 
                 <Switch
-                  checked={salon?.is_active || false}
+                  checked={salon?.is_online || false}
                   onCheckedChange={handleToggleOnline}
                   disabled={loading}
                   className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-400/80"

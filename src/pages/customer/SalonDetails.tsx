@@ -62,28 +62,23 @@ const SalonDetails = () => {
             id,
             name,
             address,
-            image_url
-          `)
-          .eq('id', id)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        // Fetch salon services separately
-        const { data: salonServicesData } = await supabase
-          .from('salon_services')
-          .select(`
-            id,
-            price,
-            duration,
-            service_id,
-            services (
+            image_url,
+            salon_services (
               id,
-              name,
-              default_duration
+              price,
+              duration,
+              image_url,
+              services (
+                id,
+                name,
+                default_duration
+              )
             )
           `)
-          .eq('salon_id', id)
-          .eq('is_active', true);
+          .eq('id', id)
+          .eq('status', 'approved')
+          .eq('admin_approved', true)
+          .maybeSingle();
 
         if (salonError) {
           console.error('Error fetching salon:', salonError);
@@ -113,15 +108,15 @@ const SalonDetails = () => {
         const serviceImages = [haircutImage, beardTrimImage, hairWashImage];
         const serviceIcons = [Scissors, Sparkles, Sparkles];
         
-        const processedServices: SalonService[] = (salonServicesData || []).map((salonService: any, index: number) => ({
-          id: salonService.services?.id || salonService.service_id,
-          name: salonService.services?.name || 'Service',
+        const processedServices: SalonService[] = salonData.salon_services?.map((salonService, index) => ({
+          id: salonService.services.id, // Use actual service ID, not salon_service ID
+          name: salonService.services.name,
           price: salonService.price,
           duration: salonService.duration,
-          image_url: null,
-          image: serviceImages[index % serviceImages.length],
+          image_url: salonService.image_url, // Custom uploaded image
+          image: serviceImages[index % serviceImages.length], // Fallback default image
           icon: serviceIcons[index % serviceIcons.length]
-        }));
+        })) || [];
 
         const processedSalon: SalonDetails = {
           id: salonData.id,

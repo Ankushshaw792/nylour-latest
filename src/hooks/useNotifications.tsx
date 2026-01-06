@@ -8,10 +8,11 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: string;
-  related_id?: string | null;
+  type: 'booking_confirmation' | 'booking_update' | 'queue_update' | 'service_reminder' | 'general' | 'booking_reminder' | 'payment_receipt' | 'queue_ready' | 'booking_cancelled';
+  related_id?: string;
   is_read: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 export const useNotifications = () => {
