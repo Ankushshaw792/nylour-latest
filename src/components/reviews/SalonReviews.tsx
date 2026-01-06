@@ -27,7 +27,7 @@ export const SalonReviews = ({ salonId }: SalonReviewsProps) => {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from("reviews")
           .select("id, rating, comment, created_at, customer_id")
           .eq("salon_id", salonId)
@@ -36,23 +36,24 @@ export const SalonReviews = ({ salonId }: SalonReviewsProps) => {
 
         if (error) throw error;
 
-        if (data && data.length > 0) {
+        const reviewData = data as any[];
+        if (reviewData && reviewData.length > 0) {
           // Fetch customer names
-          const customerIds = data.map((r) => r.customer_id);
-          const { data: customers } = await supabase
+          const customerIds = reviewData.map((r: any) => r.customer_id);
+          const { data: customers } = await (supabase as any)
             .from("customers")
             .select("user_id, first_name, last_name")
             .in("user_id", customerIds);
 
-          const enrichedReviews = data.map((review) => ({
+          const enrichedReviews = reviewData.map((review: any) => ({
             ...review,
-            customer: customers?.find((c) => c.user_id === review.customer_id),
+            customer: customers?.find((c: any) => c.user_id === review.customer_id),
           }));
 
           setReviews(enrichedReviews);
 
           // Calculate average rating
-          const avg = data.reduce((sum, r) => sum + r.rating, 0) / data.length;
+          const avg = reviewData.reduce((sum: number, r: any) => sum + r.rating, 0) / reviewData.length;
           setAverageRating(Math.round(avg * 10) / 10);
         }
       } catch (error) {

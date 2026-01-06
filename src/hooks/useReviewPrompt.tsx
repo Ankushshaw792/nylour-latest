@@ -24,14 +24,14 @@ export const useReviewPrompt = () => {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        const { data: completedBookings, error: bookingsError } = await supabase
+        const { data: completedBookings, error: bookingsError } = await (supabase as any)
           .from("bookings")
           .select(`
             id,
             salon_id,
             service_id,
             actual_end_time,
-            salons!inner (name)
+            salons (name)
           `)
           .eq("customer_id", user.id)
           .eq("status", "completed")
@@ -43,22 +43,23 @@ export const useReviewPrompt = () => {
         if (bookingsError || !completedBookings?.length) return;
 
         // Check which bookings have already been reviewed
-        const bookingIds = completedBookings.map((b) => b.id);
-        const { data: existingReviews } = await supabase
+        const bookingIds = completedBookings.map((b: any) => b.id);
+        const { data: existingReviews } = await (supabase as any)
           .from("reviews")
           .select("booking_id")
           .in("booking_id", bookingIds);
 
-        const reviewedBookingIds = new Set(existingReviews?.map((r) => r.booking_id) || []);
+        const reviewData = existingReviews as any[] || [];
+        const reviewedBookingIds = new Set(reviewData.map((r: any) => r.booking_id));
 
         // Find first unreviewed booking
         const unreviewed = completedBookings.find(
-          (b) => !reviewedBookingIds.has(b.id)
+          (b: any) => !reviewedBookingIds.has(b.id)
         );
 
         if (unreviewed) {
           // Fetch service name
-          const { data: serviceData } = await supabase
+          const { data: serviceData } = await (supabase as any)
             .from("services")
             .select("name")
             .eq("id", unreviewed.service_id)
