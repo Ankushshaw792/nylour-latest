@@ -71,20 +71,10 @@ export const FavoritesList = () => {
 
                 {/* Salon Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                     <h3 className="font-medium text-foreground truncate">
                       {salon.name}
                     </h3>
-                    <div className="flex items-center gap-1">
-                      <div 
-                        className={`w-2 h-2 rounded-full ${
-                          salon.is_online ? 'bg-green-500' : 'bg-gray-400'
-                        }`} 
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {salon.is_online ? 'Open' : 'Closed'}
-                      </span>
-                    </div>
                   </div>
                   
                   <div className="flex items-center gap-1 mt-1">

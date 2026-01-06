@@ -116,7 +116,7 @@ const BookingsOverview = () => {
   // Filter bookings by new tab structure
   const todayBookings = bookings.filter(b => b.status === 'pending');
   const queueBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress');
-  const completedBookings = bookings.filter(b => b.status === 'completed' || b.status === 'rejected' || b.status === 'cancelled');
+  const completedBookings = bookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
 
   return (
     <SalonDashboardLayout
