@@ -67,8 +67,8 @@ const PaymentPage = () => {
         .insert({
           salon_id: booking.salon_id,
           customer_id: user.id,
-          service_id: booking.service_id,
-          queue_number: Math.floor(Math.random() * 1000) + 1,
+          booking_id: booking.id,
+          position: Math.floor(Math.random() * 1000) + 1,
           status: 'waiting'
         });
 
