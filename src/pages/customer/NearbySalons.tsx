@@ -86,19 +86,23 @@ const NearbySalons = () => {
 
         console.log('Fetched salons data:', salonsData);
 
-        // Get queue counts for each salon
+        // Get queue counts for each salon - only waiting entries that haven't expired
         const salonIds = salonsData?.map(salon => salon.id) || [];
         const { data: queueData } = await supabase
           .from('queue_entries')
-          .select('salon_id, status')
+          .select('salon_id, status, position')
           .in('salon_id', salonIds)
           .eq('status', 'waiting');
 
         // Process salon data with queue counts and service info
         const processedSalons: SalonData[] = salonsData?.map((salon: any) => {
           const queueCount = queueData?.filter(q => q.salon_id === salon.id).length || 0;
-          const avgWaitTime = Math.max(15, queueCount * 20);
-          const waitTimeRange = `${avgWaitTime}-${avgWaitTime + 10} mins`;
+          // Use average service duration from salon or default to 20 mins
+          const avgServiceDuration = salon.avg_service_time || 20;
+          const avgWaitTime = queueCount * avgServiceDuration;
+          const waitTimeRange = avgWaitTime === 0 
+            ? 'No wait' 
+            : `${avgWaitTime}-${avgWaitTime + 10} mins`;
           
           const primarySalonService = salon.salon_services?.[0];
           const primaryService = primarySalonService?.services?.name || "Haircut";

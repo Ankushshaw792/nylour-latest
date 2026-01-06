@@ -93,7 +93,24 @@ const QueueStatus = () => {
           } : null
         };
 
-        setQueueEntry(combinedData);
+        // Calculate actual queue position
+        const { count: positionCount } = await supabase
+          .from("queue_entries")
+          .select("*", { count: "exact", head: true })
+          .eq("salon_id", activeQueueData.salon_id)
+          .eq("status", "waiting")
+          .lt("position", activeQueueData.position);
+
+        const actualPosition = (positionCount || 0) + 1;
+
+        // Store actual position in combined data
+        const dataWithPosition = {
+          ...combinedData,
+          actualPosition,
+          dynamicWaitTime: activeQueueData.estimated_wait_time || actualPosition * 15
+        };
+
+        setQueueEntry(dataWithPosition);
 
         // Calculate time remaining until expiration
         const expiresAt = new Date(activeQueueData.expires_at).getTime();
@@ -107,8 +124,7 @@ const QueueStatus = () => {
           .select("*")
           .eq("salon_id", activeQueueData.salon_id)
           .eq("status", "waiting")
-          .gt("expires_at", new Date().toISOString())
-          .order("queue_number");
+          .order("position");
 
         if (membersError) {
           console.error("Error fetching queue members:", membersError);
@@ -279,9 +295,9 @@ const QueueStatus = () => {
     );
   }
 
-  // Calculate progress based on current position
+  // Calculate progress based on actual position
   const totalQueueMembers = queueMembers.length;
-  const currentPosition = queueEntry.queue_number;
+  const currentPosition = queueEntry.actualPosition || 1;
   const progress = totalQueueMembers > 0 ? Math.max(0, ((totalQueueMembers - currentPosition) / totalQueueMembers) * 100) : 0;
 
   // Extract booking and salon data with null checks
@@ -382,7 +398,7 @@ const QueueStatus = () => {
             {/* Estimated Time */}
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-1">Estimated wait time</p>
-              <p className="text-3xl font-bold text-primary">{queueEntry.estimated_wait_time || 0} min</p>
+              <p className="text-3xl font-bold text-primary">{queueEntry.dynamicWaitTime || 0} min</p>
             </div>
           </CardContent>
         </Card>

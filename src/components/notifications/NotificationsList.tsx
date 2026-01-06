@@ -37,7 +37,7 @@ export const NotificationsList = ({ onClose }: NotificationsListProps) => {
       </div>
 
       {/* Notifications List */}
-      <ScrollArea className="max-h-80">
+      <ScrollArea className="max-h-[400px]">
         {notifications.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <p>No notifications yet</p>
