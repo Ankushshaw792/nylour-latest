@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 interface LocationState {
   latitude: number | null;
@@ -12,11 +12,27 @@ interface LocationState {
   permissionDenied: boolean;
 }
 
+interface SearchResult {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
+  address: {
+    suburb?: string;
+    neighbourhood?: string;
+    village?: string;
+    town?: string;
+    city?: string;
+    state_district?: string;
+    county?: string;
+    postcode?: string;
+  };
+}
+
 const LOCATION_STORAGE_KEY = "user_location";
 
 export function useUserLocation() {
   const [location, setLocation] = useState<LocationState>(() => {
-    // Try to load from localStorage first
     const stored = localStorage.getItem(LOCATION_STORAGE_KEY);
     if (stored) {
       try {
@@ -38,6 +54,9 @@ export function useUserLocation() {
       permissionDenied: false,
     };
   });
+
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const reverseGeocode = async (lat: number, lng: number) => {
     try {
@@ -104,7 +123,6 @@ export function useUserLocation() {
 
       setLocation(newLocation);
 
-      // Save to localStorage
       localStorage.setItem(
         LOCATION_STORAGE_KEY,
         JSON.stringify({
@@ -126,6 +144,72 @@ export function useUserLocation() {
     }
   }, []);
 
+  const searchLocation = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5&countrycodes=in`,
+        {
+          headers: {
+            "User-Agent": "NylourApp/1.0",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Search failed");
+      }
+
+      const data: SearchResult[] = await response.json();
+      setSearchResults(data);
+    } catch (error) {
+      console.error("Location search error:", error);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  const setManualLocation = useCallback((result: SearchResult) => {
+    const addr = result.address || {};
+    const area = addr.suburb || addr.neighbourhood || addr.village || addr.town || "";
+    const city = addr.city || addr.state_district || addr.county || "";
+    const pincode = addr.postcode || "";
+    const fullAddress = `${city}${pincode ? `, ${pincode}` : ""}`;
+
+    const newLocation = {
+      latitude: parseFloat(result.lat),
+      longitude: parseFloat(result.lon),
+      area: area || result.display_name.split(",")[0],
+      city,
+      pincode,
+      address: fullAddress || result.display_name,
+      loading: false,
+      error: null,
+      permissionDenied: false,
+    };
+
+    setLocation(newLocation);
+    setSearchResults([]);
+
+    localStorage.setItem(
+      LOCATION_STORAGE_KEY,
+      JSON.stringify({
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude,
+        area: newLocation.area,
+        city: newLocation.city,
+        pincode: newLocation.pincode,
+        address: newLocation.address,
+      })
+    );
+  }, []);
+
   const clearLocation = useCallback(() => {
     localStorage.removeItem(LOCATION_STORAGE_KEY);
     setLocation({
@@ -139,12 +223,22 @@ export function useUserLocation() {
       error: null,
       permissionDenied: false,
     });
+    setSearchResults([]);
+  }, []);
+
+  const clearSearchResults = useCallback(() => {
+    setSearchResults([]);
   }, []);
 
   return {
     ...location,
     refreshLocation: getCurrentLocation,
     clearLocation,
+    searchLocation,
+    setManualLocation,
+    searchResults,
+    searching,
+    clearSearchResults,
     hasLocation: location.latitude !== null && location.longitude !== null,
   };
 }
