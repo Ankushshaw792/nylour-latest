@@ -29,7 +29,7 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
         .eq('salon_id', salonId)
         .eq('customer_id', customerId)
         .eq('status', 'waiting')
-        .single();
+        .maybeSingle();
 
       if (error || !queueEntry) {
         setTimerData({
@@ -38,32 +38,26 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
           actualWaitTime: 0,
           timeRemaining: 0
         });
+        setIsLoading(false);
         return;
       }
 
-      // Calculate dynamic wait time using database function
-      const { data: waitTimeData, error: waitTimeError } = await supabase
-        .rpc('calculate_dynamic_wait_time', {
-          p_salon_id: salonId,
-          p_customer_id: customerId
-        });
+      // Calculate position manually - count entries ahead
+      const { count: aheadCount } = await supabase
+        .from('queue_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('salon_id', salonId)
+        .eq('status', 'waiting')
+        .lt('position', queueEntry.position);
 
-      // Calculate queue position using database function
-      const { data: positionData, error: positionError } = await supabase
-        .rpc('calculate_queue_position', {
-          p_salon_id: salonId,
-          p_customer_id: customerId
-        });
-
-      if (waitTimeError || positionError) {
-        console.error('Error fetching queue calculations:', waitTimeError || positionError);
-        return;
-      }
-
-      const estimatedWaitMinutes = waitTimeData || 0;
-      const queuePosition = positionData || 0;
-      const joinedAt = new Date(queueEntry.joined_at);
-      const actualWaitTime = Math.floor((Date.now() - joinedAt.getTime()) / (1000 * 60));
+      const queuePosition = (aheadCount || 0) + 1;
+      
+      // Calculate wait time based on position (15 mins per person ahead)
+      const estimatedWaitMinutes = Math.max(0, (queuePosition - 1) * 15);
+      
+      // Calculate actual wait time from check_in_time
+      const checkInTime = new Date(queueEntry.check_in_time);
+      const actualWaitTime = Math.floor((Date.now() - checkInTime.getTime()) / (1000 * 60));
       const timeRemaining = Math.max(0, estimatedWaitMinutes - actualWaitTime);
 
       setTimerData({

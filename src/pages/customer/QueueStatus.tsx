@@ -24,17 +24,13 @@ const QueueStatus = () => {
       if (!user) return;
       
       try {
-        // Call the expire function first to clean up old entries
-        await supabase.rpc('expire_old_queue_entries');
-
-        // Find user's active queue entry (not expired)
+        // Find user's active queue entry
         const { data: queueDataArray, error: queueError } = await supabase
           .from("queue_entries")
           .select("*")
           .eq("customer_id", user.id)
           .eq("status", "waiting")
-          .gt("expires_at", new Date().toISOString())
-          .order("joined_at", { ascending: false })
+          .order("check_in_time", { ascending: false })
           .limit(1);
 
         const activeQueueData = queueDataArray && queueDataArray.length > 0 ? queueDataArray[0] : null;
@@ -72,24 +68,25 @@ const QueueStatus = () => {
 
         if (bookingError) {
           console.error("Error fetching booking:", bookingError);
-          // Continue without booking data
         }
         
-        console.log("Booking data:", bookingData);
-
-        // Fetch the service name
-        const { data: serviceData } = await supabase
-          .from("services")
-          .select("name")
-          .eq("id", activeQueueData.service_id)
-          .maybeSingle();
+        // Fetch the service name from booking
+        let serviceName = "Service";
+        if (bookingData?.service_id) {
+          const { data: serviceData } = await supabase
+            .from("services")
+            .select("name")
+            .eq("id", bookingData.service_id)
+            .maybeSingle();
+          serviceName = serviceData?.name || "Service";
+        }
 
         // Combine the data with service name
         const combinedData = {
           ...activeQueueData,
           bookings: bookingData ? {
             ...bookingData,
-            service_name: serviceData?.name || "Service"
+            service_name: serviceName
           } : null
         };
 
@@ -112,10 +109,10 @@ const QueueStatus = () => {
 
         setQueueEntry(dataWithPosition);
 
-        // Calculate time remaining until expiration
-        const expiresAt = new Date(activeQueueData.expires_at).getTime();
-        const now = Date.now();
-        const remaining = Math.max(0, expiresAt - now);
+        // Calculate time remaining (default 1 hour from check_in_time)
+        const checkInTime = new Date(activeQueueData.check_in_time).getTime();
+        const expiryTime = checkInTime + (60 * 60 * 1000); // 1 hour
+        const remaining = Math.max(0, expiryTime - Date.now());
         setTimeRemaining(remaining);
 
         // Fetch all queue members for this salon
@@ -137,19 +134,29 @@ const QueueStatus = () => {
               .select("user_id, first_name, last_name")
               .in("user_id", customerIds);
 
-            // Fetch service names for queue members
-            const serviceIds = membersData.map(m => m.service_id).filter(Boolean);
+            // Fetch service names from bookings
+            const bookingIds = membersData.map(m => m.booking_id).filter(Boolean);
+            const { data: bookingsData } = await supabase
+              .from("bookings")
+              .select("id, service_id")
+              .in("id", bookingIds);
+
+            const serviceIds = (bookingsData || []).map(b => b.service_id).filter(Boolean);
             const { data: servicesData } = await supabase
               .from("services")
               .select("id, name")
               .in("id", serviceIds);
 
             // Combine queue members with customer and service data
-            const enrichedMembers = membersData.map(member => ({
-              ...member,
-              customer: customersData?.find(c => c.user_id === member.customer_id),
-              service_name: servicesData?.find(s => s.id === member.service_id)?.name || "Service"
-            }));
+            const enrichedMembers = membersData.map(member => {
+              const booking = bookingsData?.find(b => b.id === member.booking_id);
+              const service = servicesData?.find(s => s.id === booking?.service_id);
+              return {
+                ...member,
+                customer: customersData?.find(c => c.user_id === member.customer_id),
+                service_name: service?.name || "Service"
+              };
+            });
 
             setQueueMembers(enrichedMembers);
           } else {
