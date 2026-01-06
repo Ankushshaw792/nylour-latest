@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus } from "lucide-react";
+import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus, UserX, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,9 +30,12 @@ import {
 
 const BookingsOverview = () => {
   const { user, loading: authLoading } = useRequireAuth();
-  const { bookings, loading, acceptBooking, rejectBooking, startService, completeService, sendReminder, addWalkInCustomer, salon } = useSalonRealtimeData();
+  const { bookings, loading, acceptBooking, rejectBooking, startService, completeService, markNoShow, sendReminder, sendCustomReminder, addWalkInCustomer, salon } = useSalonRealtimeData();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [selectedBookingForMessage, setSelectedBookingForMessage] = useState<{ customerId: string; bookingId: string } | null>(null);
+  const [customMessage, setCustomMessage] = useState("");
   const [walkInName, setWalkInName] = useState("");
   const [walkInPhone, setWalkInPhone] = useState("");
   const [walkInService, setWalkInService] = useState("");
@@ -97,10 +100,23 @@ const BookingsOverview = () => {
     setWalkInService("");
   };
 
+  const handleSendCustomMessage = async () => {
+    if (!selectedBookingForMessage || !customMessage.trim()) return;
+    await sendCustomReminder(selectedBookingForMessage.customerId, selectedBookingForMessage.bookingId, customMessage);
+    setIsMessageDialogOpen(false);
+    setCustomMessage("");
+    setSelectedBookingForMessage(null);
+  };
+
+  const openMessageDialog = (customerId: string, bookingId: string) => {
+    setSelectedBookingForMessage({ customerId, bookingId });
+    setIsMessageDialogOpen(true);
+  };
+
   // Filter bookings by new tab structure
   const todayBookings = bookings.filter(b => b.status === 'pending');
   const queueBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress');
-  const completedBookings = bookings.filter(b => b.status === 'completed' || b.status === 'rejected');
+  const completedBookings = bookings.filter(b => b.status === 'completed' || b.status === 'rejected' || b.status === 'cancelled');
 
   return (
     <SalonDashboardLayout
@@ -165,6 +181,41 @@ const BookingsOverview = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Custom Message Dialog */}
+        <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send Message to Customer</DialogTitle>
+              <DialogDescription>
+                Send a custom notification to the customer
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="message">Message</Label>
+                <Input
+                  id="message"
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  placeholder="Enter your message..."
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setCustomMessage("Your turn is coming up soon! Please be ready.")}>
+                  Quick: Turn Soon
+                </Button>
+                <Button variant="outline" onClick={() => setCustomMessage("We're running a bit behind. Thank you for your patience!")}>
+                  Quick: Running Late
+                </Button>
+              </div>
+              <Button onClick={handleSendCustomMessage} className="w-full" disabled={!customMessage.trim()}>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Send Message
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Tabs defaultValue="today" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="today">Today ({todayBookings.length})</TabsTrigger>
@@ -198,7 +249,9 @@ const BookingsOverview = () => {
                   booking={booking}
                   onStart={startService}
                   onComplete={completeService}
+                  onNoShow={markNoShow}
                   onSendReminder={sendReminder}
+                  onSendMessage={openMessageDialog}
                   showActions="queue"
                 />
               ))
@@ -234,11 +287,13 @@ interface BookingCardProps {
   onReject?: (id: string) => void;
   onStart?: (id: string) => void;
   onComplete?: (id: string) => void;
+  onNoShow?: (id: string) => void;
   onSendReminder?: (customerId: string, bookingId: string) => void;
+  onSendMessage?: (customerId: string, bookingId: string) => void;
   showActions: 'accept-reject' | 'queue' | 'none';
 }
 
-const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onSendReminder, showActions }: BookingCardProps) => {
+const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoShow, onSendReminder, onSendMessage, showActions }: BookingCardProps) => {
   // Extract customer name from different possible sources
   const customerName = booking.customers 
     ? `${booking.customers.first_name || ''} ${booking.customers.last_name || ''}`.trim()
@@ -326,12 +381,13 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onSendR
               )}
               
               {showActions === 'queue' && (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={handleCall}
                     disabled={phone === 'N/A'}
+                    title="Call customer"
                   >
                     <Phone className="h-4 w-4" />
                   </Button>
@@ -340,18 +396,38 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onSendR
                     variant="outline"
                     onClick={() => booking.customer_id && onSendReminder?.(booking.customer_id, booking.id)}
                     disabled={!booking.customer_id}
+                    title="Send quick reminder"
                   >
                     <Bell className="h-4 w-4" />
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => booking.customer_id && onSendMessage?.(booking.customer_id, booking.id)}
+                    disabled={!booking.customer_id}
+                    title="Send custom message"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
                   {booking.status === 'confirmed' && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => onStart?.(booking.id)}
-                    >
-                      <Clock className="h-4 w-4 mr-1" />
-                      Start
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => onNoShow?.(booking.id)}
+                        title="Mark as no-show"
+                      >
+                        <UserX className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => onStart?.(booking.id)}
+                      >
+                        <Clock className="h-4 w-4 mr-1" />
+                        Start
+                      </Button>
+                    </>
                   )}
                   {booking.status === 'in_progress' && (
                     <Button
