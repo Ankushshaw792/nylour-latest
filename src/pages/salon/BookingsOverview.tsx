@@ -30,7 +30,7 @@ import {
 
 const BookingsOverview = () => {
   const { user, loading: authLoading } = useRequireAuth();
-  const { bookings, loading, acceptBooking, rejectBooking, completeService, sendReminder, addWalkInCustomer, salon } = useSalonRealtimeData();
+  const { bookings, loading, acceptBooking, rejectBooking, startService, completeService, sendReminder, addWalkInCustomer, salon } = useSalonRealtimeData();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [walkInName, setWalkInName] = useState("");
@@ -196,6 +196,7 @@ const BookingsOverview = () => {
                 <BookingCard
                   key={booking.id}
                   booking={booking}
+                  onStart={startService}
                   onComplete={completeService}
                   onSendReminder={sendReminder}
                   showActions="queue"
@@ -231,12 +232,13 @@ interface BookingCardProps {
   booking: any;
   onAccept?: (id: string) => void;
   onReject?: (id: string) => void;
+  onStart?: (id: string) => void;
   onComplete?: (id: string) => void;
   onSendReminder?: (customerId: string, bookingId: string) => void;
   showActions: 'accept-reject' | 'queue' | 'none';
 }
 
-const BookingCard = ({ booking, onAccept, onReject, onComplete, onSendReminder, showActions }: BookingCardProps) => {
+const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onSendReminder, showActions }: BookingCardProps) => {
   // Extract customer name from different possible sources
   const customerName = booking.customers 
     ? `${booking.customers.first_name || ''} ${booking.customers.last_name || ''}`.trim()
@@ -341,13 +343,25 @@ const BookingCard = ({ booking, onAccept, onReject, onComplete, onSendReminder, 
                   >
                     <Bell className="h-4 w-4" />
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => onComplete?.(booking.id)}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Complete
-                  </Button>
+                  {booking.status === 'confirmed' && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => onStart?.(booking.id)}
+                    >
+                      <Clock className="h-4 w-4 mr-1" />
+                      Start
+                    </Button>
+                  )}
+                  {booking.status === 'in_progress' && (
+                    <Button
+                      size="sm"
+                      onClick={() => onComplete?.(booking.id)}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Complete
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
