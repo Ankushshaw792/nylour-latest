@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Clock, ChevronDown, Mic, Filter, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Search, MapPin, Clock, Mic, SlidersHorizontal, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { AuthSheet } from "@/components/auth/AuthSheet";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { SalonStatusBadge } from "@/components/salon/SalonStatusBadge";
+import { LocationSelector } from "@/components/location/LocationSelector";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserLocation } from "@/hooks/useUserLocation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { calculateDistance, formatDistance } from "@/lib/locationUtils";
 
 interface SalonData {
   id: string;
@@ -24,18 +27,24 @@ interface SalonData {
   primaryService: string;
   servicePrice: string;
   rating: number;
-  distance: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+interface SalonWithDistance extends SalonData {
+  distance: number | null;
+  distanceText: string;
 }
 
 const NearbySalons = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [authSheetOpen, setAuthSheetOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
   const [salons, setSalons] = useState<SalonData[]>([]);
   const [loadingSalons, setLoadingSalons] = useState(true);
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
+  const { latitude: userLat, longitude: userLng, hasLocation } = useUserLocation();
 
   const filterTabs = ["All", "Open Now", "Nearby", "Quick Service"];
 
@@ -86,12 +95,11 @@ const NearbySalons = () => {
           .eq('status', 'waiting');
 
         // Process salon data with queue counts and service info
-        const processedSalons: SalonData[] = salonsData?.map(salon => {
+        const processedSalons: SalonData[] = salonsData?.map((salon: any) => {
           const queueCount = queueData?.filter(q => q.salon_id === salon.id).length || 0;
-          const avgWaitTime = Math.max(15, queueCount * 20); // Estimate 20 min per person, min 15 min
+          const avgWaitTime = Math.max(15, queueCount * 20);
           const waitTimeRange = `${avgWaitTime}-${avgWaitTime + 10} mins`;
           
-          // Get primary service and price
           const primarySalonService = salon.salon_services?.[0];
           const primaryService = primarySalonService?.services?.name || "Haircut";
           const servicePrice = `₹${primarySalonService?.price || 200}`;
@@ -101,13 +109,14 @@ const NearbySalons = () => {
             name: salon.name,
             address: salon.address,
             image_url: salon.image_url,
-            phone: 'Contact salon for phone number', // Phone now protected
+            phone: 'Contact salon for phone number',
             queueCount,
             waitTime: waitTimeRange,
             primaryService,
             servicePrice,
-            rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10, // Mock rating for now
-            distance: `${(Math.random() * 2 + 0.5).toFixed(1)} km` // Mock distance for now
+            rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10,
+            latitude: salon.latitude || null,
+            longitude: salon.longitude || null,
           };
         }) || [];
 
@@ -131,8 +140,33 @@ const NearbySalons = () => {
     }
   };
 
+  // Calculate distances and sort salons
+  const salonsWithDistance: SalonWithDistance[] = useMemo(() => {
+    return salons.map(salon => {
+      let distance: number | null = null;
+      let distanceText = "Distance unknown";
+
+      if (hasLocation && userLat && userLng && salon.latitude && salon.longitude) {
+        distance = calculateDistance(userLat, userLng, salon.latitude, salon.longitude);
+        distanceText = formatDistance(distance);
+      } else if (!hasLocation) {
+        distanceText = "Enable location";
+      }
+
+      return { ...salon, distance, distanceText };
+    }).sort((a, b) => {
+      // Sort by distance if available
+      if (a.distance !== null && b.distance !== null) {
+        return a.distance - b.distance;
+      }
+      if (a.distance !== null) return -1;
+      if (b.distance !== null) return 1;
+      return 0;
+    });
+  }, [salons, userLat, userLng, hasLocation]);
+
   // Filter salons based on search and active filter
-  const filteredSalons = salons.filter(salon => {
+  const filteredSalons = salonsWithDistance.filter(salon => {
     const matchesSearch = salon.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          salon.primaryService.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -140,11 +174,11 @@ const NearbySalons = () => {
     
     switch (activeFilter) {
       case "Open Now":
-        return true; // All salons are considered open for now
+        return true;
       case "Nearby": 
-        return parseFloat(salon.distance) <= 1.0; // Within 1km
+        return salon.distance !== null && salon.distance <= 1.0;
       case "Quick Service":
-        return salon.queueCount <= 3; // 3 or fewer people in queue
+        return salon.queueCount <= 3;
       default:
         return true;
     }
@@ -163,21 +197,8 @@ const NearbySalons = () => {
       {/* Location Section */}
       <div className="bg-card border-b border-border p-4">
         <div className="flex items-center justify-between mb-4">
-          {/* Location Selector */}
           <div className="flex-1">
-            <div 
-              className="flex items-center cursor-pointer"
-              onClick={() => setIsLocationOpen(!isLocationOpen)}
-            >
-              <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-              <div className="flex-1">
-                <div className="flex items-center">
-                  <span className="font-semibold text-foreground">Kankarbagh</span>
-                  <ChevronDown className="h-4 w-4 ml-1 text-muted-foreground" />
-                </div>
-                <p className="text-xs text-muted-foreground">Patna, Bihar 800020</p>
-              </div>
-            </div>
+            <LocationSelector />
           </div>
         </div>
 
@@ -299,7 +320,7 @@ const NearbySalons = () => {
                           <Clock className="h-4 w-4 text-primary" />
                           <span className="text-primary font-medium">{salon.waitTime}</span>
                         </div>
-                        <span className="text-muted-foreground text-sm">{salon.distance} away</span>
+                        <span className="text-muted-foreground text-sm">{salon.distanceText}</span>
                       </div>
                     </div>
 
