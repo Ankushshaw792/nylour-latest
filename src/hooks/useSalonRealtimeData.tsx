@@ -410,6 +410,125 @@ export const useSalonRealtimeData = () => {
     }
   }, []);
 
+  // Mark booking as no-show
+  const markNoShow = useCallback(async (bookingId: string) => {
+    try {
+      // Get booking details for notification
+      const { data: bookingData } = await supabase
+        .from('bookings')
+        .select('customer_id, salon_id, salons(name)')
+        .eq('id', bookingId)
+        .maybeSingle();
+
+      const { error } = await supabase
+        .from('bookings')
+        .update({ 
+          status: 'cancelled',
+          salon_notes: 'Marked as no-show'
+        })
+        .eq('id', bookingId);
+
+      if (error) throw error;
+
+      // Update queue entry if exists
+      if (bookingData?.customer_id) {
+        await supabase
+          .from('queue_entries')
+          .update({ status: 'completed' })
+          .eq('customer_id', bookingData.customer_id)
+          .eq('salon_id', bookingData.salon_id)
+          .in('status', ['waiting', 'in_service']);
+
+        // Send notification
+        const salonName = (bookingData.salons as any)?.name || 'The salon';
+        await supabase.from('notifications').insert({
+          user_id: bookingData.customer_id,
+          title: 'Booking Marked as No-Show',
+          message: `You were marked as no-show at ${salonName}. Please contact the salon if this was a mistake.`,
+          type: 'booking_cancelled',
+          related_id: bookingId
+        });
+      }
+
+      toast({
+        title: "No Show",
+        description: "Customer marked as no-show",
+      });
+    } catch (error) {
+      console.error('Error marking no-show:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark as no-show",
+        variant: "destructive",
+      });
+    }
+  }, []);
+
+  // Calculate dynamic wait time for queue
+  const calculateWaitTime = useCallback(async (salonId: string, queuePosition: number): Promise<number> => {
+    try {
+      // Get average service duration from recent completed bookings
+      const { data: recentBookings } = await supabase
+        .from('bookings')
+        .select('actual_start_time, actual_end_time')
+        .eq('salon_id', salonId)
+        .eq('status', 'completed')
+        .not('actual_start_time', 'is', null)
+        .not('actual_end_time', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      let avgServiceTime = 30; // Default 30 minutes
+
+      if (recentBookings && recentBookings.length > 0) {
+        const durations = recentBookings.map(b => {
+          const start = new Date(b.actual_start_time!).getTime();
+          const end = new Date(b.actual_end_time!).getTime();
+          return (end - start) / (1000 * 60); // Convert to minutes
+        }).filter(d => d > 0 && d < 180); // Filter out invalid durations
+
+        if (durations.length > 0) {
+          avgServiceTime = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
+        }
+      }
+
+      // Calculate wait time: position * average service time
+      return Math.max(0, (queuePosition - 1) * avgServiceTime);
+    } catch (error) {
+      console.error('Error calculating wait time:', error);
+      return (queuePosition - 1) * 30; // Fallback
+    }
+  }, []);
+
+  // Send custom reminder message
+  const sendCustomReminder = useCallback(async (customerId: string, bookingId: string, message: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: customerId,
+          title: 'Message from Salon',
+          message: message,
+          type: 'queue_update',
+          related_id: bookingId
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Message sent to customer",
+      });
+    } catch (error) {
+      console.error('Error sending custom reminder:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive",
+      });
+    }
+  }, []);
+
   // Add walk-in customer
   const addWalkInCustomer = useCallback(async (customerData: {
     name: string;
@@ -575,9 +694,12 @@ export const useSalonRealtimeData = () => {
     rejectBooking,
     startService,
     completeService,
+    markNoShow,
     addWalkInCustomer,
     sendReminder,
+    sendCustomReminder,
     notifyNextCustomer,
+    calculateWaitTime,
     refetch: fetchSalonData
   };
 };
