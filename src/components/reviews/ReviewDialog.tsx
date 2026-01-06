@@ -44,18 +44,20 @@ export const ReviewDialog = ({
 
     try {
       // Insert review into reviews table
-      const { error } = await supabase.from("reviews").insert({
-        salon_id: salonId,
-        customer_id: customerId,
-        booking_id: bookingId,
-        rating,
-        comment: comment.trim() || null,
-      });
+      const { error } = await (supabase as any)
+        .from("reviews")
+        .insert({
+          salon_id: salonId,
+          customer_id: customerId,
+          booking_id: bookingId,
+          rating,
+          comment: comment.trim() || null,
+        });
 
       if (error) throw error;
 
       // Update booking to mark as reviewed
-      await supabase
+      await (supabase as any)
         .from("bookings")
         .update({ salon_notes: "Reviewed" })
         .eq("id", bookingId);
