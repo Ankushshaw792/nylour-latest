@@ -79,8 +79,7 @@ const BookingScreen = () => {
           duration: items.reduce((total, item) => total + (parseInt(item.duration) * item.quantity), 0),
           total_price: bookingFee,
           status: 'pending',
-          payment_status: 'pending',
-          customer_notes: `Contact: ${contactName} - ${contactPhone}`
+          notes: `Contact: ${contactName} - ${contactPhone}`
         })
         .select()
         .maybeSingle();

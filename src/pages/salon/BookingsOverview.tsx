@@ -297,14 +297,14 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
   // Extract customer name from different possible sources
   const customerName = booking.customers 
     ? `${booking.customers.first_name || ''} ${booking.customers.last_name || ''}`.trim()
-    : booking.customer_notes?.includes('Walk-in:')
-    ? booking.customer_notes.split('Walk-in:')[1]?.split(' - ')[0]?.trim() || 'Walk-in Customer'
+    : booking.notes?.includes('Walk-in:')
+    ? booking.notes.split('Walk-in:')[1]?.split(' - ')[0]?.trim() || 'Walk-in Customer'
     : 'Walk-in Customer';
   
   const serviceName = booking.salon_services?.services?.name || 'Service';
   const phone = booking.customers?.phone || 
-    (booking.customer_notes?.includes('Walk-in:') 
-      ? booking.customer_notes.split(' - ')[1]?.trim() 
+    (booking.notes?.includes('Walk-in:') 
+      ? booking.notes.split(' - ')[1]?.trim() 
       : 'N/A');
   const bookingDate = format(new Date(booking.booking_date), 'MMM dd, yyyy');
   const bookingTime = booking.booking_time.slice(0, 5);
