@@ -36,6 +36,15 @@ export interface SalonFormData {
     duration: number;
   }>;
   
+  // Custom Services
+  customServices: Array<{
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    duration: number;
+  }>;
+  
   // Business Settings
   maxQueueSize: number;
   currentWaitTime: number;
@@ -59,6 +68,7 @@ const initialFormData: SalonFormData = {
     { day_of_week: 0, open_time: "10:00", close_time: "16:00", is_closed: true },
   ],
   selectedServices: [],
+  customServices: [],
   maxQueueSize: 20,
   currentWaitTime: 30,
   acceptsBookings: true,
@@ -106,7 +116,7 @@ export const SalonRegistrationForm = () => {
       case 1: // Business Hours
         return formData.businessHours.some(hour => !hour.is_closed);
       case 2: // Services
-        return formData.selectedServices.length > 0;
+        return formData.selectedServices.length > 0 || formData.customServices.length > 0;
       case 3: // Business Settings
         return formData.maxQueueSize > 0 && formData.currentWaitTime > 0;
       default:
@@ -169,7 +179,7 @@ export const SalonRegistrationForm = () => {
 
       if (hoursError) throw hoursError;
 
-      // Create salon services
+      // Create salon services from selected services
       const servicesToInsert = formData.selectedServices.map(service => ({
         salon_id: salon.id,
         service_id: service.service_id,
@@ -178,11 +188,44 @@ export const SalonRegistrationForm = () => {
         is_active: true,
       }));
 
-      const { error: servicesError } = await supabase
-        .from('salon_services')
-        .insert(servicesToInsert);
+      if (servicesToInsert.length > 0) {
+        const { error: servicesError } = await supabase
+          .from('salon_services')
+          .insert(servicesToInsert);
 
-      if (servicesError) throw servicesError;
+        if (servicesError) throw servicesError;
+      }
+
+      // Create custom services first in services table, then link to salon_services
+      for (const customService of formData.customServices) {
+        // Insert into global services table
+        const { data: newService, error: serviceError } = await supabase
+          .from('services')
+          .insert({
+            name: customService.name,
+            description: customService.description,
+            default_duration: customService.duration,
+            default_price: customService.price,
+            category: 'Custom',
+          })
+          .select()
+          .single();
+
+        if (serviceError) throw serviceError;
+
+        // Link to salon_services
+        const { error: linkError } = await supabase
+          .from('salon_services')
+          .insert({
+            salon_id: salon.id,
+            service_id: newService.id,
+            price: customService.price,
+            duration: customService.duration,
+            is_active: true,
+          });
+
+        if (linkError) throw linkError;
+      }
 
       // Clear localStorage draft
       localStorage.removeItem('salon-registration-draft');
