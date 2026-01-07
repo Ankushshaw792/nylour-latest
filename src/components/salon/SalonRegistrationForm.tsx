@@ -170,10 +170,9 @@ export const SalonRegistrationForm = () => {
           address: formData.address,
           image_url: formData.imageUrl,
           max_queue_size: formData.maxQueueSize,
-          current_wait_time: formData.currentWaitTime,
-          accepts_bookings: formData.acceptsBookings,
-          status: 'approved',
-          admin_approved: true,
+          avg_service_time: formData.currentWaitTime,
+          accepts_walkins: formData.acceptsBookings,
+          is_active: true,
         })
         .select()
         .maybeSingle();
