@@ -128,7 +128,7 @@ const SalonDetails = () => {
         const serviceIcons = [Scissors, Sparkles, Sparkles];
         
         const processedServices: SalonService[] = salonData.salon_services?.map((salonService: any, index: number) => ({
-          id: salonService.services.id,
+          id: salonService.id, // Use salon_services.id for bookings foreign key
           name: salonService.services.name,
           price: salonService.price,
           duration: salonService.duration,
