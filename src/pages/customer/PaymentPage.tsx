@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CreditCard, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CreditCard, Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -10,6 +9,12 @@ import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { UPIPaymentSheet } from "@/components/payment/UPIPaymentSheet";
+import { CardPaymentSheet } from "@/components/payment/CardPaymentSheet";
+import { WalletPaymentSheet } from "@/components/payment/WalletPaymentSheet";
+import { PaymentProcessingOverlay } from "@/components/payment/PaymentProcessingOverlay";
+
+const BOOKING_FEE = 10;
 
 const PaymentPage = () => {
   const { bookingId } = useParams();
@@ -18,7 +23,16 @@ const PaymentPage = () => {
   const [booking, setBooking] = useState<any>(null);
   const [salon, setSalon] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState("upi");
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
+  // Payment sheet states
+  const [showUPISheet, setShowUPISheet] = useState(false);
+  const [showCardSheet, setShowCardSheet] = useState(false);
+  const [showWalletSheet, setShowWalletSheet] = useState(false);
+  
+  // Processing states
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showProcessingOverlay, setShowProcessingOverlay] = useState(false);
+  const [paymentDetails, setPaymentDetails] = useState<{ method: string; reference: string }>({ method: "", reference: "" });
 
   useEffect(() => {
     const fetchBookingDetails = async () => {
@@ -43,55 +57,67 @@ const PaymentPage = () => {
     fetchBookingDetails();
   }, [bookingId, user]);
 
-  const handlePayment = async () => {
+  const processPayment = useCallback(async () => {
     if (!booking || !user) return;
     
-    setIsProcessingPayment(true);
-    
     try {
-      // Update booking status to confirmed and payment status to completed
+      // Generate transaction reference
+      const transactionRef = `TXN${Date.now().toString().slice(-10)}`;
+      
+      // Update booking with payment details
       const { error: bookingError } = await supabase
         .from('bookings')
         .update({ 
           status: 'confirmed',
           payment_status: 'completed',
-          salon_notes: `Payment: ${paymentMethod.toUpperCase()} - ₹10`
+          payment_method: paymentDetails.method,
+          payment_reference: transactionRef,
+          notes: `Payment: ${paymentDetails.method.toUpperCase()} - ₹${BOOKING_FEE} | Ref: ${transactionRef}`
         })
         .eq('id', booking.id);
 
       if (bookingError) throw bookingError;
 
-      // Create queue entry - get next position first
-      const { data: existingQueue } = await supabase
-        .from('queue_entries')
-        .select('position')
-        .eq('salon_id', booking.salon_id)
-        .eq('status', 'waiting')
-        .order('position', { ascending: false })
-        .limit(1);
-
-      const nextPosition = (existingQueue?.[0]?.position || 0) + 1;
-
-      const { error: queueError } = await supabase
-        .from('queue_entries')
-        .insert({
-          salon_id: booking.salon_id,
-          customer_id: user.id,
-          booking_id: booking.id,
-          position: nextPosition,
-          status: 'waiting'
-        });
-
-      if (queueError) throw queueError;
-
-      toast.success('Payment successful! Your booking is confirmed.');
+      // Queue entry is created automatically by database trigger
+      // Navigate to confirmation page
       navigate(`/booking-confirmation/${booking.id}`);
     } catch (error) {
       console.error('Payment error:', error);
       toast.error('Payment failed. Please try again.');
-    } finally {
-      setIsProcessingPayment(false);
+      setShowProcessingOverlay(false);
     }
+  }, [booking, user, paymentDetails, navigate]);
+
+  const handlePaymentMethodClick = () => {
+    if (paymentMethod === "upi") {
+      setShowUPISheet(true);
+    } else if (paymentMethod === "card") {
+      setShowCardSheet(true);
+    } else if (paymentMethod === "wallet") {
+      setShowWalletSheet(true);
+    }
+  };
+
+  const handleUPIConfirm = (upiId: string) => {
+    setPaymentDetails({ method: "UPI", reference: upiId });
+    setShowUPISheet(false);
+    setIsProcessing(true);
+    setShowProcessingOverlay(true);
+  };
+
+  const handleCardConfirm = (cardDetails: { number: string; expiry: string; cvv: string; name: string }) => {
+    const maskedCard = `****${cardDetails.number.replace(/\s/g, "").slice(-4)}`;
+    setPaymentDetails({ method: "Card", reference: maskedCard });
+    setShowCardSheet(false);
+    setIsProcessing(true);
+    setShowProcessingOverlay(true);
+  };
+
+  const handleWalletConfirm = (walletName: string) => {
+    setPaymentDetails({ method: walletName.charAt(0).toUpperCase() + walletName.slice(1) + " Wallet", reference: walletName });
+    setShowWalletSheet(false);
+    setIsProcessing(true);
+    setShowProcessingOverlay(true);
   };
 
   if (loading || !booking) {
@@ -103,101 +129,143 @@ const PaymentPage = () => {
   }
 
   return (
-    <CustomerLayout
-      headerProps={{
-        title: "Payment",
-        showBackButton: true,
-        showProfile: false,
-        showNotifications: false
-      }}
-      bottomButtonProps={{
-        text: isProcessingPayment ? "Processing Payment..." : "Pay ₹10 Now",
-        onClick: handlePayment,
-        disabled: isProcessingPayment
-      }}
-    >
-      {/* Hero Section */}
-      <div className="bg-gradient-hero text-white p-4">        
-        <div className="text-center">
-          <h2 className="text-xl font-bold">{salon?.name}</h2>
-          <p className="text-white/90">Complete your payment</p>
+    <>
+      <CustomerLayout
+        headerProps={{
+          title: "Payment",
+          showBackButton: true,
+          showProfile: false,
+          showNotifications: false
+        }}
+        bottomButtonProps={{
+          text: `Pay ₹${BOOKING_FEE} Now`,
+          onClick: handlePaymentMethodClick,
+          disabled: isProcessing
+        }}
+      >
+        {/* Hero Section */}
+        <div className="bg-gradient-hero text-white p-4">        
+          <div className="text-center">
+            <h2 className="text-xl font-bold">{salon?.name}</h2>
+            <p className="text-white/90">Complete your payment</p>
+          </div>
         </div>
-      </div>
 
-      <div className="p-4 space-y-4">
-        {/* Payment Summary */}
-        <Card>
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-lg mb-4">Payment Summary</h3>
-            
-            <div className="space-y-3 mb-4">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Booking Fee</span>
-                <span className="font-medium">₹10</span>
-              </div>
-            </div>
-
-            <Separator className="my-4" />
-            
-            <div className="flex justify-between items-center text-lg font-bold">
-              <span>Total Amount</span>
-              <span>₹10</span>
-            </div>
-
-            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                <strong>Note:</strong> This is a booking fee to secure your slot. Service charges will be paid at the salon.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Payment Method */}
-        <Card>
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-lg mb-4">Payment Method</h3>
-            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50">
-                  <RadioGroupItem value="upi" id="upi" />
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                      <span className="text-xs font-bold text-purple-600">UPI</span>
-                    </div>
-                    <Label htmlFor="upi" className="font-medium cursor-pointer">UPI</Label>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50">
-                  <RadioGroupItem value="card" id="card" />
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                      <CreditCard className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <Label htmlFor="card" className="font-medium cursor-pointer">Credit / Debit Card</Label>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50">
-                  <RadioGroupItem value="wallet" id="wallet" />
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                      <span className="text-xs font-bold text-green-600">₹</span>
-                    </div>
-                    <Label htmlFor="wallet" className="font-medium cursor-pointer">Digital Wallet</Label>
-                  </div>
+        <div className="p-4 space-y-4">
+          {/* Payment Summary */}
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="font-semibold text-lg mb-4">Payment Summary</h3>
+              
+              <div className="space-y-3 mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Booking Fee</span>
+                  <span className="font-medium">₹{BOOKING_FEE}</span>
                 </div>
               </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
 
-        {/* Pay Button - Now handled by CustomerLayout */}
-        <div className="pt-2 pb-6">
-          {/* Fixed button is now handled by CustomerLayout */}
+              <Separator className="my-4" />
+              
+              <div className="flex justify-between items-center text-lg font-bold">
+                <span>Total Amount</span>
+                <span>₹{BOOKING_FEE}</span>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <strong>Note:</strong> This is a booking fee to secure your slot. Service charges will be paid at the salon.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment Method */}
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="font-semibold text-lg mb-4">Select Payment Method</h3>
+              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                <div className="space-y-3">
+                  <div className={`flex items-center space-x-3 p-3 border rounded-lg transition-colors cursor-pointer ${paymentMethod === 'upi' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
+                    <RadioGroupItem value="upi" id="upi" />
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                        <span className="text-sm font-bold text-purple-600">UPI</span>
+                      </div>
+                      <div>
+                        <Label htmlFor="upi" className="font-medium cursor-pointer">UPI</Label>
+                        <p className="text-xs text-muted-foreground">Pay using any UPI app</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`flex items-center space-x-3 p-3 border rounded-lg transition-colors cursor-pointer ${paymentMethod === 'card' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
+                    <RadioGroupItem value="card" id="card" />
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                        <CreditCard className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <Label htmlFor="card" className="font-medium cursor-pointer">Credit / Debit Card</Label>
+                        <p className="text-xs text-muted-foreground">Visa, Mastercard, RuPay</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`flex items-center space-x-3 p-3 border rounded-lg transition-colors cursor-pointer ${paymentMethod === 'wallet' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
+                    <RadioGroupItem value="wallet" id="wallet" />
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                        <Wallet className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <Label htmlFor="wallet" className="font-medium cursor-pointer">Digital Wallet</Label>
+                        <p className="text-xs text-muted-foreground">Paytm, PhonePe, Amazon Pay</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
+
+          {/* Spacer for bottom button */}
+          <div className="h-20" />
         </div>
-      </div>
-    </CustomerLayout>
+      </CustomerLayout>
+
+      {/* Payment Sheets */}
+      <UPIPaymentSheet
+        open={showUPISheet}
+        onOpenChange={setShowUPISheet}
+        amount={BOOKING_FEE}
+        onConfirm={handleUPIConfirm}
+        isProcessing={isProcessing}
+      />
+      
+      <CardPaymentSheet
+        open={showCardSheet}
+        onOpenChange={setShowCardSheet}
+        amount={BOOKING_FEE}
+        onConfirm={handleCardConfirm}
+        isProcessing={isProcessing}
+      />
+      
+      <WalletPaymentSheet
+        open={showWalletSheet}
+        onOpenChange={setShowWalletSheet}
+        amount={BOOKING_FEE}
+        onConfirm={handleWalletConfirm}
+        isProcessing={isProcessing}
+      />
+
+      {/* Processing Overlay */}
+      <PaymentProcessingOverlay
+        isVisible={showProcessingOverlay}
+        onComplete={processPayment}
+        paymentMethod={paymentDetails.method}
+        amount={BOOKING_FEE}
+      />
+    </>
   );
 };
 
