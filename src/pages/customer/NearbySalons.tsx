@@ -63,6 +63,9 @@ const NearbySalons = () => {
             address,
             image_url,
             phone,
+            avg_service_time,
+            latitude,
+            longitude,
             salon_services(
               price,
               duration,
@@ -86,13 +89,19 @@ const NearbySalons = () => {
 
         console.log('Fetched salons data:', salonsData);
 
-        // Get queue counts for each salon - only waiting entries that haven't expired
+        // Get today's date for filtering queue entries
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayISO = today.toISOString();
+
+        // Get queue counts for each salon - only TODAY's waiting entries
         const salonIds = salonsData?.map(salon => salon.id) || [];
         const { data: queueData } = await supabase
           .from('queue_entries')
-          .select('salon_id, status, position')
+          .select('salon_id, status, position, check_in_time')
           .in('salon_id', salonIds)
-          .eq('status', 'waiting');
+          .eq('status', 'waiting')
+          .gte('check_in_time', todayISO);
 
         // Process salon data with queue counts and service info
         const processedSalons: SalonData[] = salonsData?.map((salon: any) => {
