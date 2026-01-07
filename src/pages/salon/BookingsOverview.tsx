@@ -368,7 +368,13 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
                 variant={
                   booking.status === 'confirmed' ? 'default' : 
                   booking.status === 'pending' ? 'secondary' : 
+                  booking.status === 'completed' ? 'default' :
                   'destructive'
+                }
+                className={
+                  booking.status === 'completed' ? 'bg-green-500 hover:bg-green-600 text-white' :
+                  booking.status === 'cancelled' || booking.status === 'rejected' ? 'bg-red-500 hover:bg-red-600 text-white' :
+                  ''
                 }
               >
                 {booking.status}
