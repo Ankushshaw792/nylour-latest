@@ -22,6 +22,11 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
     if (!salonId || !customerId) return;
 
     try {
+      // Get today's date for filtering
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStart = today.toISOString();
+
       // Get queue entry
       const { data: queueEntry, error } = await supabase
         .from('queue_entries')
@@ -29,7 +34,8 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
         .eq('salon_id', salonId)
         .eq('customer_id', customerId)
         .eq('status', 'waiting')
-        .single();
+        .gte('check_in_time', todayStart)
+        .maybeSingle();
 
       if (error || !queueEntry) {
         setTimerData({
@@ -38,33 +44,38 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
           actualWaitTime: 0,
           timeRemaining: 0
         });
+        setIsLoading(false);
         return;
       }
 
-      // Calculate dynamic wait time using database function
-      const { data: waitTimeData, error: waitTimeError } = await supabase
-        .rpc('calculate_dynamic_wait_time', {
-          p_salon_id: salonId,
-          p_customer_id: customerId
-        });
+      // Get salon's avg_service_time
+      const { data: salonData } = await supabase
+        .from('salons')
+        .select('avg_service_time')
+        .eq('id', salonId)
+        .single();
 
-      // Calculate queue position using database function
+      const avgServiceTime = salonData?.avg_service_time || 30;
+
+      // Calculate queue position: count waiting entries with position less than current
       const { data: positionData, error: positionError } = await supabase
-        .rpc('calculate_queue_position', {
-          p_salon_id: salonId,
-          p_customer_id: customerId
-        });
+        .from('queue_entries')
+        .select('id')
+        .eq('salon_id', salonId)
+        .eq('status', 'waiting')
+        .gte('check_in_time', todayStart)
+        .lt('position', queueEntry.position);
 
-      if (waitTimeError || positionError) {
-        console.error('Error fetching queue calculations:', waitTimeError || positionError);
-        return;
-      }
+      const queuePosition = queueEntry.position;
+      const peopleAhead = positionData?.length || 0;
 
-      const estimatedWaitMinutes = waitTimeData || 0;
-      const queuePosition = positionData || 0;
-      const joinedAt = new Date(queueEntry.joined_at);
-      const actualWaitTime = Math.floor((Date.now() - joinedAt.getTime()) / (1000 * 60));
-      const timeRemaining = Math.max(0, estimatedWaitMinutes - actualWaitTime);
+      // Calculate estimated wait time: people ahead * avg service time
+      const estimatedWaitMinutes = peopleAhead * avgServiceTime;
+
+      // Calculate actual wait time since check-in
+      const checkInTime = new Date(queueEntry.check_in_time);
+      const actualWaitTime = Math.floor((Date.now() - checkInTime.getTime()) / (1000 * 60));
+      const timeRemaining = Math.max(0, estimatedWaitMinutes);
 
       setTimerData({
         estimatedWaitMinutes,

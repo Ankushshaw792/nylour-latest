@@ -91,9 +91,9 @@ const ComprehensiveDashboard = () => {
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1">
                         <Badge variant="outline" className="text-xs">
-                          #{entry.queue_number}
+                          #{entry.position}
                         </Badge>
                         <h3 className="font-semibold">
                           {entry.customers?.first_name || 'Unknown'} {entry.customers?.last_name || 'Customer'}
@@ -107,7 +107,7 @@ const ComprehensiveDashboard = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">{entry.services?.name || 'Service'}</p>
                       <p className="text-xs text-muted-foreground">
-                        Phone: {entry.customers?.phone || 'N/A'} • Joined: {new Date(entry.joined_at).toLocaleTimeString()}
+                        Phone: {entry.customers?.phone || 'N/A'} • Joined: {new Date(entry.check_in_time).toLocaleTimeString()}
                       </p>
                     </div>
                     

@@ -19,7 +19,6 @@ interface Service {
   price: number;
   duration: number;
   is_active: boolean;
-  image_url: string | null;
   services: {
     name: string;
     description: string | null;
@@ -45,7 +44,6 @@ const ServicesManagement = () => {
   const [formData, setFormData] = useState({
     price: 0,
     duration: 30,
-    image_url: null as string | null,
   });
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
 
@@ -141,7 +139,6 @@ const ServicesManagement = () => {
     setFormData({
       price: service.price,
       duration: service.duration,
-      image_url: service.image_url,
     });
     setIsEditDialogOpen(true);
   };
@@ -154,7 +151,6 @@ const ServicesManagement = () => {
       .update({
         price: formData.price,
         duration: formData.duration,
-        image_url: formData.image_url,
       })
       .eq('id', editingService.id);
 
@@ -168,24 +164,7 @@ const ServicesManagement = () => {
     }
   };
 
-  const handleDeleteImage = async () => {
-    if (!editingService?.image_url) return;
-
-    try {
-      const imagePath = editingService.image_url.split('/service-images/')[1];
-      if (imagePath) {
-        await supabase.storage
-          .from('service-images')
-          .remove([imagePath]);
-      }
-
-      setFormData({ ...formData, image_url: null });
-      toast.success('Image removed');
-    } catch (error) {
-      console.error('Error deleting image:', error);
-      toast.error('Failed to delete image');
-    }
-  };
+  // handleDeleteImage removed - image_url doesn't exist on salon_services
 
   const handleAddNewService = async () => {
     if (!selectedServiceId || !salon?.id) {
@@ -205,7 +184,6 @@ const ServicesManagement = () => {
         service_id: selectedServiceId,
         price: formData.price,
         duration: formData.duration,
-        image_url: formData.image_url,
       });
 
     if (error) {
@@ -215,13 +193,13 @@ const ServicesManagement = () => {
       toast.success('Service added successfully');
       setIsAddDialogOpen(false);
       setSelectedServiceId("");
-      setFormData({ price: 0, duration: 30, image_url: null });
+      setFormData({ price: 0, duration: 30 });
       fetchServices();
     }
   };
 
   const handleOpenAddDialog = () => {
-    setFormData({ price: 0, duration: 30, image_url: null });
+    setFormData({ price: 0, duration: 30 });
     setSelectedServiceId("");
     setIsAddDialogOpen(true);
   };
@@ -233,7 +211,6 @@ const ServicesManagement = () => {
       setFormData({
         price: 0,
         duration: selectedService.default_duration,
-        image_url: null,
       });
     }
   };
@@ -279,17 +256,9 @@ const ServicesManagement = () => {
               {services.map((service) => (
                 <Card key={service.id} className="overflow-hidden">
                   <div className="relative h-48 bg-muted">
-                    {service.image_url ? (
-                      <img
-                        src={service.image_url}
-                        alt={service.services.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Scissors className="h-16 w-16 text-muted-foreground" />
-                      </div>
-                    )}
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Scissors className="h-16 w-16 text-muted-foreground" />
+                    </div>
                   </div>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">

@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
 
-type BookingStatus = Database['public']['Enums']['booking_status'];
-type QueueStatus = Database['public']['Enums']['queue_status'];
+// Use simple string types instead of non-existent enums
+type BookingStatus = string;
+type QueueStatus = string;
 
 interface Booking {
   id: string;
@@ -16,13 +16,11 @@ interface Booking {
   status: BookingStatus;
   total_price: number;
   queue_position?: number | null;
-  customer_notes?: string | null;
-  is_walk_in: boolean | null;
+  notes?: string | null;
   customers?: {
     first_name: string | null;
     last_name: string | null;
     phone: string | null;
-    avatar_url: string | null;
   } | null;
   salon_services?: {
     price: number;
@@ -37,11 +35,11 @@ interface Booking {
 interface QueueEntry {
   id: string;
   customer_id: string;
-  service_id: string;
-  queue_number: number;
+  booking_id: string | null;
+  position: number;
   estimated_wait_time?: number | null;
   status: QueueStatus;
-  joined_at: string;
+  check_in_time: string;
   customers?: {
     first_name: string | null;
     last_name: string | null;
@@ -56,9 +54,9 @@ interface QueueEntry {
 interface SalonStatus {
   id: string;
   name: string;
-  is_online: boolean;
-  accepts_bookings: boolean;
-  current_wait_time: number;
+  is_active: boolean;
+  accepts_walkins: boolean;
+  avg_service_time: number;
   max_queue_size: number;
 }
 
@@ -76,7 +74,7 @@ export const useSalonRealtimeData = () => {
     try {
       const { data: salonData, error: salonError } = await supabase
         .from('salons')
-        .select('id, name, is_online, accepts_bookings, current_wait_time, max_queue_size')
+        .select('id, name, is_active, accepts_walkins, avg_service_time, max_queue_size')
         .eq('owner_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -148,30 +146,40 @@ export const useSalonRealtimeData = () => {
       }
 
       // Fetch queue entries - simplified
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      
       const { data: queueData, error: queueError } = await supabase
         .from('queue_entries')
         .select(`
           id,
           customer_id,
-          service_id,
-          queue_number,
+          booking_id,
+          position,
           estimated_wait_time,
           status,
-          joined_at
+          check_in_time
         `)
         .eq('salon_id', salonData.id)
         .neq('status', 'completed')
-        .order('joined_at', { ascending: true });
+        .gte('check_in_time', todayStart.toISOString())
+        .order('check_in_time', { ascending: true });
 
       if (queueError) {
         console.error('Queue fetch error:', queueError);
         setQueue([]);
       } else {
         // Map the raw data to include proper types
-        const mappedQueue: QueueEntry[] = (queueData || []).map(entry => ({
-          ...entry,
-          customers: null, // Will fetch separately if needed
-          services: null  // Will fetch separately if needed
+        const mappedQueue: QueueEntry[] = (queueData || []).map((entry: any) => ({
+          id: entry.id,
+          customer_id: entry.customer_id,
+          booking_id: entry.booking_id,
+          position: entry.position,
+          estimated_wait_time: entry.estimated_wait_time,
+          status: entry.status,
+          check_in_time: entry.check_in_time,
+          customers: null,
+          services: null
         }));
         setQueue(mappedQueue);
       }
@@ -315,8 +323,7 @@ export const useSalonRealtimeData = () => {
       const { error } = await supabase
         .from('bookings')
         .update({ 
-          status: 'in_progress',
-          actual_start_time: new Date().toISOString()
+          status: 'in_progress'
         })
         .eq('id', bookingId);
 
@@ -369,8 +376,7 @@ export const useSalonRealtimeData = () => {
       const { error } = await supabase
         .from('bookings')
         .update({ 
-          status: 'completed',
-          actual_end_time: new Date().toISOString()
+          status: 'completed'
         })
         .eq('id', bookingId);
 
@@ -424,7 +430,7 @@ export const useSalonRealtimeData = () => {
         .from('bookings')
         .update({ 
           status: 'cancelled',
-          salon_notes: 'Marked as no-show'
+          notes: 'Marked as no-show'
         })
         .eq('id', bookingId);
 
@@ -467,36 +473,18 @@ export const useSalonRealtimeData = () => {
   // Calculate dynamic wait time for queue
   const calculateWaitTime = useCallback(async (salonId: string, queuePosition: number): Promise<number> => {
     try {
-      // Get average service duration from recent completed bookings
-      const { data: recentBookings } = await supabase
-        .from('bookings')
-        .select('actual_start_time, actual_end_time')
-        .eq('salon_id', salonId)
-        .eq('status', 'completed')
-        .not('actual_start_time', 'is', null)
-        .not('actual_end_time', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(10);
+      // Get salon's avg_service_time
+      const { data: salonData } = await supabase
+        .from('salons')
+        .select('avg_service_time')
+        .eq('id', salonId)
+        .single();
 
-      let avgServiceTime = 30; // Default 30 minutes
-
-      if (recentBookings && recentBookings.length > 0) {
-        const durations = recentBookings.map(b => {
-          const start = new Date(b.actual_start_time!).getTime();
-          const end = new Date(b.actual_end_time!).getTime();
-          return (end - start) / (1000 * 60); // Convert to minutes
-        }).filter(d => d > 0 && d < 180); // Filter out invalid durations
-
-        if (durations.length > 0) {
-          avgServiceTime = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
-        }
-      }
-
-      // Calculate wait time: position * average service time
+      const avgServiceTime = salonData?.avg_service_time || 30;
       return Math.max(0, (queuePosition - 1) * avgServiceTime);
     } catch (error) {
       console.error('Error calculating wait time:', error);
-      return (queuePosition - 1) * 30; // Fallback
+      return (queuePosition - 1) * 30;
     }
   }, []);
 
