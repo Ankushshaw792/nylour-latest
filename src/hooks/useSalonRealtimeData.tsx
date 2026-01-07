@@ -84,11 +84,23 @@ export const useSalonRealtimeData = () => {
       if (!salonData) throw new Error('No salon found for this owner');
       setSalon(salonData);
 
-      // Fetch bookings for today - simple fetch without joins
+      // Fetch bookings for today with joins (prevents N+1 queries and ensures correct customer details)
       const today = new Date().toISOString().split('T')[0];
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
-        .select('*')
+        .select(`
+          id,
+          customer_id,
+          salon_id,
+          service_id,
+          booking_date,
+          booking_time,
+          status,
+          total_price,
+          notes,
+          customers(first_name, last_name, phone),
+          salon_services(price, duration, services(name, default_duration))
+        `)
         .eq('salon_id', salonData.id)
         .eq('booking_date', today)
         .order('created_at', { ascending: true });
@@ -96,71 +108,8 @@ export const useSalonRealtimeData = () => {
       if (bookingsError) {
         console.error('Bookings fetch error:', bookingsError);
         setBookings([]);
-      } else if (bookingsData) {
-        // Enrich bookings with customer and service data
-        const enrichedBookings = await Promise.all(
-          bookingsData.map(async (booking) => {
-            let customerData = null;
-            let serviceData = null;
-
-            // Fetch customer data only if customer_id exists (not walk-in)
-            if (booking.customer_id) {
-              const { data: customer } = await supabase
-                .from('customers')
-                .select('first_name, last_name, phone')
-                .eq('id', booking.customer_id)
-                .maybeSingle();
-              customerData = customer;
-            }
-
-            // Fetch service data - handle both walk-in (service_id = salon_services.id) 
-            // and online bookings (service_id = salon_services.id from cart)
-            // First try to find salon_service by id directly (for walk-ins and online bookings)
-            const { data: salonServiceById } = await supabase
-              .from('salon_services')
-              .select('id, price, duration, service_id, services(name, default_duration)')
-              .eq('id', booking.service_id)
-              .maybeSingle();
-
-            if (salonServiceById) {
-              // Found by salon_services.id
-              serviceData = {
-                price: salonServiceById.price,
-                duration: salonServiceById.duration,
-                services: salonServiceById.services
-              };
-            } else {
-              // Fallback: try to find by services.id (legacy data)
-              const { data: service } = await supabase
-                .from('services')
-                .select('name, default_duration')
-                .eq('id', booking.service_id)
-                .maybeSingle();
-
-              const { data: salonService } = await supabase
-                .from('salon_services')
-                .select('price, duration')
-                .eq('salon_id', salonData.id)
-                .eq('service_id', booking.service_id)
-                .maybeSingle();
-
-              serviceData = service && salonService ? {
-                price: salonService.price,
-                duration: salonService.duration,
-                services: service
-              } : null;
-            }
-
-            return {
-              ...booking,
-              customers: customerData,
-              salon_services: serviceData
-            };
-          })
-        );
-        setBookings(enrichedBookings as any);
       } else {
-        setBookings([]);
+        setBookings((bookingsData || []) as any);
       }
 
       // Fetch queue entries - simplified
