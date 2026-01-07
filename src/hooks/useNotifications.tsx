@@ -9,7 +9,7 @@ export interface Notification {
   title: string;
   message: string;
   type: string;
-  related_id: string | null;
+  related_id?: string | null;
   is_read: boolean;
   created_at: string;
 }
@@ -147,19 +147,6 @@ export const useNotifications = () => {
           setNotifications(prev => 
             prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
           );
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          const deletedId = (payload.old as any).id;
-          setNotifications(prev => prev.filter(n => n.id !== deletedId));
         }
       )
       .subscribe();

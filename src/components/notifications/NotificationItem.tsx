@@ -2,12 +2,10 @@ import { formatDistanceToNow } from "date-fns";
 import { X, Calendar, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Notification } from "@/hooks/useNotifications";
+import { useNotifications, Notification } from "@/hooks/useNotifications";
 
 interface NotificationItemProps {
   notification: Notification;
-  onMarkAsRead: (id: string) => void;
-  onDelete: (id: string) => void;
   onClose?: () => void;
 }
 
@@ -18,26 +16,28 @@ const getNotificationIcon = (type: Notification['type']) => {
     case 'booking_update':
       return <Calendar className="h-4 w-4 text-blue-500" />;
     case 'queue_update':
-    case 'queue':
       return <Clock className="h-4 w-4 text-orange-500" />;
     case 'service_reminder':
       return <AlertCircle className="h-4 w-4 text-yellow-500" />;
     default:
-      return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
+      return <AlertCircle className="h-4 w-4 text-gray-500" />;
   }
 };
 
-export const NotificationItem = ({ notification, onMarkAsRead, onDelete, onClose }: NotificationItemProps) => {
+export const NotificationItem = ({ notification, onClose }: NotificationItemProps) => {
+  const { markAsRead, deleteNotification } = useNotifications();
+
   const handleClick = () => {
     if (!notification.is_read) {
-      onMarkAsRead(notification.id);
+      markAsRead(notification.id);
     }
+    // TODO: Add navigation logic based on notification type and related_id
     onClose?.();
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDelete(notification.id);
+    deleteNotification(notification.id);
   };
 
   return (

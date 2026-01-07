@@ -9,7 +9,7 @@ interface NotificationsListProps {
 }
 
 export const NotificationsList = ({ onClose }: NotificationsListProps) => {
-  const { notifications, loading, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const { notifications, loading, unreadCount, markAllAsRead } = useNotifications();
 
   if (loading) {
     return (
@@ -48,8 +48,6 @@ export const NotificationsList = ({ onClose }: NotificationsListProps) => {
               <NotificationItem 
                 key={notification.id} 
                 notification={notification}
-                onMarkAsRead={markAsRead}
-                onDelete={deleteNotification}
                 onClose={onClose}
               />
             ))}
