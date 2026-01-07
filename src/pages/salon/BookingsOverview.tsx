@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SalonCancellationDialog } from "@/components/salon/SalonCancellationDialog";
 
 const BookingsOverview = () => {
   const { user, loading: authLoading } = useRequireAuth();
@@ -40,6 +41,13 @@ const BookingsOverview = () => {
   const [walkInPhone, setWalkInPhone] = useState("");
   const [walkInService, setWalkInService] = useState("");
   const [availableServices, setAvailableServices] = useState<Array<{ id: string; name: string }>>([]);
+  
+  // Cancellation dialog state
+  const [cancellationDialog, setCancellationDialog] = useState<{
+    isOpen: boolean;
+    bookingId: string;
+    type: "reject" | "noshow";
+  }>({ isOpen: false, bookingId: "", type: "reject" });
 
   // Fetch available services for manual booking - MUST be before any returns
   useEffect(() => {
@@ -111,6 +119,22 @@ const BookingsOverview = () => {
   const openMessageDialog = (customerId: string, bookingId: string) => {
     setSelectedBookingForMessage({ customerId, bookingId });
     setIsMessageDialogOpen(true);
+  };
+
+  const openRejectDialog = (bookingId: string) => {
+    setCancellationDialog({ isOpen: true, bookingId, type: "reject" });
+  };
+
+  const openNoShowDialog = (bookingId: string) => {
+    setCancellationDialog({ isOpen: true, bookingId, type: "noshow" });
+  };
+
+  const handleCancellationConfirm = async (bookingId: string, reason: string) => {
+    if (cancellationDialog.type === "reject") {
+      await rejectBooking(bookingId, reason);
+    } else {
+      await markNoShow(bookingId, reason);
+    }
   };
 
   // Filter bookings by new tab structure
@@ -231,7 +255,7 @@ const BookingsOverview = () => {
                   key={booking.id}
                   booking={booking}
                   onAccept={acceptBooking}
-                  onReject={rejectBooking}
+                  onReject={openRejectDialog}
                   showActions="accept-reject"
                 />
               ))
@@ -249,7 +273,7 @@ const BookingsOverview = () => {
                   booking={booking}
                   onStart={startService}
                   onComplete={completeService}
-                  onNoShow={markNoShow}
+                  onNoShow={openNoShowDialog}
                   onSendReminder={sendReminder}
                   onSendMessage={openMessageDialog}
                   showActions="queue"
@@ -275,6 +299,15 @@ const BookingsOverview = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Cancellation/No-Show Reason Dialog */}
+        <SalonCancellationDialog
+          isOpen={cancellationDialog.isOpen}
+          onClose={() => setCancellationDialog({ ...cancellationDialog, isOpen: false })}
+          bookingId={cancellationDialog.bookingId}
+          type={cancellationDialog.type}
+          onConfirm={handleCancellationConfirm}
+        />
       </div>
     </SalonDashboardLayout>
   );

@@ -267,8 +267,8 @@ export const useSalonRealtimeData = () => {
     }
   }, []);
 
-  // Reject booking
-  const rejectBooking = useCallback(async (bookingId: string) => {
+  // Reject booking with reason
+  const rejectBooking = useCallback(async (bookingId: string, reason?: string) => {
     try {
       // Get booking details for notification
       const { data: bookingData } = await supabase
@@ -277,9 +277,14 @@ export const useSalonRealtimeData = () => {
         .eq('id', bookingId)
         .single();
 
+      const cancellationReason = reason || 'Booking rejected by salon';
+
       const { error } = await supabase
         .from('bookings')
-        .update({ status: 'rejected' })
+        .update({ 
+          status: 'rejected',
+          cancellation_reason: cancellationReason
+        })
         .eq('id', bookingId);
 
       if (error) throw error;
@@ -290,7 +295,7 @@ export const useSalonRealtimeData = () => {
         await supabase.from('notifications').insert({
           user_id: bookingData.customer_id,
           title: 'Booking Not Available',
-          message: `Sorry, ${salonName} couldn't accommodate your booking. Please try another time slot.`,
+          message: `Sorry, ${salonName} couldn't accommodate your booking. Reason: ${cancellationReason}`,
           type: 'booking_cancelled',
           related_id: bookingId
         });
@@ -416,8 +421,8 @@ export const useSalonRealtimeData = () => {
     }
   }, []);
 
-  // Mark booking as no-show
-  const markNoShow = useCallback(async (bookingId: string) => {
+  // Mark booking as no-show with reason
+  const markNoShow = useCallback(async (bookingId: string, reason?: string) => {
     try {
       // Get booking details for notification
       const { data: bookingData } = await supabase
@@ -426,11 +431,14 @@ export const useSalonRealtimeData = () => {
         .eq('id', bookingId)
         .maybeSingle();
 
+      const cancellationReason = reason || 'Customer did not arrive';
+
       const { error } = await supabase
         .from('bookings')
         .update({ 
           status: 'cancelled',
-          notes: 'Marked as no-show'
+          notes: 'Marked as no-show',
+          cancellation_reason: cancellationReason
         })
         .eq('id', bookingId);
 
@@ -450,7 +458,7 @@ export const useSalonRealtimeData = () => {
         await supabase.from('notifications').insert({
           user_id: bookingData.customer_id,
           title: 'Booking Marked as No-Show',
-          message: `You were marked as no-show at ${salonName}. Please contact the salon if this was a mistake.`,
+          message: `You were marked as no-show at ${salonName}. Reason: ${cancellationReason}`,
           type: 'booking_cancelled',
           related_id: bookingId
         });
