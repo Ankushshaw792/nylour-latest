@@ -13,10 +13,8 @@ import {
   Upload, 
   Trash2, 
   Star, 
-  ChevronUp, 
-  ChevronDown, 
+  GripVertical,
   ImageIcon,
-  X
 } from "lucide-react";
 import {
   AlertDialog,
@@ -48,8 +46,10 @@ const GalleryManagement = () => {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [deleteImage, setDeleteImage] = useState<GalleryImage | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchSalonAndImages = async () => {
@@ -151,17 +151,56 @@ const GalleryManagement = () => {
     toast({ title: "Upload complete", description: `${validFiles.length} image(s) added` });
   }, [salonId, images]);
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleFileDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(e.type === 'dragenter' || e.type === 'dragover');
+    // Only handle file drags in the upload area
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDraggingFile(e.type === 'dragenter' || e.type === 'dragover');
+    }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
-    handleFiles(e.dataTransfer.files);
+    setIsDraggingFile(false);
+    if (e.dataTransfer.types.includes('Files')) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
+  // Image reordering drag-and-drop handlers
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = async () => {
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      const newImages = [...images];
+      const [draggedItem] = newImages.splice(draggedIndex, 1);
+      newImages.splice(dragOverIndex, 0, draggedItem);
+
+      // Update local state immediately
+      setImages(newImages.map((img, i) => ({ ...img, display_order: i })));
+
+      // Update database
+      await Promise.all(
+        newImages.map((img, i) =>
+          supabase.from('salon_images').update({ display_order: i }).eq('id', img.id)
+        )
+      );
+
+      toast({ title: "Order updated" });
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const confirmDelete = async () => {
@@ -212,21 +251,6 @@ const GalleryManagement = () => {
     ));
   };
 
-  const moveImage = async (index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= images.length) return;
-
-    const newImages = [...images];
-    [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
-
-    // Update display_order for both
-    await Promise.all([
-      supabase.from('salon_images').update({ display_order: newIndex }).eq('id', images[index].id),
-      supabase.from('salon_images').update({ display_order: index }).eq('id', images[newIndex].id),
-    ]);
-
-    setImages(newImages.map((img, i) => ({ ...img, display_order: i })));
-  };
 
   if (loading) {
     return (
@@ -245,12 +269,12 @@ const GalleryManagement = () => {
       <div className="p-4 space-y-6 pb-24">
         {/* Upload Area */}
         <div
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
+          onDragEnter={handleFileDrag}
+          onDragLeave={handleFileDrag}
+          onDragOver={handleFileDrag}
+          onDrop={handleFileDrop}
           className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-            isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'
+            isDraggingFile ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'
           } ${images.length >= MAX_IMAGES ? 'opacity-50 pointer-events-none' : ''}`}
         >
           <input
@@ -287,12 +311,21 @@ const GalleryManagement = () => {
         ) : (
           <div className="grid grid-cols-2 gap-4">
             {images.map((image, index) => (
-              <Card key={image.id} className="overflow-hidden">
+              <Card 
+                key={image.id} 
+                className={`overflow-hidden cursor-grab active:cursor-grabbing transition-all ${
+                  draggedIndex === index ? 'opacity-50 scale-95' : ''
+                } ${dragOverIndex === index ? 'ring-2 ring-primary' : ''}`}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+              >
                 <div className="relative aspect-square">
                   <img
                     src={image.image_url}
                     alt={image.caption || 'Gallery image'}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover pointer-events-none"
                   />
                   {image.is_primary && (
                     <Badge className="absolute top-2 left-2 bg-primary">
@@ -300,6 +333,9 @@ const GalleryManagement = () => {
                     </Badge>
                   )}
                   <div className="absolute top-2 right-2 flex gap-1">
+                    <div className="h-8 w-8 flex items-center justify-center bg-secondary/80 rounded-md">
+                      <GripVertical className="h-4 w-4 text-foreground" />
+                    </div>
                     <Button
                       size="icon"
                       variant="secondary"
@@ -309,8 +345,8 @@ const GalleryManagement = () => {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="absolute bottom-2 right-2 flex gap-1">
-                    {!image.is_primary && (
+                  {!image.is_primary && (
+                    <div className="absolute bottom-2 right-2">
                       <Button
                         size="icon"
                         variant="secondary"
@@ -320,28 +356,8 @@ const GalleryManagement = () => {
                       >
                         <Star className="h-4 w-4" />
                       </Button>
-                    )}
-                    {index > 0 && (
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="h-8 w-8"
-                        onClick={() => moveImage(index, 'up')}
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {index < images.length - 1 && (
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="h-8 w-8"
-                        onClick={() => moveImage(index, 'down')}
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
                 <CardContent className="p-3">
                   <Input
