@@ -55,7 +55,7 @@ const SalonDetails = () => {
       try {
         setLoadingSalon(true);
         
-        // Fetch salon with services
+        // Fetch salon with avg_service_time
         const { data: salonData, error: salonError } = await supabase
           .from('salons')
           .select(`
@@ -97,33 +97,16 @@ const SalonDetails = () => {
           .eq('salon_id', id)
           .eq('is_active', true);
 
-        if (salonError) {
-          console.error('Error fetching salon:', salonError);
-          toast.error('Failed to load salon details');
-          return;
-        }
-
-        if (!salonData) {
-          toast.error('Salon not found');
-          return;
-        }
-
-        // Get today's date for filtering queue entries
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayISO = today.toISOString();
-
-        // Get current queue count - only TODAY's waiting entries
+        // Get current queue count - active statuses
         const { data: queueData } = await supabase
           .from('queue_entries')
-          .select('id, check_in_time')
+          .select('id')
           .eq('salon_id', id)
-          .eq('status', 'waiting')
-          .gte('check_in_time', todayISO);
+          .in('status', ['waiting', 'called', 'in_service']);
 
         const queueCount = queueData?.length || 0;
         const avgServiceTime = salonData.avg_service_time || 20;
-        const avgWaitTime = queueCount === 0 ? 0 : queueCount * avgServiceTime;
+        const avgWaitTime = queueCount * avgServiceTime;
 
         // Get salon hours (mock for now)
         const hours = "9:00 AM - 9:00 PM";
@@ -145,10 +128,10 @@ const SalonDetails = () => {
           id: salonData.id,
           name: salonData.name,
           address: salonData.address,
-          phone: 'Contact salon for phone number', // Phone now protected
-          rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10, // Mock rating
-          reviews: Math.floor(Math.random() * 200) + 50, // Mock reviews
-          waitTime: `${avgWaitTime} min`,
+          phone: 'Contact salon for phone number',
+          rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10,
+          reviews: Math.floor(Math.random() * 200) + 50,
+          waitTime: avgWaitTime === 0 ? 'No wait' : `${avgWaitTime} min`,
           queueCount,
           services: processedServices,
           hours,
@@ -165,6 +148,20 @@ const SalonDetails = () => {
     };
 
     fetchSalonDetails();
+
+    // Subscribe to queue changes for this salon
+    const channel = supabase
+      .channel(`salon-queue-${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'queue_entries', filter: `salon_id=eq.${id}` },
+        () => fetchSalonDetails()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
   const getItemQuantity = (serviceId: string) => {

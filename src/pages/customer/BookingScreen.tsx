@@ -67,11 +67,22 @@ const BookingScreen = () => {
         throw new Error('Please fill in contact details');
       }
 
-      // Create booking record with pending status
+      // Get customer record for this user
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!customerData) {
+        throw new Error('Customer profile not found');
+      }
+
+      // Create booking record with pending status using customer.id
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')
         .insert({
-          customer_id: user.id,
+          customer_id: customerData.id,
           salon_id: id,
           service_id: items[0].id,
           booking_date: new Date().toISOString().split('T')[0],
@@ -79,8 +90,7 @@ const BookingScreen = () => {
           duration: items.reduce((total, item) => total + (parseInt(item.duration) * item.quantity), 0),
           total_price: bookingFee,
           status: 'pending',
-          payment_status: 'pending',
-          customer_notes: `Contact: ${contactName} - ${contactPhone}`
+          notes: `Contact: ${contactName} - ${contactPhone}`
         })
         .select()
         .maybeSingle();
