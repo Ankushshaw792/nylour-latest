@@ -99,23 +99,43 @@ const QueueStatus = () => {
           console.error("Error fetching booking:", bookingError);
         }
 
-        // Fetch service name from booking's service_id
+        // Fetch service details from salon_services (actual price) and services (name)
         let serviceName = "Service";
+        let servicePrice = bookingData?.total_price || 0;
+        let serviceDuration = 30;
+        
         if (bookingData?.service_id) {
-          const { data: serviceData } = await supabase
-            .from("services")
-            .select("name")
+          // First get the salon_service to get actual price and duration
+          const { data: salonServiceData } = await supabase
+            .from("salon_services")
+            .select("price, duration, service_id")
             .eq("id", bookingData.service_id)
             .maybeSingle();
-          serviceName = serviceData?.name || "Service";
+          
+          if (salonServiceData) {
+            servicePrice = salonServiceData.price;
+            serviceDuration = salonServiceData.duration || 30;
+            
+            // Get service name from services table
+            if (salonServiceData.service_id) {
+              const { data: serviceData } = await supabase
+                .from("services")
+                .select("name")
+                .eq("id", salonServiceData.service_id)
+                .maybeSingle();
+              serviceName = serviceData?.name || "Service";
+            }
+          }
         }
 
-        // Combine the data with service name
+        // Combine the data with service name and actual price
         const combinedData = {
           ...activeQueueData,
           bookings: bookingData ? {
             ...bookingData,
-            service_name: serviceName
+            service_name: serviceName,
+            service_price: servicePrice,
+            service_duration: serviceDuration
           } : null
         };
 
@@ -141,7 +161,7 @@ const QueueStatus = () => {
               .select("id, first_name, last_name")
               .in("id", customerIds);
 
-            // Fetch booking info for each queue member to get service names
+            // Fetch booking info for each queue member to get service names and durations
             const bookingIds = membersData.map(m => m.booking_id).filter(Boolean);
             let bookingsWithServices: any[] = [];
             if (bookingIds.length > 0) {
@@ -151,16 +171,34 @@ const QueueStatus = () => {
                 .in("id", bookingIds);
               
               if (bookingsData && bookingsData.length > 0) {
-                const serviceIds = bookingsData.map(b => b.service_id).filter(Boolean);
-                const { data: servicesData } = await supabase
-                  .from("services")
-                  .select("id, name")
-                  .in("id", serviceIds);
+                const salonServiceIds = bookingsData.map(b => b.service_id).filter(Boolean);
                 
-                bookingsWithServices = bookingsData.map(b => ({
-                  ...b,
-                  service_name: servicesData?.find(s => s.id === b.service_id)?.name || "Service"
-                }));
+                // Get salon_services with their service_id reference
+                const { data: salonServicesData } = await supabase
+                  .from("salon_services")
+                  .select("id, service_id, duration")
+                  .in("id", salonServiceIds);
+                
+                // Get actual service names
+                const serviceIds = salonServicesData?.map(ss => ss.service_id).filter(Boolean) || [];
+                let servicesData: any[] = [];
+                if (serviceIds.length > 0) {
+                  const { data: fetchedServices } = await supabase
+                    .from("services")
+                    .select("id, name")
+                    .in("id", serviceIds);
+                  servicesData = fetchedServices || [];
+                }
+                
+                bookingsWithServices = bookingsData.map(b => {
+                  const salonService = salonServicesData?.find(ss => ss.id === b.service_id);
+                  const service = servicesData?.find(s => s.id === salonService?.service_id);
+                  return {
+                    ...b,
+                    service_name: service?.name || "Service",
+                    service_duration: salonService?.duration || 30
+                  };
+                });
               }
             }
 
@@ -170,7 +208,8 @@ const QueueStatus = () => {
               return {
                 ...member,
                 customer: customersData?.find(c => c.id === member.customer_id),
-                service_name: memberBooking?.service_name || "Service"
+                service_name: memberBooking?.service_name || "Service",
+                service_duration: memberBooking?.service_duration || 30
               };
             });
 
@@ -396,8 +435,8 @@ const QueueStatus = () => {
                 <span className="font-medium">{service}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount</span>
-                <span className="font-medium">₹{booking.total_price}</span>
+                <span className="text-muted-foreground">Service Price</span>
+                <span className="font-medium">₹{booking.service_price}</span>
               </div>
             </div>
           </CardContent>
@@ -410,10 +449,16 @@ const QueueStatus = () => {
             <div className="space-y-3">
               {queueMembers.map((member) => {
                 const isCurrentUser = member.customer_id === currentCustomerId;
+                const currentUserPosition = queueEntry.position;
+                const isAhead = member.position < currentUserPosition;
+                const isBehind = member.position > currentUserPosition;
                 const isActive = member.position === 1;
                 const displayName = isCurrentUser 
                   ? "You" 
                   : `${member.customer?.first_name || "Customer"} ${member.customer?.last_name || ""}`.trim();
+                
+                // Calculate estimated time for people ahead (cumulative time from position 1 to their position)
+                const memberDuration = member.service_duration || avgServiceTime;
                 
                 return (
                   <div
@@ -447,13 +492,23 @@ const QueueStatus = () => {
                         </p>
                       </div>
                     </div>
-                    <div 
-                      className={`w-3 h-3 rounded-full ${
-                        isActive 
-                          ? 'bg-amber-500' 
-                          : 'bg-muted-foreground/40'
-                      }`}
-                    />
+                    <div className="flex items-center gap-2">
+                      {/* Show time only for people ahead (not for current user or people behind) */}
+                      {isAhead && !isCurrentUser && (
+                        <span className="text-xs text-muted-foreground">
+                          ~{memberDuration} min
+                        </span>
+                      )}
+                      <div 
+                        className={`w-3 h-3 rounded-full ${
+                          isActive 
+                            ? 'bg-amber-500' 
+                            : isCurrentUser
+                              ? 'bg-primary'
+                              : 'bg-muted-foreground/40'
+                        }`}
+                      />
+                    </div>
                   </div>
                 );
               })}
