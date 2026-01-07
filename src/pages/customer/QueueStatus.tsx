@@ -16,6 +16,7 @@ const QueueStatus = () => {
   const [queueEntry, setQueueEntry] = useState<any>(null);
   const [queueMembers, setQueueMembers] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [currentCustomerId, setCurrentCustomerId] = useState<string | null>(null);
 
   // Fetch active queue data and setup real-time updates
   useEffect(() => {
@@ -23,6 +24,23 @@ const QueueStatus = () => {
       if (!user) return;
       
       try {
+        // First, get the customer record using user_id
+        const { data: customer, error: customerError } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (customerError || !customer) {
+          console.error("Error fetching customer:", customerError);
+          setQueueEntry(null);
+          setDataLoading(false);
+          return;
+        }
+        
+        // Store customer ID for use in UI
+        setCurrentCustomerId(customer.id);
+
         // Get today's date for filtering
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -32,7 +50,7 @@ const QueueStatus = () => {
         const { data: queueDataArray, error: queueError } = await supabase
           .from("queue_entries")
           .select("*")
-          .eq("customer_id", user.id)
+          .eq("customer_id", customer.id)
           .eq("status", "waiting")
           .gte("check_in_time", todayStart)
           .order("check_in_time", { ascending: false })
@@ -49,6 +67,7 @@ const QueueStatus = () => {
         if (!activeQueueData) {
           console.log("No active queue entry found");
           setQueueEntry(null);
+          setDataLoading(false);
           return;
         }
 
@@ -65,11 +84,14 @@ const QueueStatus = () => {
               avg_service_time
             )
           `)
-          .eq("customer_id", user.id)
+          .eq("customer_id", customer.id)
           .eq("salon_id", activeQueueData.salon_id)
           .in("status", ["pending", "confirmed", "in_progress"])
           .order("created_at", { ascending: false })
           .limit(1);
+        
+        // Store customer.id for later use in isCurrentUser check
+        const customerId = customer.id;
 
         const bookingData = bookingDataArray && bookingDataArray.length > 0 ? bookingDataArray[0] : null;
 
@@ -111,13 +133,13 @@ const QueueStatus = () => {
         if (membersError) {
           console.error("Error fetching queue members:", membersError);
         } else {
-          // Fetch customer names for queue members
+          // Fetch customer names for queue members - use 'id' since customer_id references customers.id
           if (membersData && membersData.length > 0) {
             const customerIds = membersData.map(m => m.customer_id);
             const { data: customersData } = await supabase
               .from("customers")
-              .select("user_id, first_name, last_name")
-              .in("user_id", customerIds);
+              .select("id, first_name, last_name")
+              .in("id", customerIds);
 
             // Fetch booking info for each queue member to get service names
             const bookingIds = membersData.map(m => m.booking_id).filter(Boolean);
@@ -147,7 +169,7 @@ const QueueStatus = () => {
               const memberBooking = bookingsWithServices.find(b => b.id === member.booking_id);
               return {
                 ...member,
-                customer: customersData?.find(c => c.user_id === member.customer_id),
+                customer: customersData?.find(c => c.id === member.customer_id),
                 service_name: memberBooking?.service_name || "Service"
               };
             });
@@ -387,7 +409,7 @@ const QueueStatus = () => {
             <h3 className="font-semibold mb-4">Live Queue</h3>
             <div className="space-y-3">
               {queueMembers.map((member) => {
-                const isCurrentUser = member.customer_id === user?.id;
+                const isCurrentUser = member.customer_id === currentCustomerId;
                 const isActive = member.position === 1;
                 const displayName = isCurrentUser 
                   ? "You" 
