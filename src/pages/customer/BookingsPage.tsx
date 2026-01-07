@@ -10,6 +10,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BookingSummaryDialog } from "@/components/bookings/BookingSummaryDialog";
+import { CancellationDialog } from "@/components/bookings/CancellationDialog";
 
 const BookingsPage = () => {
   const { user, loading } = useRequireAuth();
@@ -20,6 +21,10 @@ const BookingsPage = () => {
   const [dataLoading, setDataLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<any>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [cancellationCount, setCancellationCount] = useState(0);
 
   // Fetch user's bookings
   useEffect(() => {
@@ -30,7 +35,7 @@ const BookingsPage = () => {
         // First, get the customer record using user_id
         const { data: customer, error: customerError } = await supabase
           .from("customers")
-          .select("id")
+          .select("id, cancellation_count")
           .eq("user_id", user.id)
           .maybeSingle();
 
@@ -41,6 +46,9 @@ const BookingsPage = () => {
           setDataLoading(false);
           return;
         }
+
+        setCustomerId(customer.id);
+        setCancellationCount(customer.cancellation_count || 0);
 
         const today = new Date().toISOString().split('T')[0];
         
@@ -66,12 +74,12 @@ const BookingsPage = () => {
           toast.error("Failed to load current bookings");
         }
 
-        // Fetch services for current bookings
+        // Fetch services for current bookings via salon_services join
         if (currentData && currentData.length > 0) {
           const serviceIds = currentData.map(b => b.service_id).filter(Boolean);
-          const { data: servicesData } = await supabase
-            .from("services")
-            .select("id, name")
+          const { data: salonServicesData } = await supabase
+            .from("salon_services")
+            .select("id, services(name)")
             .in("id", serviceIds);
 
           // Fetch queue entries for current bookings (today only)
@@ -87,11 +95,14 @@ const BookingsPage = () => {
             .gte("check_in_time", todayStart);
 
           // Merge service and queue data
-          const enrichedCurrent = currentData.map(booking => ({
-            ...booking,
-            service_name: servicesData?.find(s => s.id === booking.service_id)?.name || "Service",
-            queue_entry: queueData?.find(q => q.salon_id === booking.salon_id)
-          }));
+          const enrichedCurrent = currentData.map(booking => {
+            const salonService = salonServicesData?.find(s => s.id === booking.service_id);
+            return {
+              ...booking,
+              service_name: (salonService?.services as any)?.name || "Service",
+              queue_entry: queueData?.find(q => q.salon_id === booking.salon_id)
+            };
+          });
           
           setCurrentBookings(enrichedCurrent);
         } else {
@@ -120,19 +131,22 @@ const BookingsPage = () => {
           toast.error("Failed to load past bookings");
         }
 
-        // Fetch services for past bookings (including expired)
+        // Fetch services for past bookings via salon_services join
         if (allPastData && allPastData.length > 0) {
           const serviceIds = allPastData.map(b => b.service_id).filter(Boolean);
-          const { data: servicesData } = await supabase
-            .from("services")
-            .select("id, name")
+          const { data: salonServicesData } = await supabase
+            .from("salon_services")
+            .select("id, services(name)")
             .in("id", serviceIds);
 
           // Merge service data
-          const enrichedPast = allPastData.map(booking => ({
-            ...booking,
-            service_name: servicesData?.find(s => s.id === booking.service_id)?.name || "Service"
-          }));
+          const enrichedPast = allPastData.map(booking => {
+            const salonService = salonServicesData?.find(s => s.id === booking.service_id);
+            return {
+              ...booking,
+              service_name: (salonService?.services as any)?.name || "Service"
+            };
+          });
 
           setPastBookings(enrichedPast);
         } else {
@@ -214,25 +228,13 @@ const BookingsPage = () => {
     setSelectedBooking(null);
   };
 
-  const handleCancelBooking = async (bookingId: string) => {
-    try {
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: "cancelled" })
-        .eq("id", bookingId);
+  const handleOpenCancelDialog = (booking: any) => {
+    setBookingToCancel(booking);
+    setCancelDialogOpen(true);
+  };
 
-      if (error) {
-        console.error("Error cancelling booking:", error);
-        toast.error("Failed to cancel booking");
-      } else {
-        toast.success("Booking cancelled successfully");
-        // Refresh bookings
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error("Error cancelling booking:", error);
-      toast.error("Failed to cancel booking");
-    }
+  const handleCancellationComplete = () => {
+    window.location.reload();
   };
 
   const formatDate = (dateStr: string) => {
@@ -360,7 +362,7 @@ const BookingsPage = () => {
                         variant="outline" 
                         size="sm" 
                         className="flex-1 gap-2"
-                        onClick={() => handleCancelBooking(booking.id)}
+                        onClick={() => handleOpenCancelDialog(booking)}
                       >
                         <X className="h-4 w-4" />
                         Cancel
@@ -475,6 +477,17 @@ const BookingsPage = () => {
         isOpen={summaryDialogOpen}
         onClose={handleCloseDialog}
       />
+
+      {bookingToCancel && customerId && (
+        <CancellationDialog
+          isOpen={cancelDialogOpen}
+          onClose={() => setCancelDialogOpen(false)}
+          bookingId={bookingToCancel.id}
+          customerId={customerId}
+          cancellationCount={cancellationCount}
+          onCancellationComplete={handleCancellationComplete}
+        />
+      )}
     </CustomerLayout>
   );
 };
