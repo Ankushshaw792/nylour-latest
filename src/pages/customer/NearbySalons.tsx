@@ -63,12 +63,18 @@ const NearbySalons = () => {
             address,
             image_url,
             phone,
+            latitude,
+            longitude,
             salon_services(
               price,
               duration,
               services(
                 name
               )
+            ),
+            salon_images(
+              image_url,
+              is_primary
             )
           `)
           .order('created_at', { ascending: false });
@@ -109,11 +115,16 @@ const NearbySalons = () => {
           const primaryService = primarySalonService?.services?.name || "Haircut";
           const servicePrice = `₹${primarySalonService?.price || 200}`;
           
+          // Get primary image from salon_images or fallback to image_url
+          const primaryImage = salon.salon_images?.find((img: any) => img.is_primary)?.image_url 
+            || salon.salon_images?.[0]?.image_url 
+            || salon.image_url;
+          
           return {
             id: salon.id,
             name: salon.name,
             address: salon.address,
-            image_url: salon.image_url,
+            image_url: primaryImage,
             phone: 'Contact salon for phone number',
             queueCount,
             waitTime: waitTimeRange,
