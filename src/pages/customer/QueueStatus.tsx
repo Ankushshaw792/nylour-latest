@@ -24,13 +24,17 @@ const QueueStatus = () => {
       if (!user) return;
       
       try {
-        // Find user's active queue entry
+        // Call the expire function first to clean up old entries
+        await supabase.rpc('expire_old_queue_entries');
+
+        // Find user's active queue entry (not expired)
         const { data: queueDataArray, error: queueError } = await supabase
           .from("queue_entries")
           .select("*")
           .eq("customer_id", user.id)
           .eq("status", "waiting")
-          .order("check_in_time", { ascending: false })
+          .gt("expires_at", new Date().toISOString())
+          .order("joined_at", { ascending: false })
           .limit(1);
 
         const activeQueueData = queueDataArray && queueDataArray.length > 0 ? queueDataArray[0] : null;
@@ -68,51 +72,33 @@ const QueueStatus = () => {
 
         if (bookingError) {
           console.error("Error fetching booking:", bookingError);
+          // Continue without booking data
         }
         
-        // Fetch the service name from booking
-        let serviceName = "Service";
-        if (bookingData?.service_id) {
-          const { data: serviceData } = await supabase
-            .from("services")
-            .select("name")
-            .eq("id", bookingData.service_id)
-            .maybeSingle();
-          serviceName = serviceData?.name || "Service";
-        }
+        console.log("Booking data:", bookingData);
+
+        // Fetch the service name
+        const { data: serviceData } = await supabase
+          .from("services")
+          .select("name")
+          .eq("id", activeQueueData.service_id)
+          .maybeSingle();
 
         // Combine the data with service name
         const combinedData = {
           ...activeQueueData,
           bookings: bookingData ? {
             ...bookingData,
-            service_name: serviceName
+            service_name: serviceData?.name || "Service"
           } : null
         };
 
-        // Calculate actual queue position
-        const { count: positionCount } = await supabase
-          .from("queue_entries")
-          .select("*", { count: "exact", head: true })
-          .eq("salon_id", activeQueueData.salon_id)
-          .eq("status", "waiting")
-          .lt("position", activeQueueData.position);
+        setQueueEntry(combinedData);
 
-        const actualPosition = (positionCount || 0) + 1;
-
-        // Store actual position in combined data
-        const dataWithPosition = {
-          ...combinedData,
-          actualPosition,
-          dynamicWaitTime: activeQueueData.estimated_wait_time || actualPosition * 15
-        };
-
-        setQueueEntry(dataWithPosition);
-
-        // Calculate time remaining (default 1 hour from check_in_time)
-        const checkInTime = new Date(activeQueueData.check_in_time).getTime();
-        const expiryTime = checkInTime + (60 * 60 * 1000); // 1 hour
-        const remaining = Math.max(0, expiryTime - Date.now());
+        // Calculate time remaining until expiration
+        const expiresAt = new Date(activeQueueData.expires_at).getTime();
+        const now = Date.now();
+        const remaining = Math.max(0, expiresAt - now);
         setTimeRemaining(remaining);
 
         // Fetch all queue members for this salon
@@ -121,7 +107,8 @@ const QueueStatus = () => {
           .select("*")
           .eq("salon_id", activeQueueData.salon_id)
           .eq("status", "waiting")
-          .order("position");
+          .gt("expires_at", new Date().toISOString())
+          .order("queue_number");
 
         if (membersError) {
           console.error("Error fetching queue members:", membersError);
@@ -134,29 +121,19 @@ const QueueStatus = () => {
               .select("user_id, first_name, last_name")
               .in("user_id", customerIds);
 
-            // Fetch service names from bookings
-            const bookingIds = membersData.map(m => m.booking_id).filter(Boolean);
-            const { data: bookingsData } = await supabase
-              .from("bookings")
-              .select("id, service_id")
-              .in("id", bookingIds);
-
-            const serviceIds = (bookingsData || []).map(b => b.service_id).filter(Boolean);
+            // Fetch service names for queue members
+            const serviceIds = membersData.map(m => m.service_id).filter(Boolean);
             const { data: servicesData } = await supabase
               .from("services")
               .select("id, name")
               .in("id", serviceIds);
 
             // Combine queue members with customer and service data
-            const enrichedMembers = membersData.map(member => {
-              const booking = bookingsData?.find(b => b.id === member.booking_id);
-              const service = servicesData?.find(s => s.id === booking?.service_id);
-              return {
-                ...member,
-                customer: customersData?.find(c => c.user_id === member.customer_id),
-                service_name: service?.name || "Service"
-              };
-            });
+            const enrichedMembers = membersData.map(member => ({
+              ...member,
+              customer: customersData?.find(c => c.user_id === member.customer_id),
+              service_name: servicesData?.find(s => s.id === member.service_id)?.name || "Service"
+            }));
 
             setQueueMembers(enrichedMembers);
           } else {
@@ -302,9 +279,9 @@ const QueueStatus = () => {
     );
   }
 
-  // Calculate progress based on actual position
+  // Calculate progress based on current position
   const totalQueueMembers = queueMembers.length;
-  const currentPosition = queueEntry.actualPosition || 1;
+  const currentPosition = queueEntry.queue_number;
   const progress = totalQueueMembers > 0 ? Math.max(0, ((totalQueueMembers - currentPosition) / totalQueueMembers) * 100) : 0;
 
   // Extract booking and salon data with null checks
@@ -405,7 +382,7 @@ const QueueStatus = () => {
             {/* Estimated Time */}
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-1">Estimated wait time</p>
-              <p className="text-3xl font-bold text-primary">{queueEntry.dynamicWaitTime || 0} min</p>
+              <p className="text-3xl font-bold text-primary">{queueEntry.estimated_wait_time || 0} min</p>
             </div>
           </CardContent>
         </Card>

@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Scissors, Edit, Plus } from "lucide-react";
+import { Scissors, Upload, Edit, Trash2, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Service {
@@ -18,10 +19,11 @@ interface Service {
   price: number;
   duration: number;
   is_active: boolean;
+  image_url: string | null;
   services: {
     name: string;
     description: string | null;
-  } | null;
+  };
 }
 
 interface AvailableService {
@@ -39,9 +41,11 @@ const ServicesManagement = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [availableServices, setAvailableServices] = useState<AvailableService[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     price: 0,
     duration: 30,
+    image_url: null as string | null,
   });
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
 
@@ -65,7 +69,7 @@ const ServicesManagement = () => {
       console.error('Error fetching services:', error);
       toast.error('Failed to load services');
     } else {
-      setServices((data || []) as Service[]);
+      setServices(data || []);
     }
   };
 
@@ -91,11 +95,53 @@ const ServicesManagement = () => {
     }
   }, [salon?.id]);
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !salon?.id) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${salon.id}/${Date.now()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('service-images')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('service-images')
+        .getPublicUrl(fileName);
+
+      setFormData({ ...formData, image_url: publicUrl });
+      toast.success('Image uploaded successfully');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleEditService = (service: Service) => {
     setEditingService(service);
     setFormData({
       price: service.price,
       duration: service.duration,
+      image_url: service.image_url,
     });
     setIsEditDialogOpen(true);
   };
@@ -108,6 +154,7 @@ const ServicesManagement = () => {
       .update({
         price: formData.price,
         duration: formData.duration,
+        image_url: formData.image_url,
       })
       .eq('id', editingService.id);
 
@@ -118,6 +165,25 @@ const ServicesManagement = () => {
       toast.success('Service updated successfully');
       setIsEditDialogOpen(false);
       fetchServices();
+    }
+  };
+
+  const handleDeleteImage = async () => {
+    if (!editingService?.image_url) return;
+
+    try {
+      const imagePath = editingService.image_url.split('/service-images/')[1];
+      if (imagePath) {
+        await supabase.storage
+          .from('service-images')
+          .remove([imagePath]);
+      }
+
+      setFormData({ ...formData, image_url: null });
+      toast.success('Image removed');
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      toast.error('Failed to delete image');
     }
   };
 
@@ -139,6 +205,7 @@ const ServicesManagement = () => {
         service_id: selectedServiceId,
         price: formData.price,
         duration: formData.duration,
+        image_url: formData.image_url,
       });
 
     if (error) {
@@ -148,13 +215,13 @@ const ServicesManagement = () => {
       toast.success('Service added successfully');
       setIsAddDialogOpen(false);
       setSelectedServiceId("");
-      setFormData({ price: 0, duration: 30 });
+      setFormData({ price: 0, duration: 30, image_url: null });
       fetchServices();
     }
   };
 
   const handleOpenAddDialog = () => {
-    setFormData({ price: 0, duration: 30 });
+    setFormData({ price: 0, duration: 30, image_url: null });
     setSelectedServiceId("");
     setIsAddDialogOpen(true);
   };
@@ -166,6 +233,7 @@ const ServicesManagement = () => {
       setFormData({
         price: 0,
         duration: selectedService.default_duration,
+        image_url: null,
       });
     }
   };
@@ -195,18 +263,14 @@ const ServicesManagement = () => {
   }
 
   return (
-    <SalonDashboardLayout title="Services" description="Manage your salon services">
+    <SalonDashboardLayout title="Services" description="Manage your salon services and upload images">
       <div className="space-y-6">
         {services.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Scissors className="h-16 w-16 text-muted-foreground mb-4" />
               <p className="text-lg font-medium mb-2">No services found</p>
-              <p className="text-sm text-muted-foreground mb-4">Add services to your salon to get started</p>
-              <Button onClick={handleOpenAddDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Service
-              </Button>
+              <p className="text-sm text-muted-foreground">Add services to your salon to get started</p>
             </CardContent>
           </Card>
         ) : (
@@ -214,12 +278,22 @@ const ServicesManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {services.map((service) => (
                 <Card key={service.id} className="overflow-hidden">
-                  <div className="relative h-32 bg-muted flex items-center justify-center">
-                    <Scissors className="h-12 w-12 text-muted-foreground" />
+                  <div className="relative h-48 bg-muted">
+                    {service.image_url ? (
+                      <img
+                        src={service.image_url}
+                        alt={service.services.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Scissors className="h-16 w-16 text-muted-foreground" />
+                      </div>
+                    )}
                   </div>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
-                      <span>{service.services?.name || "Service"}</span>
+                      <span>{service.services.name}</span>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -232,13 +306,13 @@ const ServicesManagement = () => {
                   <CardContent className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Price:</span>
-                      <span className="font-medium">₹{service.price}</span>
+                      <span className="font-medium">${service.price}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Duration:</span>
                       <span className="font-medium">{service.duration} min</span>
                     </div>
-                    {service.services?.description && (
+                    {service.services.description && (
                       <p className="text-sm text-muted-foreground mt-2">
                         {service.services.description}
                       </p>
@@ -274,14 +348,14 @@ const ServicesManagement = () => {
               <div>
                 <Label>Service Name</Label>
                 <Input
-                  value={editingService.services?.name || ""}
+                  value={editingService.services.name}
                   disabled
                   className="bg-muted"
                 />
               </div>
 
               <div>
-                <Label htmlFor="price">Price (₹)</Label>
+                <Label htmlFor="price">Price ($)</Label>
                 <Input
                   id="price"
                   type="number"
@@ -300,11 +374,52 @@ const ServicesManagement = () => {
                 />
               </div>
 
+              <div>
+                <Label>Service Image</Label>
+                {formData.image_url ? (
+                  <div className="relative">
+                    <img
+                      src={formData.image_url}
+                      alt="Service"
+                      className="w-full h-48 object-cover rounded-md"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2"
+                      onClick={handleDeleteImage}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed rounded-md p-8 text-center">
+                    <Upload className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                    <Label htmlFor="image-upload" className="cursor-pointer">
+                      <span className="text-sm text-primary hover:underline">
+                        Click to upload image
+                      </span>
+                      <Input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={uploading}
+                      />
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      PNG, JPG, WEBP up to 5MB
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleSaveService}>
+                <Button onClick={handleSaveService} disabled={uploading}>
                   Save Changes
                 </Button>
               </div>
@@ -345,7 +460,7 @@ const ServicesManagement = () => {
             {selectedServiceId && (
               <>
                 <div>
-                  <Label htmlFor="add-price">Price (₹)</Label>
+                  <Label htmlFor="add-price">Price ($)</Label>
                   <Input
                     id="add-price"
                     type="number"
@@ -364,6 +479,47 @@ const ServicesManagement = () => {
                     onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 30 })}
                   />
                 </div>
+
+                <div>
+                  <Label>Service Image (Optional)</Label>
+                  {formData.image_url ? (
+                    <div className="relative">
+                      <img
+                        src={formData.image_url}
+                        alt="Service"
+                        className="w-full h-48 object-cover rounded-md"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => setFormData({ ...formData, image_url: null })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed rounded-md p-8 text-center">
+                      <Upload className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                      <Label htmlFor="add-image-upload" className="cursor-pointer">
+                        <span className="text-sm text-primary hover:underline">
+                          Click to upload image
+                        </span>
+                        <Input
+                          id="add-image-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageUpload}
+                          disabled={uploading}
+                        />
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        PNG, JPG, WEBP up to 5MB
+                      </p>
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -371,7 +527,10 @@ const ServicesManagement = () => {
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddNewService} disabled={!selectedServiceId}>
+              <Button 
+                onClick={handleAddNewService} 
+                disabled={!selectedServiceId || uploading || formData.price <= 0}
+              >
                 Add Service
               </Button>
             </div>

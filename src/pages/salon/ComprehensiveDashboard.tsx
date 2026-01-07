@@ -107,7 +107,7 @@ const ComprehensiveDashboard = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">{entry.services?.name || 'Service'}</p>
                       <p className="text-xs text-muted-foreground">
-                        Phone: {entry.customers?.phone || 'N/A'} • Joined: {new Date(entry.check_in_time).toLocaleTimeString()}
+                        Phone: {entry.customers?.phone || 'N/A'} • Joined: {new Date(entry.joined_at).toLocaleTimeString()}
                       </p>
                     </div>
                     

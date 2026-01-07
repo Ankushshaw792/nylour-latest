@@ -55,7 +55,7 @@ const SalonDetails = () => {
       try {
         setLoadingSalon(true);
         
-        // Fetch salon with avg_service_time
+        // Fetch salon with services
         const { data: salonData, error: salonError } = await supabase
           .from('salons')
           .select(`
@@ -63,11 +63,21 @@ const SalonDetails = () => {
             name,
             address,
             image_url,
-            is_active,
-            avg_service_time
+            salon_services (
+              id,
+              price,
+              duration,
+              image_url,
+              services (
+                id,
+                name,
+                default_duration
+              )
+            )
           `)
           .eq('id', id)
-          .eq('is_active', true)
+          .eq('status', 'approved')
+          .eq('admin_approved', true)
           .maybeSingle();
 
         if (salonError) {
@@ -81,32 +91,15 @@ const SalonDetails = () => {
           return;
         }
 
-        // Fetch salon services separately
-        const { data: servicesData } = await supabase
-          .from('salon_services')
-          .select(`
-            id,
-            price,
-            duration,
-            services (
-              id,
-              name,
-              default_duration
-            )
-          `)
-          .eq('salon_id', id)
-          .eq('is_active', true);
-
-        // Get current queue count - active statuses
+        // Get current queue count
         const { data: queueData } = await supabase
           .from('queue_entries')
           .select('id')
           .eq('salon_id', id)
-          .in('status', ['waiting', 'called', 'in_service']);
+          .eq('status', 'waiting');
 
         const queueCount = queueData?.length || 0;
-        const avgServiceTime = salonData.avg_service_time || 20;
-        const avgWaitTime = queueCount * avgServiceTime;
+        const avgWaitTime = Math.max(15, queueCount * 20);
 
         // Get salon hours (mock for now)
         const hours = "9:00 AM - 9:00 PM";
@@ -115,23 +108,24 @@ const SalonDetails = () => {
         const serviceImages = [haircutImage, beardTrimImage, hairWashImage];
         const serviceIcons = [Scissors, Sparkles, Sparkles];
         
-        const processedServices: SalonService[] = (servicesData || []).map((salonService: any, index: number) => ({
-          id: salonService.services?.id || salonService.id,
-          name: salonService.services?.name || "Service",
+        const processedServices: SalonService[] = salonData.salon_services?.map((salonService, index) => ({
+          id: salonService.services.id, // Use actual service ID, not salon_service ID
+          name: salonService.services.name,
           price: salonService.price,
           duration: salonService.duration,
-          image: serviceImages[index % serviceImages.length],
+          image_url: salonService.image_url, // Custom uploaded image
+          image: serviceImages[index % serviceImages.length], // Fallback default image
           icon: serviceIcons[index % serviceIcons.length]
-        }));
+        })) || [];
 
         const processedSalon: SalonDetails = {
           id: salonData.id,
           name: salonData.name,
           address: salonData.address,
-          phone: 'Contact salon for phone number',
-          rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10,
-          reviews: Math.floor(Math.random() * 200) + 50,
-          waitTime: avgWaitTime === 0 ? 'No wait' : `${avgWaitTime} min`,
+          phone: 'Contact salon for phone number', // Phone now protected
+          rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10, // Mock rating
+          reviews: Math.floor(Math.random() * 200) + 50, // Mock reviews
+          waitTime: `${avgWaitTime} min`,
           queueCount,
           services: processedServices,
           hours,
@@ -148,20 +142,6 @@ const SalonDetails = () => {
     };
 
     fetchSalonDetails();
-
-    // Subscribe to queue changes for this salon
-    const channel = supabase
-      .channel(`salon-queue-${id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'queue_entries', filter: `salon_id=eq.${id}` },
-        () => fetchSalonDetails()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [id]);
 
   const getItemQuantity = (serviceId: string) => {
