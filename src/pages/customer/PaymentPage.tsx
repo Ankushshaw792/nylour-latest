@@ -38,6 +38,16 @@ const PaymentPage = () => {
     const fetchBookingDetails = async () => {
       if (!bookingId || !user) return;
 
+      // First get customer record by auth user id
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!customer) return;
+
+      // Then query bookings using the customer table id
       const { data: bookingData } = await supabase
         .from('bookings')
         .select(`
@@ -45,7 +55,7 @@ const PaymentPage = () => {
           salons (name, address)
         `)
         .eq('id', bookingId)
-        .eq('customer_id', user.id)
+        .eq('customer_id', customer.id)
         .maybeSingle();
 
       if (bookingData) {
