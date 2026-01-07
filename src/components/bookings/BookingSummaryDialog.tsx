@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Phone, MapPin, Clock, Calendar, DollarSign, Users, X } from 'lucide-react';
+import { Phone, MapPin, Clock, Calendar, X, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import QueueTimer from '@/components/queue/QueueTimer';
+import { CancellationDialog } from '@/components/bookings/CancellationDialog';
 
 interface BookingSummaryDialogProps {
   booking: any;
@@ -20,20 +20,50 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
   const navigate = useNavigate();
   const [queueEntry, setQueueEntry] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [serviceName, setServiceName] = useState<string>("Service");
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancellationCount, setCancellationCount] = useState(0);
 
-  // Fetch real-time queue data
+  // Fetch service name and queue data
   useEffect(() => {
-    const fetchQueueData = async () => {
+    const fetchData = async () => {
       if (!booking || !isOpen) return;
 
       try {
+        // Fetch service name via salon_services
+        if (booking.service_id) {
+          const { data: salonServiceData } = await supabase
+            .from("salon_services")
+            .select("id, services(name)")
+            .eq("id", booking.service_id)
+            .maybeSingle();
+
+          if (salonServiceData?.services) {
+            setServiceName((salonServiceData.services as any)?.name || "Service");
+          }
+        }
+
+        // Fetch customer cancellation count
+        if (booking.customer_id) {
+          const { data: customerData } = await supabase
+            .from("customers")
+            .select("cancellation_count")
+            .eq("id", booking.customer_id)
+            .maybeSingle();
+
+          if (customerData) {
+            setCancellationCount(customerData.cancellation_count || 0);
+          }
+        }
+
+        // Fetch queue data
         const { data: queueData } = await supabase
           .from("queue_entries")
           .select("*")
           .eq("customer_id", booking.customer_id)
           .eq("salon_id", booking.salon_id)
           .eq("status", "waiting")
-          .order("joined_at", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(1);
 
         if (queueData && queueData.length > 0) {
@@ -42,11 +72,11 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
           setQueueEntry(null);
         }
       } catch (error) {
-        console.error("Error fetching queue data:", error);
+        console.error("Error fetching data:", error);
       }
     };
 
-    fetchQueueData();
+    fetchData();
 
     // Set up real-time subscription for queue updates
     const channel = supabase
@@ -60,7 +90,7 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
           filter: `salon_id=eq.${booking?.salon_id}`
         },
         () => {
-          fetchQueueData();
+          fetchData();
         }
       )
       .subscribe();
@@ -78,27 +108,14 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
     }
   };
 
-  const handleCancelBooking = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: "cancelled" })
-        .eq("id", booking.id);
+  const handleOpenCancelDialog = () => {
+    setCancelDialogOpen(true);
+  };
 
-      if (error) {
-        console.error("Error cancelling booking:", error);
-        toast.error("Failed to cancel booking");
-      } else {
-        toast.success("Booking cancelled successfully");
-        onClose();
-      }
-    } catch (error) {
-      console.error("Error cancelling booking:", error);
-      toast.error("Failed to cancel booking");
-    } finally {
-      setLoading(false);
-    }
+  const handleCancellationComplete = () => {
+    setCancelDialogOpen(false);
+    onClose();
+    window.location.reload();
   };
 
   const formatDate = (dateStr: string) => {
@@ -123,8 +140,9 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
   if (!booking) return null;
 
   const salon = booking.salons;
-  const service = booking.service_name;
-
+  const displayServiceName = booking.service_name || serviceName;
+  const isCancelled = booking.status === "cancelled";
+  const isActive = ["pending", "confirmed", "in_progress"].includes(booking.status);
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md mx-auto max-h-[90vh] overflow-y-auto">
@@ -157,7 +175,7 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-medium">Service</span>
-              <span className="text-foreground">{service}</span>
+              <span className="text-foreground">{displayServiceName}</span>
             </div>
             
             <div className="flex items-center justify-between">
@@ -188,10 +206,29 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
 
             <div className="flex items-center justify-between">
               <span className="font-medium">Status</span>
-              <Badge variant={booking.status === "confirmed" ? "default" : "secondary"}>
-                {booking.status === "confirmed" ? "Confirmed" : "Pending"}
+              <Badge variant={
+                booking.status === "confirmed" ? "default" : 
+                booking.status === "cancelled" ? "destructive" : 
+                booking.status === "completed" ? "secondary" : "secondary"
+              }>
+                {booking.status === "confirmed" ? "Confirmed" : 
+                 booking.status === "cancelled" ? "Cancelled" :
+                 booking.status === "completed" ? "Completed" : "Pending"}
               </Badge>
             </div>
+
+            {/* Cancellation Reason for cancelled bookings */}
+            {isCancelled && booking.cancellation_reason && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mt-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-destructive">Cancellation Reason</p>
+                    <p className="text-sm text-muted-foreground">{booking.cancellation_reason}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Queue Information */}
@@ -208,39 +245,59 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
 
           <Separator />
 
-          {/* Action Buttons */}
-          <div className="space-y-2">
-            <Button onClick={handleCall} className="w-full gap-2" size="lg">
-              <Phone className="h-4 w-4" />
-              Call Salon
-            </Button>
-            
-            <div className="flex gap-2">
-              {queueEntry && (
+          {/* Action Buttons - Only show for active bookings */}
+          {isActive && (
+            <div className="space-y-2">
+              <Button onClick={handleCall} className="w-full gap-2" size="lg">
+                <Phone className="h-4 w-4" />
+                Call Salon
+              </Button>
+              
+              <div className="flex gap-2">
+                {queueEntry && (
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 gap-2"
+                    onClick={() => {
+                      onClose();
+                      navigate("/queue-status");
+                    }}
+                  >
+                    View Queue
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   className="flex-1 gap-2"
-                  onClick={() => {
-                    onClose();
-                    navigate("/queue-status");
-                  }}
+                  onClick={handleOpenCancelDialog}
                 >
-                  View Queue
+                  <X className="h-4 w-4" />
+                  Cancel
                 </Button>
-              )}
-              <Button 
-                variant="outline" 
-                className="flex-1 gap-2"
-                onClick={handleCancelBooking}
-                disabled={loading}
-              >
-                <X className="h-4 w-4" />
-                {loading ? "Cancelling..." : "Cancel"}
-              </Button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* For past bookings, just show close button */}
+          {!isActive && (
+            <Button variant="outline" className="w-full" onClick={onClose}>
+              Close
+            </Button>
+          )}
         </div>
       </DialogContent>
+
+      {/* Cancellation Confirmation Dialog */}
+      {booking.customer_id && (
+        <CancellationDialog
+          isOpen={cancelDialogOpen}
+          onClose={() => setCancelDialogOpen(false)}
+          bookingId={booking.id}
+          customerId={booking.customer_id}
+          cancellationCount={cancellationCount}
+          onCancellationComplete={handleCancellationComplete}
+        />
+      )}
     </Dialog>
   );
 };

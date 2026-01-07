@@ -48,6 +48,12 @@ export const CancellationDialog = ({
         return;
       }
 
+      // Also update the cancellation_reason column
+      await supabase
+        .from('bookings')
+        .update({ cancellation_reason: 'Cancelled by customer' })
+        .eq('id', bookingId);
+
       toast.success('Booking cancelled. A cancellation fee of ₹5 has been applied.');
       onCancellationComplete();
     } catch (error) {
