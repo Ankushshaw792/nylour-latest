@@ -23,6 +23,9 @@ export type Database = {
           duration: number | null
           id: string
           notes: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string | null
           reviewed: boolean | null
           salon_id: string | null
           service_id: string | null
@@ -38,6 +41,9 @@ export type Database = {
           duration?: number | null
           id?: string
           notes?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
           reviewed?: boolean | null
           salon_id?: string | null
           service_id?: string | null
@@ -53,6 +59,9 @@ export type Database = {
           duration?: number | null
           id?: string
           notes?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
           reviewed?: boolean | null
           salon_id?: string | null
           service_id?: string | null

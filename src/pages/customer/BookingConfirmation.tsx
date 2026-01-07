@@ -149,12 +149,24 @@ const BookingConfirmation = () => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Amount Paid</span>
-                <span className="font-semibold text-primary">₹{booking.total_price}</span>
+                <span className="text-muted-foreground">Booking Fee</span>
+                <span className="font-semibold text-primary">₹10</span>
               </div>
+              {booking.payment_method && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Payment Method</span>
+                  <span className="font-medium">{booking.payment_method}</span>
+                </div>
+              )}
+              {booking.payment_reference && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Transaction ID</span>
+                  <span className="font-mono text-xs">{booking.payment_reference}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Payment Status</span>
-                <Badge variant={booking.payment_status === "completed" ? "default" : "secondary"}>
+                <Badge variant={booking.payment_status === "completed" ? "default" : "secondary"} className="capitalize">
                   {booking.payment_status || "Pending"}
                 </Badge>
               </div>
