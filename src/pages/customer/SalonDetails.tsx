@@ -21,7 +21,6 @@ interface SalonService {
   price: number;
   duration: number;
   image?: string;
-  image_url?: string | null;
   icon: any;
 }
 
@@ -63,11 +62,11 @@ const SalonDetails = () => {
             name,
             address,
             image_url,
+            avg_service_time,
             salon_services (
               id,
               price,
               duration,
-              image_url,
               services (
                 id,
                 name,
@@ -76,8 +75,6 @@ const SalonDetails = () => {
             )
           `)
           .eq('id', id)
-          .eq('status', 'approved')
-          .eq('admin_approved', true)
           .maybeSingle();
 
         if (salonError) {
@@ -91,15 +88,22 @@ const SalonDetails = () => {
           return;
         }
 
-        // Get current queue count
+        // Get current queue count (today only)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStart = today.toISOString();
+        
         const { data: queueData } = await supabase
           .from('queue_entries')
           .select('id')
           .eq('salon_id', id)
-          .eq('status', 'waiting');
+          .eq('status', 'waiting')
+          .gte('check_in_time', todayStart);
 
         const queueCount = queueData?.length || 0;
-        const avgWaitTime = Math.max(15, queueCount * 20);
+        // Use salon's avg_service_time (default 30 mins) for wait calculation
+        const avgServiceTime = salonData.avg_service_time || 30;
+        const avgWaitTime = queueCount * avgServiceTime;
 
         // Get salon hours (mock for now)
         const hours = "9:00 AM - 9:00 PM";
@@ -108,13 +112,12 @@ const SalonDetails = () => {
         const serviceImages = [haircutImage, beardTrimImage, hairWashImage];
         const serviceIcons = [Scissors, Sparkles, Sparkles];
         
-        const processedServices: SalonService[] = salonData.salon_services?.map((salonService, index) => ({
-          id: salonService.services.id, // Use actual service ID, not salon_service ID
+        const processedServices: SalonService[] = salonData.salon_services?.map((salonService: any, index: number) => ({
+          id: salonService.services.id,
           name: salonService.services.name,
           price: salonService.price,
           duration: salonService.duration,
-          image_url: salonService.image_url, // Custom uploaded image
-          image: serviceImages[index % serviceImages.length], // Fallback default image
+          image: serviceImages[index % serviceImages.length],
           icon: serviceIcons[index % serviceIcons.length]
         })) || [];
 
@@ -277,7 +280,7 @@ const SalonDetails = () => {
                       {/* Service Image */}
                       <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
                         <img 
-                          src={service.image_url || service.image || haircutImage} 
+                          src={service.image || haircutImage} 
                           alt={service.name}
                           className="w-full h-full object-cover"
                         />

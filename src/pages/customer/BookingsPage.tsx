@@ -58,12 +58,17 @@ const BookingsPage = () => {
             .select("id, name")
             .in("id", serviceIds);
 
-          // Fetch queue entries for current bookings
+          // Fetch queue entries for current bookings (today only)
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const todayStart = today.toISOString();
+          
           const { data: queueData } = await supabase
             .from("queue_entries")
             .select("*")
             .in("customer_id", [user.id])
-            .eq("status", "waiting");
+            .eq("status", "waiting")
+            .gte("check_in_time", todayStart);
 
           // Merge service and queue data
           const enrichedCurrent = currentData.map(booking => ({
@@ -300,7 +305,7 @@ const BookingsPage = () => {
                             <p className="text-xs text-muted-foreground">Estimated wait time</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xl font-bold text-primary">#{queueEntry.queue_number}</p>
+                            <p className="text-xl font-bold text-primary">#{queueEntry.position}</p>
                             <p className="text-sm text-primary">{queueEntry.estimated_wait_time || 0} min</p>
                           </div>
                         </div>

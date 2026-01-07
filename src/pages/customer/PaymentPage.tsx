@@ -61,14 +61,24 @@ const PaymentPage = () => {
 
       if (bookingError) throw bookingError;
 
-      // Create queue entry
+      // Create queue entry - get next position first
+      const { data: existingQueue } = await supabase
+        .from('queue_entries')
+        .select('position')
+        .eq('salon_id', booking.salon_id)
+        .eq('status', 'waiting')
+        .order('position', { ascending: false })
+        .limit(1);
+
+      const nextPosition = (existingQueue?.[0]?.position || 0) + 1;
+
       const { error: queueError } = await supabase
         .from('queue_entries')
         .insert({
           salon_id: booking.salon_id,
           customer_id: user.id,
-          service_id: booking.service_id,
-          queue_number: Math.floor(Math.random() * 1000) + 1,
+          booking_id: booking.id,
+          position: nextPosition,
           status: 'waiting'
         });
 

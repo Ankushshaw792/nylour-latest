@@ -75,16 +75,7 @@ export const FavoritesList = () => {
                     <h3 className="font-medium text-foreground truncate">
                       {salon.name}
                     </h3>
-                    <div className="flex items-center gap-1">
-                      <div 
-                        className={`w-2 h-2 rounded-full ${
-                          salon.is_online ? 'bg-green-500' : 'bg-gray-400'
-                        }`} 
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {salon.is_online ? 'Open' : 'Closed'}
-                      </span>
-                    </div>
+                    {/* Status badge removed - is_online doesn't exist */}
                   </div>
                   
                   <div className="flex items-center gap-1 mt-1">

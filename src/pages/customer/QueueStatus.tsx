@@ -16,7 +16,6 @@ const QueueStatus = () => {
   const [queueEntry, setQueueEntry] = useState<any>(null);
   const [queueMembers, setQueueMembers] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
   // Fetch active queue data and setup real-time updates
   useEffect(() => {
@@ -24,17 +23,19 @@ const QueueStatus = () => {
       if (!user) return;
       
       try {
-        // Call the expire function first to clean up old entries
-        await supabase.rpc('expire_old_queue_entries');
+        // Get today's date for filtering
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStart = today.toISOString();
 
-        // Find user's active queue entry (not expired)
+        // Find user's active queue entry (today only)
         const { data: queueDataArray, error: queueError } = await supabase
           .from("queue_entries")
           .select("*")
           .eq("customer_id", user.id)
           .eq("status", "waiting")
-          .gt("expires_at", new Date().toISOString())
-          .order("joined_at", { ascending: false })
+          .gte("check_in_time", todayStart)
+          .order("check_in_time", { ascending: false })
           .limit(1);
 
         const activeQueueData = queueDataArray && queueDataArray.length > 0 ? queueDataArray[0] : null;
@@ -60,11 +61,13 @@ const QueueStatus = () => {
               id,
               name,
               address,
-              phone
+              phone,
+              avg_service_time
             )
           `)
           .eq("customer_id", user.id)
           .eq("salon_id", activeQueueData.salon_id)
+          .in("status", ["pending", "confirmed", "in_progress"])
           .order("created_at", { ascending: false })
           .limit(1);
 
@@ -72,43 +75,38 @@ const QueueStatus = () => {
 
         if (bookingError) {
           console.error("Error fetching booking:", bookingError);
-          // Continue without booking data
         }
-        
-        console.log("Booking data:", bookingData);
 
-        // Fetch the service name
-        const { data: serviceData } = await supabase
-          .from("services")
-          .select("name")
-          .eq("id", activeQueueData.service_id)
-          .maybeSingle();
+        // Fetch service name from booking's service_id
+        let serviceName = "Service";
+        if (bookingData?.service_id) {
+          const { data: serviceData } = await supabase
+            .from("services")
+            .select("name")
+            .eq("id", bookingData.service_id)
+            .maybeSingle();
+          serviceName = serviceData?.name || "Service";
+        }
 
         // Combine the data with service name
         const combinedData = {
           ...activeQueueData,
           bookings: bookingData ? {
             ...bookingData,
-            service_name: serviceData?.name || "Service"
+            service_name: serviceName
           } : null
         };
 
         setQueueEntry(combinedData);
 
-        // Calculate time remaining until expiration
-        const expiresAt = new Date(activeQueueData.expires_at).getTime();
-        const now = Date.now();
-        const remaining = Math.max(0, expiresAt - now);
-        setTimeRemaining(remaining);
-
-        // Fetch all queue members for this salon
+        // Fetch all queue members for this salon (today only)
         const { data: membersData, error: membersError } = await supabase
           .from("queue_entries")
           .select("*")
           .eq("salon_id", activeQueueData.salon_id)
           .eq("status", "waiting")
-          .gt("expires_at", new Date().toISOString())
-          .order("queue_number");
+          .gte("check_in_time", todayStart)
+          .order("position");
 
         if (membersError) {
           console.error("Error fetching queue members:", membersError);
@@ -121,19 +119,38 @@ const QueueStatus = () => {
               .select("user_id, first_name, last_name")
               .in("user_id", customerIds);
 
-            // Fetch service names for queue members
-            const serviceIds = membersData.map(m => m.service_id).filter(Boolean);
-            const { data: servicesData } = await supabase
-              .from("services")
-              .select("id, name")
-              .in("id", serviceIds);
+            // Fetch booking info for each queue member to get service names
+            const bookingIds = membersData.map(m => m.booking_id).filter(Boolean);
+            let bookingsWithServices: any[] = [];
+            if (bookingIds.length > 0) {
+              const { data: bookingsData } = await supabase
+                .from("bookings")
+                .select("id, service_id")
+                .in("id", bookingIds);
+              
+              if (bookingsData && bookingsData.length > 0) {
+                const serviceIds = bookingsData.map(b => b.service_id).filter(Boolean);
+                const { data: servicesData } = await supabase
+                  .from("services")
+                  .select("id, name")
+                  .in("id", serviceIds);
+                
+                bookingsWithServices = bookingsData.map(b => ({
+                  ...b,
+                  service_name: servicesData?.find(s => s.id === b.service_id)?.name || "Service"
+                }));
+              }
+            }
 
             // Combine queue members with customer and service data
-            const enrichedMembers = membersData.map(member => ({
-              ...member,
-              customer: customersData?.find(c => c.user_id === member.customer_id),
-              service_name: servicesData?.find(s => s.id === member.service_id)?.name || "Service"
-            }));
+            const enrichedMembers = membersData.map(member => {
+              const memberBooking = bookingsWithServices.find(b => b.id === member.booking_id);
+              return {
+                ...member,
+                customer: customersData?.find(c => c.user_id === member.customer_id),
+                service_name: memberBooking?.service_name || "Service"
+              };
+            });
 
             setQueueMembers(enrichedMembers);
           } else {
@@ -183,24 +200,6 @@ const QueueStatus = () => {
       supabase.removeChannel(subscription);
     };
   }, [user]);
-
-  // Countdown timer effect
-  useEffect(() => {
-    if (!timeRemaining || timeRemaining <= 0) return;
-
-    const timer = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (!prev || prev <= 1000) {
-          // Queue expired - refresh the page
-          window.location.reload();
-          return 0;
-        }
-        return prev - 1000;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeRemaining]);
 
   if (loading || dataLoading) {
     return (
@@ -265,11 +264,7 @@ const QueueStatus = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <MessageSquare className="h-4 w-4 text-primary" />
-                  <span className="text-sm">Receive SMS notifications</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm">Queue expires after 1 hour</span>
+                  <span className="text-sm">Receive notifications</span>
                 </div>
               </div>
             </CardContent>
@@ -281,8 +276,12 @@ const QueueStatus = () => {
 
   // Calculate progress based on current position
   const totalQueueMembers = queueMembers.length;
-  const currentPosition = queueEntry.queue_number;
+  const currentPosition = queueEntry.position;
   const progress = totalQueueMembers > 0 ? Math.max(0, ((totalQueueMembers - currentPosition) / totalQueueMembers) * 100) : 0;
+
+  // Calculate estimated wait time based on position and avg service time
+  const avgServiceTime = queueEntry.bookings?.salons?.avg_service_time || 30;
+  const estimatedWaitMinutes = Math.max(0, (currentPosition - 1) * avgServiceTime);
 
   // Extract booking and salon data with null checks
   const booking = queueEntry.bookings;
@@ -319,16 +318,6 @@ const QueueStatus = () => {
   const salon = booking.salons;
   const service = booking.service_name;
 
-  // Format time remaining
-  const formatTimeRemaining = (ms: number): string => {
-    const minutes = Math.floor(ms / (1000 * 60));
-    const seconds = Math.floor((ms % (1000 * 60)) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  // Check if queue is about to expire (less than 10 minutes)
-  const isAboutToExpire = timeRemaining && timeRemaining < 10 * 60 * 1000;
-
   return (
     <CustomerLayout
       headerProps={{
@@ -350,26 +339,6 @@ const QueueStatus = () => {
               <p className="text-muted-foreground">in the queue</p>
             </div>
 
-            {/* Expiration Warning */}
-            {timeRemaining && (
-              <div className={`mb-4 p-3 rounded-lg border ${
-                isAboutToExpire 
-                  ? 'bg-destructive/10 border-destructive/20 text-destructive' 
-                  : 'bg-amber-50 border-amber-200 text-amber-700'
-              }`}>
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <div className="text-sm">
-                    <span className="font-medium">Queue expires in: </span>
-                    <span className="font-bold">{formatTimeRemaining(timeRemaining)}</span>
-                  </div>
-                </div>
-                {isAboutToExpire && (
-                  <p className="text-xs mt-1">Please head to the salon soon!</p>
-                )}
-              </div>
-            )}
-
             {/* Progress Bar */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
@@ -382,7 +351,7 @@ const QueueStatus = () => {
             {/* Estimated Time */}
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-1">Estimated wait time</p>
-              <p className="text-3xl font-bold text-primary">{queueEntry.estimated_wait_time || 0} min</p>
+              <p className="text-3xl font-bold text-primary">{estimatedWaitMinutes} min</p>
             </div>
           </CardContent>
         </Card>
@@ -419,7 +388,7 @@ const QueueStatus = () => {
             <div className="space-y-3">
               {queueMembers.map((member) => {
                 const isCurrentUser = member.customer_id === user?.id;
-                const isActive = member.queue_number === 1;
+                const isActive = member.position === 1;
                 const displayName = isCurrentUser 
                   ? "You" 
                   : `${member.customer?.first_name || "Customer"} ${member.customer?.last_name || ""}`.trim();
@@ -445,7 +414,7 @@ const QueueStatus = () => {
                               : 'bg-muted-foreground/20 text-foreground'
                         }`}
                       >
-                        {member.queue_number}
+                        {member.position}
                       </div>
                       <div>
                         <p className={`font-medium ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
@@ -474,14 +443,10 @@ const QueueStatus = () => {
         <Card className="bg-success/10 border-success/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-success/20 rounded-full flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-success" />
-              </div>
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
               <div>
-                <h4 className="font-semibold text-success mb-1">SMS Alerts Active</h4>
-                <p className="text-sm text-muted-foreground">
-                  You'll get notified 15 minutes before your turn
-                </p>
+                <p className="font-medium text-green-700">Notifications Enabled</p>
+                <p className="text-sm text-green-600">You'll be notified when your turn is near</p>
               </div>
             </div>
           </CardContent>
@@ -490,51 +455,22 @@ const QueueStatus = () => {
         {/* Salon Contact */}
         <Card>
           <CardContent className="p-4">
-            <h3 className="font-semibold mb-4">Salon Contact</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold mb-3">Need Help?</h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-4 w-4" />
                 <span className="text-sm">{salon.address}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Phone className="h-4 w-4" />
                 <span className="text-sm">{salon.phone}</span>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        {/* Action Button */}
-        <div className="pb-6">
-          <Button
-            variant="mobile-outline"
-            size="xl"
-            className="w-full mb-3"
-            onClick={() => window.location.reload()}
-          >
-            <RefreshCw className="h-5 w-5 mr-2" />
-            Refresh Status
-          </Button>
-
-          {currentPosition === 1 && (
-            <Card className="bg-primary/10 border-primary/20">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-6 w-6 text-primary" />
-                  <div>
-                    <h4 className="font-semibold text-primary">You're Next!</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Please head to the salon now
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-           )}
-        </div>
       </div>
-      </CustomerLayout>
-    );
-  };
+    </CustomerLayout>
+  );
+};
 
-  export default QueueStatus;
+export default QueueStatus;
