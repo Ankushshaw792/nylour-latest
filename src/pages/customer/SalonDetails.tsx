@@ -63,7 +63,8 @@ const SalonDetails = () => {
             name,
             address,
             image_url,
-            is_active
+            is_active,
+            avg_service_time
           `)
           .eq('id', id)
           .eq('is_active', true)
@@ -107,15 +108,22 @@ const SalonDetails = () => {
           return;
         }
 
-        // Get current queue count
+        // Get today's date for filtering queue entries
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayISO = today.toISOString();
+
+        // Get current queue count - only TODAY's waiting entries
         const { data: queueData } = await supabase
           .from('queue_entries')
-          .select('id')
+          .select('id, check_in_time')
           .eq('salon_id', id)
-          .eq('status', 'waiting');
+          .eq('status', 'waiting')
+          .gte('check_in_time', todayISO);
 
         const queueCount = queueData?.length || 0;
-        const avgWaitTime = Math.max(15, queueCount * 20);
+        const avgServiceTime = salonData.avg_service_time || 20;
+        const avgWaitTime = queueCount === 0 ? 0 : queueCount * avgServiceTime;
 
         // Get salon hours (mock for now)
         const hours = "9:00 AM - 9:00 PM";
