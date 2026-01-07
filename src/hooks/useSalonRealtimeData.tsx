@@ -107,7 +107,7 @@ export const useSalonRealtimeData = () => {
             if (booking.customer_id) {
               const { data: customer } = await supabase
                 .from('customers')
-                .select('first_name, last_name, phone, avatar_url')
+                .select('first_name, last_name, phone')
                 .eq('id', booking.customer_id)
                 .maybeSingle();
               customerData = customer;
