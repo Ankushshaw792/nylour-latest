@@ -224,6 +224,16 @@ export const useSalonRealtimeData = () => {
     }
   }, [salon]);
 
+  // Helper to get auth user_id from customer_id
+  const getAuthUserId = useCallback(async (customerId: string): Promise<string | null> => {
+    const { data } = await supabase
+      .from('customers')
+      .select('user_id')
+      .eq('id', customerId)
+      .single();
+    return data?.user_id || null;
+  }, []);
+
   // Accept booking
   const acceptBooking = useCallback(async (bookingId: string) => {
     try {
@@ -241,16 +251,19 @@ export const useSalonRealtimeData = () => {
 
       if (error) throw error;
 
-      // Send notification to customer
+      // Send notification to customer using auth user_id
       if (bookingData?.customer_id) {
-        const salonName = (bookingData.salons as any)?.name || 'The salon';
-        await supabase.from('notifications').insert({
-          user_id: bookingData.customer_id,
-          title: 'Booking Confirmed! ✓',
-          message: `${salonName} has accepted your booking. Get ready for your appointment!`,
-          type: 'booking_confirmation',
-          related_id: bookingId
-        });
+        const authUserId = await getAuthUserId(bookingData.customer_id);
+        if (authUserId) {
+          const salonName = (bookingData.salons as any)?.name || 'The salon';
+          await supabase.from('notifications').insert({
+            user_id: authUserId,
+            title: 'Booking Confirmed! ✓',
+            message: `${salonName} has accepted your booking. Get ready for your appointment!`,
+            type: 'booking_confirmation',
+            related_id: bookingId
+          });
+        }
       }
 
       toast({
@@ -265,7 +278,7 @@ export const useSalonRealtimeData = () => {
         variant: "destructive",
       });
     }
-  }, []);
+  }, [getAuthUserId]);
 
   // Reject booking with reason
   const rejectBooking = useCallback(async (bookingId: string, reason?: string) => {
@@ -289,16 +302,19 @@ export const useSalonRealtimeData = () => {
 
       if (error) throw error;
 
-      // Send notification to customer
+      // Send notification to customer using auth user_id
       if (bookingData?.customer_id) {
-        const salonName = (bookingData.salons as any)?.name || 'The salon';
-        await supabase.from('notifications').insert({
-          user_id: bookingData.customer_id,
-          title: 'Booking Not Available',
-          message: `Sorry, ${salonName} couldn't accommodate your booking. Reason: ${cancellationReason}`,
-          type: 'booking_cancelled',
-          related_id: bookingId
-        });
+        const authUserId = await getAuthUserId(bookingData.customer_id);
+        if (authUserId) {
+          const salonName = (bookingData.salons as any)?.name || 'The salon';
+          await supabase.from('notifications').insert({
+            user_id: authUserId,
+            title: 'Booking Not Available',
+            message: `Sorry, ${salonName} couldn't accommodate your booking. Reason: ${cancellationReason}`,
+            type: 'booking_cancelled',
+            related_id: bookingId
+          });
+        }
       }
 
       toast({
@@ -313,7 +329,7 @@ export const useSalonRealtimeData = () => {
         variant: "destructive",
       });
     }
-  }, []);
+  }, [getAuthUserId]);
 
   // Start service
   const startService = useCallback(async (bookingId: string) => {
@@ -343,15 +359,18 @@ export const useSalonRealtimeData = () => {
           .eq('salon_id', bookingData.salon_id)
           .eq('status', 'waiting');
 
-        // Send notification
-        const salonName = (bookingData.salons as any)?.name || 'The salon';
-        await supabase.from('notifications').insert({
-          user_id: bookingData.customer_id,
-          title: 'Service Started! 💇',
-          message: `Your service at ${salonName} has begun. Enjoy!`,
-          type: 'queue_update',
-          related_id: bookingId
-        });
+        // Send notification using auth user_id
+        const authUserId = await getAuthUserId(bookingData.customer_id);
+        if (authUserId) {
+          const salonName = (bookingData.salons as any)?.name || 'The salon';
+          await supabase.from('notifications').insert({
+            user_id: authUserId,
+            title: 'Service Started! 💇',
+            message: `Your service at ${salonName} has begun. Enjoy!`,
+            type: 'queue_update',
+            related_id: bookingId
+          });
+        }
       }
 
       toast({
@@ -366,7 +385,7 @@ export const useSalonRealtimeData = () => {
         variant: "destructive",
       });
     }
-  }, []);
+  }, [getAuthUserId]);
 
   // Complete service
   const completeService = useCallback(async (bookingId: string) => {
@@ -396,15 +415,18 @@ export const useSalonRealtimeData = () => {
           .eq('salon_id', bookingData.salon_id)
           .in('status', ['waiting', 'in_service']);
 
-        // Send notification
-        const salonName = (bookingData.salons as any)?.name || 'The salon';
-        await supabase.from('notifications').insert({
-          user_id: bookingData.customer_id,
-          title: 'Service Complete! ⭐',
-          message: `Thanks for visiting ${salonName}! We hope to see you again soon.`,
-          type: 'general',
-          related_id: bookingId
-        });
+        // Send notification using auth user_id
+        const authUserId = await getAuthUserId(bookingData.customer_id);
+        if (authUserId) {
+          const salonName = (bookingData.salons as any)?.name || 'The salon';
+          await supabase.from('notifications').insert({
+            user_id: authUserId,
+            title: 'Service Complete! ⭐',
+            message: `Thanks for visiting ${salonName}! We hope to see you again soon.`,
+            type: 'general',
+            related_id: bookingId
+          });
+        }
       }
 
       toast({
@@ -419,7 +441,7 @@ export const useSalonRealtimeData = () => {
         variant: "destructive",
       });
     }
-  }, []);
+  }, [getAuthUserId]);
 
   // Mark booking as no-show with reason
   const markNoShow = useCallback(async (bookingId: string, reason?: string) => {
@@ -453,15 +475,18 @@ export const useSalonRealtimeData = () => {
           .eq('salon_id', bookingData.salon_id)
           .in('status', ['waiting', 'in_service']);
 
-        // Send notification
-        const salonName = (bookingData.salons as any)?.name || 'The salon';
-        await supabase.from('notifications').insert({
-          user_id: bookingData.customer_id,
-          title: 'Booking Marked as No-Show',
-          message: `You were marked as no-show at ${salonName}. Reason: ${cancellationReason}`,
-          type: 'booking_cancelled',
-          related_id: bookingId
-        });
+        // Send notification using auth user_id
+        const authUserId = await getAuthUserId(bookingData.customer_id);
+        if (authUserId) {
+          const salonName = (bookingData.salons as any)?.name || 'The salon';
+          await supabase.from('notifications').insert({
+            user_id: authUserId,
+            title: 'Booking Marked as No-Show',
+            message: `You were marked as no-show at ${salonName}. Reason: ${cancellationReason}`,
+            type: 'booking_cancelled',
+            related_id: bookingId
+          });
+        }
       }
 
       toast({
@@ -476,7 +501,7 @@ export const useSalonRealtimeData = () => {
         variant: "destructive",
       });
     }
-  }, []);
+  }, [getAuthUserId]);
 
   // Calculate dynamic wait time for queue
   const calculateWaitTime = useCallback(async (salonId: string, queuePosition: number): Promise<number> => {
@@ -499,10 +524,16 @@ export const useSalonRealtimeData = () => {
   // Send custom reminder message
   const sendCustomReminder = useCallback(async (customerId: string, bookingId: string, message: string) => {
     try {
+      // Get auth user_id from customer_id
+      const authUserId = await getAuthUserId(customerId);
+      if (!authUserId) {
+        throw new Error('Could not find user for this customer');
+      }
+
       const { error } = await supabase
         .from('notifications')
         .insert({
-          user_id: customerId,
+          user_id: authUserId,
           title: 'Message from Salon',
           message: message,
           type: 'queue_update',
@@ -523,7 +554,7 @@ export const useSalonRealtimeData = () => {
         variant: "destructive",
       });
     }
-  }, []);
+  }, [getAuthUserId]);
 
   // Add walk-in customer
   const addWalkInCustomer = useCallback(async (customerData: {
@@ -579,10 +610,16 @@ export const useSalonRealtimeData = () => {
   // Send reminder to specific customer
   const sendReminder = useCallback(async (customerId: string, bookingId: string) => {
     try {
+      // Get auth user_id from customer_id
+      const authUserId = await getAuthUserId(customerId);
+      if (!authUserId) {
+        throw new Error('Could not find user for this customer');
+      }
+
       const { error } = await supabase
         .from('notifications')
         .insert({
-          user_id: customerId,
+          user_id: authUserId,
           title: 'Your turn is coming up!',
           message: 'Please be ready. Your service will begin shortly.',
           type: 'queue_update',
@@ -603,7 +640,7 @@ export const useSalonRealtimeData = () => {
         variant: "destructive",
       });
     }
-  }, []);
+  }, [getAuthUserId]);
 
   // Notify next customer
   const notifyNextCustomer = useCallback(async (message?: string) => {
