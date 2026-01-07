@@ -27,6 +27,21 @@ const BookingsPage = () => {
       if (!user) return;
 
       try {
+        // First, get the customer record using user_id
+        const { data: customer, error: customerError } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (customerError || !customer) {
+          console.error("Error fetching customer:", customerError);
+          setCurrentBookings([]);
+          setPastBookings([]);
+          setDataLoading(false);
+          return;
+        }
+
         const today = new Date().toISOString().split('T')[0];
         
         // Fetch CURRENT bookings - based on status and booking_date
@@ -37,10 +52,11 @@ const BookingsPage = () => {
             salons!inner (
               name,
               address,
-              phone
+              phone,
+              avg_service_time
             )
           `)
-          .eq("customer_id", user.id)
+          .eq("customer_id", customer.id)
           .in("status", ["pending", "confirmed", "in_progress"])
           .gte("booking_date", today)
           .order("booking_date", { ascending: true });
@@ -59,14 +75,14 @@ const BookingsPage = () => {
             .in("id", serviceIds);
 
           // Fetch queue entries for current bookings (today only)
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const todayStart = today.toISOString();
+          const todayDate = new Date();
+          todayDate.setHours(0, 0, 0, 0);
+          const todayStart = todayDate.toISOString();
           
           const { data: queueData } = await supabase
             .from("queue_entries")
             .select("*")
-            .in("customer_id", [user.id])
+            .eq("customer_id", customer.id)
             .eq("status", "waiting")
             .gte("check_in_time", todayStart);
 
@@ -93,7 +109,7 @@ const BookingsPage = () => {
               phone
             )
           `)
-          .eq("customer_id", user.id)
+          .eq("customer_id", customer.id)
           .or(`status.in.(completed,cancelled),booking_date.lt.${today}`)
           .order("booking_date", { ascending: false });
 
