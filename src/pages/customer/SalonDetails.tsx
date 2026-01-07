@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, MapPin, Clock, Users, Phone, Scissors, Sparkles, Plus, Minus, Share, Heart, Loader2 } from "lucide-react";
+import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import salonHeroImage from "@/assets/salon-hero.jpg";
+import SalonGalleryCarousel from "@/components/salon/SalonGalleryCarousel";
 import haircutImage from "@/assets/haircut-service.jpg";
 import beardTrimImage from "@/assets/beard-trim-service.jpg";
 import hairWashImage from "@/assets/hair-wash-service.jpg";
@@ -22,6 +21,13 @@ interface SalonService {
   duration: number;
   image?: string;
   icon: any;
+}
+
+interface GalleryImage {
+  id: string;
+  image_url: string;
+  caption: string | null;
+  is_primary: boolean;
 }
 
 interface SalonDetails {
@@ -36,6 +42,7 @@ interface SalonDetails {
   services: SalonService[];
   hours: string;
   image_url: string | null;
+  galleryImages: GalleryImage[];
 }
 
 const SalonDetails = () => {
@@ -88,6 +95,14 @@ const SalonDetails = () => {
           return;
         }
 
+        // Fetch gallery images
+        const { data: galleryData } = await supabase
+          .from('salon_images')
+          .select('id, image_url, caption, is_primary')
+          .eq('salon_id', id)
+          .order('is_primary', { ascending: false })
+          .order('display_order', { ascending: true });
+
         // Get current queue count (today only)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -132,7 +147,8 @@ const SalonDetails = () => {
           queueCount,
           services: processedServices,
           hours,
-          image_url: salonData.image_url
+          image_url: salonData.image_url,
+          galleryImages: galleryData || []
         };
 
         setSalon(processedSalon);
@@ -219,15 +235,12 @@ const SalonDetails = () => {
         itemCount: totalItems
       } : undefined}
     >
-      {/* Hero Image Section */}
-      <div className="relative h-64 overflow-hidden">
-        <img 
-          src={salon?.image_url || salonHeroImage} 
-          alt={salon?.name}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
-      </div>
+      {/* Gallery Carousel */}
+      <SalonGalleryCarousel
+        images={salon.galleryImages}
+        fallbackImage={salon.image_url}
+        salonName={salon.name}
+      />
 
       <div className="p-4 space-y-6">
         {/* Wait Time Section */}
