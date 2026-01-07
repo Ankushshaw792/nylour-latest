@@ -67,11 +67,16 @@ const BookingScreen = () => {
         throw new Error('Please fill in contact details');
       }
 
+      // Get the customer record for the current user
+      if (!userProfile?.id) {
+        throw new Error('Customer profile not found. Please try again.');
+      }
+
       // Create booking record with pending status
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')
         .insert({
-          customer_id: user.id,
+          customer_id: userProfile.id,
           salon_id: id,
           service_id: items[0].id,
           booking_date: new Date().toISOString().split('T')[0],
