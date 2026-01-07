@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { BasicSalonInfo } from "./registration/BasicSalonInfo";
 import { BusinessHoursSetup } from "./registration/BusinessHoursSetup";
 import { ServicesSetup } from "./registration/ServicesSetup";
+import { GallerySetup } from "./registration/GallerySetup";
 import { BusinessSettings } from "./registration/BusinessSettings";
 import { RegistrationSuccess } from "./registration/RegistrationSuccess";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,15 @@ export interface SalonFormData {
     price: number;
     duration: number;
   }>;
+
+  // Gallery Images
+  galleryImages: Array<{
+    id: string;
+    file?: File;
+    url: string;
+    caption: string;
+    isPrimary: boolean;
+  }>;
   
   // Business Settings
   maxQueueSize: number;
@@ -69,6 +79,7 @@ const initialFormData: SalonFormData = {
   ],
   selectedServices: [],
   customServices: [],
+  galleryImages: [],
   maxQueueSize: 20,
   currentWaitTime: 30,
   acceptsBookings: true,
@@ -78,6 +89,7 @@ const steps = [
   { title: "Basic Information", description: "Tell us about your salon" },
   { title: "Business Hours", description: "Set your operating hours" },
   { title: "Services & Pricing", description: "Configure your services" },
+  { title: "Salon Gallery", description: "Upload photos of your salon" },
   { title: "Business Settings", description: "Final setup options" },
 ];
 
@@ -117,7 +129,9 @@ export const SalonRegistrationForm = () => {
         return formData.businessHours.some(hour => !hour.is_closed);
       case 2: // Services
         return formData.selectedServices.length > 0 || (formData.customServices || []).length > 0;
-      case 3: // Business Settings
+      case 3: // Gallery
+        return (formData.galleryImages || []).length > 0;
+      case 4: // Business Settings
         return formData.maxQueueSize > 0 && formData.currentWaitTime > 0;
       default:
         return true;
@@ -227,6 +241,34 @@ export const SalonRegistrationForm = () => {
         if (linkError) throw linkError;
       }
 
+      // Upload gallery images
+      const galleryImages = formData.galleryImages || [];
+      for (let i = 0; i < galleryImages.length; i++) {
+        const image = galleryImages[i];
+        if (image.file) {
+          const fileExt = image.file.name.split('.').pop();
+          const filePath = `${salon.id}/${image.id}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('salon-images')
+            .upload(filePath, image.file);
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('salon-images')
+              .getPublicUrl(filePath);
+
+            await supabase.from('salon_images').insert({
+              salon_id: salon.id,
+              image_url: urlData.publicUrl,
+              caption: image.caption || null,
+              is_primary: image.isPrimary,
+              display_order: i,
+            });
+          }
+        }
+      }
+
       // Clear localStorage draft
       localStorage.removeItem('salon-registration-draft');
       
@@ -287,8 +329,15 @@ export const SalonRegistrationForm = () => {
               updateFormData={updateFormData}
             />
           )}
-          
+
           {currentStep === 3 && (
+            <GallerySetup 
+              formData={formData} 
+              updateFormData={updateFormData}
+            />
+          )}
+          
+          {currentStep === 4 && (
             <BusinessSettings 
               formData={formData} 
               updateFormData={updateFormData}
