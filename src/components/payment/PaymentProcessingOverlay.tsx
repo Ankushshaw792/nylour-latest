@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 
 interface PaymentProcessingOverlayProps {
@@ -16,12 +16,22 @@ export const PaymentProcessingOverlay = ({
 }: PaymentProcessingOverlayProps) => {
   const [stage, setStage] = useState<"processing" | "verifying" | "success">("processing");
   const [transactionId, setTransactionId] = useState("");
+  const hasStartedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+
+  // Keep onComplete ref up to date
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     if (!isVisible) {
+      hasStartedRef.current = false;
       setStage("processing");
       return;
     }
+
+    // Prevent re-running timers if already started
+    if (hasStartedRef.current) return;
+    hasStartedRef.current = true;
 
     // Generate transaction ID
     setTransactionId(`TXN${Date.now().toString().slice(-10)}`);
@@ -29,14 +39,14 @@ export const PaymentProcessingOverlay = ({
     // Simulate payment processing stages
     const timer1 = setTimeout(() => setStage("verifying"), 1200);
     const timer2 = setTimeout(() => setStage("success"), 2400);
-    const timer3 = setTimeout(() => onComplete(), 3500);
+    const timer3 = setTimeout(() => onCompleteRef.current(), 3500);
 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(timer3);
     };
-  }, [isVisible, onComplete]);
+  }, [isVisible]);
 
   if (!isVisible) return null;
 
