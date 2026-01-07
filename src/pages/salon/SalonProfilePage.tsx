@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LogOut, Pause, Clock, Users, TrendingUp, Settings, MessageSquare, BarChart3, Eye, Wifi } from "lucide-react";
+import { LogOut, Pause, Clock, Users, TrendingUp, Settings, BarChart3, Eye, Wifi, ImageIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -344,9 +344,9 @@ const SalonProfilePage = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="h-16 flex-col gap-2">
-                <MessageSquare className="h-5 w-5" />
-                <span className="text-sm">Send SMS Updates</span>
+              <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => navigate('/salon-dashboard/gallery')}>
+                <ImageIcon className="h-5 w-5" />
+                <span className="text-sm">Manage Gallery</span>
               </Button>
               
               <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => navigate('/salon-dashboard')}>

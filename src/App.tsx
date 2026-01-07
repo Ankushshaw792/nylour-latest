@@ -30,6 +30,7 @@ import ComprehensiveDashboard from "./pages/salon/ComprehensiveDashboard";
 import ServicesManagement from "./pages/salon/ServicesManagement";
 
 import SalonProfilePage from "./pages/salon/SalonProfilePage";
+import GalleryManagement from "./pages/salon/GalleryManagement";
 
 import NotFound from "./pages/NotFound";
 
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/salon-dashboard/services" element={<MobileLayout><ServicesManagement /></MobileLayout>} />
             <Route path="/salon-dashboard/checkin" element={<MobileLayout><CheckInUpdate /></MobileLayout>} />
             <Route path="/salon-dashboard/profile" element={<MobileLayout><SalonProfilePage /></MobileLayout>} />
+            <Route path="/salon-dashboard/gallery" element={<MobileLayout><GalleryManagement /></MobileLayout>} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
