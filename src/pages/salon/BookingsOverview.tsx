@@ -327,6 +327,9 @@ interface BookingCardProps {
 }
 
 const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoShow, onSendReminder, onSendMessage, showActions }: BookingCardProps) => {
+  // Determine if this is a walk-in booking
+  const isWalkIn = !booking.customer_id || booking.notes?.includes('Walk-in:');
+  
   // Extract customer name from different possible sources
   const customerName = booking.customers 
     ? `${booking.customers.first_name || ''} ${booking.customers.last_name || ''}`.trim()
@@ -335,6 +338,7 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
     : 'Walk-in Customer';
   
   const serviceName = booking.salon_services?.services?.name || 'Service';
+  const servicePrice = booking.total_price || booking.salon_services?.price || 0;
   const phone = booking.customers?.phone || 
     (booking.notes?.includes('Walk-in:') 
       ? booking.notes.split(' - ')[1]?.trim() 
@@ -349,20 +353,32 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
   };
   
   return (
-    <Card className="card-hover">
+    <Card className={`card-hover ${isWalkIn ? 'border-l-4 border-l-amber-500' : 'border-l-4 border-l-primary'}`}>
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           {/* Customer Avatar */}
-          <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
-            <User className="h-6 w-6 text-primary" />
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isWalkIn ? 'bg-amber-100' : 'bg-primary/20'}`}>
+            <User className={`h-6 w-6 ${isWalkIn ? 'text-amber-600' : 'text-primary'}`} />
           </div>
 
           {/* Booking Details */}
           <div className="flex-1">
             <div className="flex items-start justify-between mb-2">
               <div>
-                <h4 className="font-semibold">{customerName}</h4>
-                <p className="text-sm text-muted-foreground">{serviceName}</p>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-semibold">{customerName}</h4>
+                  {isWalkIn && (
+                    <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                      Walk-in
+                    </Badge>
+                  )}
+                  {!isWalkIn && (
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                      Online
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm font-medium text-foreground mt-1">{serviceName}</p>
               </div>
               <Badge 
                 variant={
@@ -381,24 +397,26 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
               </Badge>
             </div>
 
-            <div className="flex items-center gap-4 mb-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
+            {/* Booking Info Grid */}
+            <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>{bookingTime}</span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Calendar className="h-4 w-4" />
                 <span>{bookingDate}</span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Phone className="h-4 w-4" />
                 <span>{phone}</span>
               </div>
+              <div className="flex items-center gap-1.5 font-semibold text-primary">
+                <span>₹{servicePrice}</span>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-primary">₹{booking.total_price}</span>
-              
+            <div className="flex items-center justify-end">
               {showActions === 'accept-reject' && (
                 <div className="flex gap-2">
                   <Button
