@@ -40,7 +40,7 @@ const BookingsOverview = () => {
   const [walkInName, setWalkInName] = useState("");
   const [walkInPhone, setWalkInPhone] = useState("");
   const [walkInService, setWalkInService] = useState("");
-  const [availableServices, setAvailableServices] = useState<Array<{ id: string; name: string }>>([]);
+  const [availableServices, setAvailableServices] = useState<Array<{ id: string; salonServiceId: string; name: string; price: number }>>([]);
   
   // Cancellation dialog state
   const [cancellationDialog, setCancellationDialog] = useState<{
@@ -54,27 +54,20 @@ const BookingsOverview = () => {
     if (!salon?.id) return;
     
     const fetchServices = async () => {
-      // First get service IDs from salon_services
+      // Fetch salon_services with service names and prices
       const { data: salonServices } = await supabase
         .from('salon_services')
-        .select('service_id')
+        .select('id, service_id, price, services(id, name)')
         .eq('salon_id', salon.id)
         .eq('is_active', true);
       
       if (salonServices && salonServices.length > 0) {
-        // Then fetch service details
-        const serviceIds = salonServices.map(s => s.service_id);
-        const { data: services } = await supabase
-          .from('services')
-          .select('id, name')
-          .in('id', serviceIds);
-        
-        if (services) {
-          setAvailableServices(services.map(s => ({
-            id: s.id,
-            name: s.name
-          })));
-        }
+        setAvailableServices(salonServices.map(s => ({
+          id: s.service_id,  // services.id for dropdown value
+          salonServiceId: s.id,  // salon_services.id for booking
+          name: s.services?.name || 'Unknown Service',
+          price: s.price
+        })));
       }
     };
     fetchServices();
@@ -192,7 +185,7 @@ const BookingsOverview = () => {
                   <SelectContent>
                     {availableServices.map(service => (
                       <SelectItem key={service.id} value={service.id}>
-                        {service.name}
+                        {service.name} - ₹{service.price}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -339,9 +332,10 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
   
   const serviceName = booking.salon_services?.services?.name || 'Service';
   const servicePrice = booking.total_price || booking.salon_services?.price || 0;
+  // For walk-ins, phone is stored as: "Walk-in: CustomerName - PhoneNumber"
   const phone = booking.customers?.phone || 
     (booking.notes?.includes('Walk-in:') 
-      ? booking.notes.split(' - ')[1]?.trim() 
+      ? booking.notes.split('Walk-in:')[1]?.split(' - ')[1]?.trim() || 'N/A'
       : 'N/A');
   const bookingDate = format(new Date(booking.booking_date), 'MMM dd, yyyy');
   const bookingTime = booking.booking_time.slice(0, 5);

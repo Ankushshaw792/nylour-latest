@@ -113,25 +113,43 @@ export const useSalonRealtimeData = () => {
               customerData = customer;
             }
 
-            // Fetch service data
-            const { data: service } = await supabase
-              .from('services')
-              .select('name, default_duration')
+            // Fetch service data - handle both walk-in (service_id = salon_services.id) 
+            // and online bookings (service_id = salon_services.id from cart)
+            // First try to find salon_service by id directly (for walk-ins and online bookings)
+            const { data: salonServiceById } = await supabase
+              .from('salon_services')
+              .select('id, price, duration, service_id, services(name, default_duration)')
               .eq('id', booking.service_id)
               .maybeSingle();
 
-            const { data: salonService } = await supabase
-              .from('salon_services')
-              .select('price, duration')
-              .eq('salon_id', salonData.id)
-              .eq('service_id', booking.service_id)
-              .maybeSingle();
+            if (salonServiceById) {
+              // Found by salon_services.id
+              serviceData = {
+                price: salonServiceById.price,
+                duration: salonServiceById.duration,
+                services: salonServiceById.services
+              };
+            } else {
+              // Fallback: try to find by services.id (legacy data)
+              const { data: service } = await supabase
+                .from('services')
+                .select('name, default_duration')
+                .eq('id', booking.service_id)
+                .maybeSingle();
 
-            serviceData = service && salonService ? {
-              price: salonService.price,
-              duration: salonService.duration,
-              services: service
-            } : null;
+              const { data: salonService } = await supabase
+                .from('salon_services')
+                .select('price, duration')
+                .eq('salon_id', salonData.id)
+                .eq('service_id', booking.service_id)
+                .maybeSingle();
+
+              serviceData = service && salonService ? {
+                price: salonService.price,
+                duration: salonService.duration,
+                services: service
+              } : null;
+            }
 
             return {
               ...booking,
@@ -600,15 +618,18 @@ export const useSalonRealtimeData = () => {
     if (!salon) return;
 
     try {
-      // Get service price for the booking
-      const { data: serviceData } = await supabase
+      // Get salon_services record to get both price and the salon_services.id
+      const { data: salonServiceData } = await supabase
         .from('salon_services')
-        .select('price')
+        .select('id, price, duration')
         .eq('salon_id', salon.id)
         .eq('service_id', customerData.service_id)
         .maybeSingle();
 
-      const servicePrice = serviceData?.price || 0;
+      const servicePrice = salonServiceData?.price || 0;
+      const serviceDuration = salonServiceData?.duration || 30;
+      // Use salon_services.id for walk-in bookings (same as online bookings)
+      const salonServiceId = salonServiceData?.id || customerData.service_id;
 
       // Create booking - ALWAYS null customer_id for walk-ins to keep them salon-only
       const { error: bookingError } = await supabase
@@ -616,14 +637,13 @@ export const useSalonRealtimeData = () => {
         .insert({
           customer_id: null, // Always null for walk-ins
           salon_id: salon.id,
-          service_id: customerData.service_id,
+          service_id: salonServiceId, // Use salon_services.id, not services.id
           booking_date: new Date().toISOString().split('T')[0],
           booking_time: new Date().toTimeString().split(' ')[0],
           status: 'confirmed' as BookingStatus,
           total_price: servicePrice,
-          is_walk_in: true,
           notes: `Walk-in: ${customerData.name} - ${customerData.phone}`,
-          duration: 30
+          duration: serviceDuration
         });
 
       if (bookingError) throw bookingError;
