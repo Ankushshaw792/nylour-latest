@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Scissors, Upload, Edit, Trash2, Plus } from "lucide-react";
+import { Scissors, Edit, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Service {
@@ -40,7 +40,6 @@ const ServicesManagement = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [availableServices, setAvailableServices] = useState<AvailableService[]>([]);
-  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     price: 0,
     duration: 30,
@@ -93,46 +92,7 @@ const ServicesManagement = () => {
     }
   }, [salon?.id]);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !salon?.id) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
-      return;
-    }
-
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be less than 5MB');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${salon.id}/${Date.now()}.${fileExt}`;
-
-      const { data, error } = await supabase.storage
-        .from('service-images')
-        .upload(fileName, file);
-
-      if (error) throw error;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('service-images')
-        .getPublicUrl(fileName);
-
-      setFormData({ ...formData, image_url: publicUrl });
-      toast.success('Image uploaded successfully');
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload image');
-    } finally {
-      setUploading(false);
-    }
-  };
+  // Image upload removed - salon_services table doesn't have image_url column
 
   const handleEditService = (service: Service) => {
     setEditingService(service);
@@ -343,52 +303,12 @@ const ServicesManagement = () => {
                 />
               </div>
 
-              <div>
-                <Label>Service Image</Label>
-                {formData.image_url ? (
-                  <div className="relative">
-                    <img
-                      src={formData.image_url}
-                      alt="Service"
-                      className="w-full h-48 object-cover rounded-md"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={handleDeleteImage}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed rounded-md p-8 text-center">
-                    <Upload className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                    <Label htmlFor="image-upload" className="cursor-pointer">
-                      <span className="text-sm text-primary hover:underline">
-                        Click to upload image
-                      </span>
-                      <Input
-                        id="image-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageUpload}
-                        disabled={uploading}
-                      />
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      PNG, JPG, WEBP up to 5MB
-                    </p>
-                  </div>
-                )}
-              </div>
 
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleSaveService} disabled={uploading}>
+                <Button onClick={handleSaveService}>
                   Save Changes
                 </Button>
               </div>
@@ -449,46 +369,6 @@ const ServicesManagement = () => {
                   />
                 </div>
 
-                <div>
-                  <Label>Service Image (Optional)</Label>
-                  {formData.image_url ? (
-                    <div className="relative">
-                      <img
-                        src={formData.image_url}
-                        alt="Service"
-                        className="w-full h-48 object-cover rounded-md"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2"
-                        onClick={() => setFormData({ ...formData, image_url: null })}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed rounded-md p-8 text-center">
-                      <Upload className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                      <Label htmlFor="add-image-upload" className="cursor-pointer">
-                        <span className="text-sm text-primary hover:underline">
-                          Click to upload image
-                        </span>
-                        <Input
-                          id="add-image-upload"
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImageUpload}
-                          disabled={uploading}
-                        />
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        PNG, JPG, WEBP up to 5MB
-                      </p>
-                    </div>
-                  )}
-                </div>
               </>
             )}
 
@@ -498,7 +378,7 @@ const ServicesManagement = () => {
               </Button>
               <Button 
                 onClick={handleAddNewService} 
-                disabled={!selectedServiceId || uploading || formData.price <= 0}
+                disabled={!selectedServiceId || formData.price <= 0}
               >
                 Add Service
               </Button>
