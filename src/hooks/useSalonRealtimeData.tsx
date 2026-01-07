@@ -548,7 +548,7 @@ export const useSalonRealtimeData = () => {
           status: 'confirmed' as BookingStatus,
           total_price: servicePrice,
           is_walk_in: true,
-          customer_notes: `Walk-in: ${customerData.name} - ${customerData.phone}`,
+          notes: `Walk-in: ${customerData.name} - ${customerData.phone}`,
           duration: 30
         });
 
