@@ -116,7 +116,7 @@ export const SalonRegistrationForm = () => {
       case 1: // Business Hours
         return formData.businessHours.some(hour => !hour.is_closed);
       case 2: // Services
-        return formData.selectedServices.length > 0 || formData.customServices.length > 0;
+        return formData.selectedServices.length > 0 || (formData.customServices || []).length > 0;
       case 3: // Business Settings
         return formData.maxQueueSize > 0 && formData.currentWaitTime > 0;
       default:
