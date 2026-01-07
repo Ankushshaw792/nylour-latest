@@ -351,6 +351,44 @@ export type Database = {
           },
         ]
       }
+      salon_images: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          display_order: number | null
+          id: string
+          image_url: string
+          is_primary: boolean | null
+          salon_id: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          image_url: string
+          is_primary?: boolean | null
+          salon_id?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string
+          is_primary?: boolean | null
+          salon_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salon_images_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salon_services: {
         Row: {
           created_at: string
