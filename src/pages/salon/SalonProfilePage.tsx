@@ -49,7 +49,7 @@ const SalonProfilePage = () => {
     route: "/salon-dashboard/store-info"
   }, {
     icon: Clock,
-    label: "Store Timings",
+    label: "Timing",
     route: "/salon-dashboard/store-timings"
   }, {
     icon: Users,
