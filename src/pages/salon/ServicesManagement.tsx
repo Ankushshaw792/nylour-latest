@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
 import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Scissors, Edit, Plus } from "lucide-react";
+import { Scissors, Edit, Plus, Trash2, GripVertical, Upload, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Service {
@@ -19,6 +19,8 @@ interface Service {
   price: number;
   duration: number;
   is_active: boolean;
+  image_url: string | null;
+  display_order: number;
   services: {
     name: string;
     description: string | null;
@@ -45,6 +47,16 @@ const ServicesManagement = () => {
     duration: 30,
   });
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  
+  // Delete state
+  const [deleteService, setDeleteService] = useState<Service | null>(null);
+  
+  // Drag state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  
+  // Upload state
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   // Fetch salon services
   const fetchServices = async () => {
@@ -60,7 +72,7 @@ const ServicesManagement = () => {
         )
       `)
       .eq('salon_id', salon.id)
-      .order('created_at', { ascending: false });
+      .order('display_order', { ascending: true });
 
     if (error) {
       console.error('Error fetching services:', error);
@@ -92,8 +104,6 @@ const ServicesManagement = () => {
     }
   }, [salon?.id]);
 
-  // Image upload removed - salon_services table doesn't have image_url column
-
   const handleEditService = (service: Service) => {
     setEditingService(service);
     setFormData({
@@ -124,7 +134,31 @@ const ServicesManagement = () => {
     }
   };
 
-  // handleDeleteImage removed - image_url doesn't exist on salon_services
+  const handleDeleteService = async () => {
+    if (!deleteService) return;
+
+    // Delete image from storage if exists
+    if (deleteService.image_url) {
+      const fileName = deleteService.image_url.split('/').pop();
+      if (fileName) {
+        await supabase.storage.from('salon-images').remove([`services/${fileName}`]);
+      }
+    }
+
+    const { error } = await supabase
+      .from('salon_services')
+      .delete()
+      .eq('id', deleteService.id);
+
+    if (error) {
+      console.error('Error deleting service:', error);
+      toast.error('Failed to delete service');
+    } else {
+      toast.success('Service deleted successfully');
+      setDeleteService(null);
+      fetchServices();
+    }
+  };
 
   const handleAddNewService = async () => {
     if (!selectedServiceId || !salon?.id) {
@@ -137,6 +171,9 @@ const ServicesManagement = () => {
       return;
     }
 
+    // Get next display order
+    const maxOrder = services.length > 0 ? Math.max(...services.map(s => s.display_order)) : -1;
+
     const { error } = await supabase
       .from('salon_services')
       .insert({
@@ -144,6 +181,7 @@ const ServicesManagement = () => {
         service_id: selectedServiceId,
         price: formData.price,
         duration: formData.duration,
+        display_order: maxOrder + 1,
       });
 
     if (error) {
@@ -181,16 +219,126 @@ const ServicesManagement = () => {
     return availableServices.filter(s => !existingServiceIds.includes(s.id));
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = async () => {
+    if (draggedIndex === null || dragOverIndex === null || draggedIndex === dragOverIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const reorderedServices = [...services];
+    const [draggedItem] = reorderedServices.splice(draggedIndex, 1);
+    reorderedServices.splice(dragOverIndex, 0, draggedItem);
+
+    // Update local state immediately
+    setServices(reorderedServices);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    // Update display_order in database
+    const updates = reorderedServices.map((service, index) => ({
+      id: service.id,
+      display_order: index,
+    }));
+
+    for (const update of updates) {
+      await supabase
+        .from('salon_services')
+        .update({ display_order: update.display_order })
+        .eq('id', update.id);
+    }
+  };
+
+  // Image upload handler
+  const handleImageUpload = useCallback(async (serviceId: string, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setUploadingId(serviceId);
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${serviceId}-${Date.now()}.${fileExt}`;
+    const filePath = `services/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('salon-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      toast.error('Failed to upload image');
+      setUploadingId(null);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('salon-images')
+      .getPublicUrl(filePath);
+
+    const { error: updateError } = await supabase
+      .from('salon_services')
+      .update({ image_url: publicUrl })
+      .eq('id', serviceId);
+
+    if (updateError) {
+      console.error('Update error:', updateError);
+      toast.error('Failed to save image');
+    } else {
+      toast.success('Image uploaded successfully');
+      fetchServices();
+    }
+
+    setUploadingId(null);
+  }, []);
+
+  const handleRemoveImage = async (service: Service) => {
+    if (!service.image_url) return;
+
+    const fileName = service.image_url.split('/').pop();
+    if (fileName) {
+      await supabase.storage.from('salon-images').remove([`services/${fileName}`]);
+    }
+
+    const { error } = await supabase
+      .from('salon_services')
+      .update({ image_url: null })
+      .eq('id', service.id);
+
+    if (error) {
+      toast.error('Failed to remove image');
+    } else {
+      toast.success('Image removed');
+      fetchServices();
+    }
+  };
+
   if (authLoading || salonLoading) {
     return (
       <SalonDashboardLayout title="Services" description="Manage your salon services">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
+        <div className="grid grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
-              <Skeleton className="h-48 w-full" />
-              <CardContent className="p-4">
-                <Skeleton className="h-6 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-32 w-full" />
+              <CardContent className="p-3">
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-3 w-1/2" />
               </CardContent>
             </Card>
           ))}
@@ -200,71 +348,142 @@ const ServicesManagement = () => {
   }
 
   return (
-    <SalonDashboardLayout title="Services" description="Manage your salon services and upload images">
-      <div className="space-y-6">
+    <SalonDashboardLayout title="Services" description="Manage your salon services">
+      <div className="space-y-4">
         {services.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Scissors className="h-16 w-16 text-muted-foreground mb-4" />
               <p className="text-lg font-medium mb-2">No services found</p>
-              <p className="text-sm text-muted-foreground">Add services to your salon to get started</p>
+              <p className="text-sm text-muted-foreground mb-4">Add services to your salon to get started</p>
+              <Button onClick={handleOpenAddDialog} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Service
+              </Button>
             </CardContent>
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {services.map((service) => (
-                <Card key={service.id} className="overflow-hidden">
-                  <div className="relative h-48 bg-muted">
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Scissors className="h-16 w-16 text-muted-foreground" />
+            <div className="grid grid-cols-2 gap-4">
+              {services.map((service, index) => (
+                <Card 
+                  key={service.id} 
+                  className={`overflow-hidden transition-all ${
+                    draggedIndex === index ? 'opacity-50 scale-95' : ''
+                  } ${dragOverIndex === index ? 'ring-2 ring-primary' : ''}`}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                >
+                  {/* Image section */}
+                  <div className="relative h-32 bg-muted">
+                    {service.image_url ? (
+                      <>
+                        <img 
+                          src={service.image_url} 
+                          alt={service.services.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          onClick={() => handleRemoveImage(service)}
+                          className="absolute top-2 left-2 p-1 bg-black/50 rounded-full text-white hover:bg-black/70"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Scissors className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                    )}
+                    
+                    {/* Top right controls: Drag + Delete */}
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <div className="p-1.5 bg-black/50 rounded cursor-grab text-white">
+                        <GripVertical className="h-3 w-3" />
+                      </div>
+                      <button
+                        onClick={() => setDeleteService(service)}
+                        className="p-1.5 bg-red-500/80 rounded text-white hover:bg-red-600"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     </div>
+
+                    {/* Upload button */}
+                    <label className="absolute bottom-2 right-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(service.id, file);
+                        }}
+                        disabled={uploadingId === service.id}
+                      />
+                      <div className={`flex items-center gap-1 px-2 py-1 bg-black/50 rounded text-white text-xs cursor-pointer hover:bg-black/70 ${uploadingId === service.id ? 'opacity-50' : ''}`}>
+                        <Upload className="h-3 w-3" />
+                        {uploadingId === service.id ? 'Uploading...' : 'Add Image'}
+                      </div>
+                    </label>
                   </div>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>{service.services.name}</span>
+
+                  {/* Card content */}
+                  <CardContent className="p-3">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-medium text-sm truncate">{service.services.name}</span>
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-6 w-6"
                         onClick={() => handleEditService(service)}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3" />
                       </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Price:</span>
-                      <span className="font-medium">${service.price}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Duration:</span>
-                      <span className="font-medium">{service.duration} min</span>
+                    <div className="flex gap-2 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">₹{service.price}</span>
+                      <span>·</span>
+                      <span>{service.duration} min</span>
                     </div>
-                    {service.services.description && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {service.services.description}
-                      </p>
-                    )}
                   </CardContent>
                 </Card>
               ))}
             </div>
             
             {/* Add More Services Button */}
-            <div className="flex justify-center mt-6">
+            <div className="flex justify-center">
               <Button 
                 onClick={handleOpenAddDialog}
-                size="lg"
                 className="gap-2"
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="h-4 w-4" />
                 Add More Services
               </Button>
             </div>
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteService} onOpenChange={() => setDeleteService(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Service</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteService?.services.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteService} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Edit Service Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -284,7 +503,7 @@ const ServicesManagement = () => {
               </div>
 
               <div>
-                <Label htmlFor="price">Price ($)</Label>
+                <Label htmlFor="price">Price (₹)</Label>
                 <Input
                   id="price"
                   type="number"
@@ -302,7 +521,6 @@ const ServicesManagement = () => {
                   onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
                 />
               </div>
-
 
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
@@ -349,7 +567,7 @@ const ServicesManagement = () => {
             {selectedServiceId && (
               <>
                 <div>
-                  <Label htmlFor="add-price">Price ($)</Label>
+                  <Label htmlFor="add-price">Price (₹)</Label>
                   <Input
                     id="add-price"
                     type="number"
@@ -368,7 +586,6 @@ const ServicesManagement = () => {
                     onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 30 })}
                   />
                 </div>
-
               </>
             )}
 
