@@ -42,7 +42,7 @@ export const SalonDashboardLayout = ({
                 {salon?.name || "Loading..."}
               </h1>
               <div className="flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-gray-400" />
+                <span className="w-1 h-1 rounded-full bg-success" />
                 <p className="text-gray-500 truncate text-xs">
                   {salon?.city || salon?.address || "Location"}
                 </p>
