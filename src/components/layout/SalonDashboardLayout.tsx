@@ -58,22 +58,22 @@ export const SalonDashboardLayout = ({
                 disabled={loading} 
                 className={`relative flex items-center w-20 h-8 rounded-full transition-colors disabled:opacity-50 ${
                   salon?.is_active 
-                    ? "bg-success" 
-                    : "bg-muted"
+                    ? "bg-green-500" 
+                    : "bg-gray-300"
                 }`}
               >
-                <span 
-                  className={`absolute w-6 h-6 bg-background rounded-full shadow-md transition-all duration-300 ${
-                    salon?.is_active ? "left-12" : "left-1"
-                  }`}
-                />
-                <span className={`absolute text-[10px] font-semibold transition-all duration-300 ${
+                <span className={`absolute left-2.5 text-[10px] font-semibold ${
                   salon?.is_active 
-                    ? "left-2 text-success-foreground" 
-                    : "right-2 text-muted-foreground"
+                    ? "text-green-800" 
+                    : "text-gray-600"
                 }`}>
                   {salon?.is_active ? "Online" : "Offline"}
                 </span>
+                <span 
+                  className={`absolute w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 ${
+                    salon?.is_active ? "right-1" : "left-1"
+                  }`}
+                />
               </button>
 
               {/* Notification Bell */}
