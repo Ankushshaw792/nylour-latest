@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useRef } from "react";
+import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -6,6 +6,16 @@ import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 interface SalonDashboardLayoutProps {
   children: ReactNode;
   title?: string;
@@ -21,10 +31,11 @@ export const SalonDashboardLayout = ({
     updateSalonStatus,
     loading
   } = useSalonRealtimeData();
-  const { isOpen: isWithinBusinessHours, isLoading: hoursLoading, nextOpenInfo } = useSalonOpenStatus(salon?.id);
+  const { isWithinBusinessHours, isLoading: hoursLoading, nextOpenInfo } = useSalonOpenStatus(salon?.id);
   const navigate = useNavigate();
   const { toast } = useToast();
   const hasAutoOfflined = useRef(false);
+  const [showOfflineWarning, setShowOfflineWarning] = useState(false);
 
   // Auto-offline when outside business hours
   useEffect(() => {
@@ -55,8 +66,23 @@ export const SalonDashboardLayout = ({
       return;
     }
 
+    // If trying to go offline during business hours, show warning
+    if (salon.is_active && isWithinBusinessHours === true) {
+      setShowOfflineWarning(true);
+      return;
+    }
+
     await updateSalonStatus({
       is_active: !salon.is_active
+    });
+  };
+
+  const confirmGoOffline = async () => {
+    setShowOfflineWarning(false);
+    await updateSalonStatus({ is_active: false });
+    toast({
+      title: "Shop is now Offline",
+      description: "Customers won't be able to book until you go back online.",
     });
   };
 
@@ -109,5 +135,23 @@ export const SalonDashboardLayout = ({
       <div className="pt-20">
         {children}
       </div>
+
+      {/* Offline Warning Dialog */}
+      <AlertDialog open={showOfflineWarning} onOpenChange={setShowOfflineWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Go Offline?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You're going offline during your business hours. Customers won't be able to book appointments until you go back online.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmGoOffline} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Go Offline
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>;
 };
