@@ -235,7 +235,7 @@ const BookingsOverview = () => {
 
         <Tabs defaultValue="today" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="today">Today ({todayBookings.length})</TabsTrigger>
+            <TabsTrigger value="today">Live ({todayBookings.length})</TabsTrigger>
             <TabsTrigger value="queue">Queue ({queueBookings.length})</TabsTrigger>
             <TabsTrigger value="completed">Completed ({completedBookings.length})</TabsTrigger>
           </TabsList>
