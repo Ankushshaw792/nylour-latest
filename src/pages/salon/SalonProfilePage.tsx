@@ -1,23 +1,24 @@
 import { useState, useEffect } from "react";
-import { LogOut, Pause, Clock, Settings, BarChart3, Eye, Users } from "lucide-react";
+import { LogOut, Store, Clock, Users, Calendar, Timer, Bell, BarChart3, History, Star, HelpCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
-import NotificationControls from "@/components/salon/NotificationControls";
+
+interface ProfileMenuItem {
+  icon: React.ElementType;
+  label: string;
+  route?: string;
+  comingSoon?: boolean;
+}
 
 const SalonProfilePage = () => {
   const { user, signOut } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [bookingStatus, setBookingStatus] = useState(true);
-  const [waitTime, setWaitTime] = useState(30);
   const [salon, setSalon] = useState<any>(null);
 
   useEffect(() => {
@@ -31,8 +32,9 @@ const SalonProfilePage = () => {
           .eq('owner_id', user.id)
           .maybeSingle();
 
-        if (!salonData) return;
-        setSalon(salonData);
+        if (salonData) {
+          setSalon(salonData);
+        }
       } catch (error) {
         console.error('Error fetching salon data:', error);
       } finally {
@@ -48,24 +50,54 @@ const SalonProfilePage = () => {
     navigate('/');
   };
 
-  const handleUpdateWaitTime = () => {
-    toast({
-      title: "Wait time updated",
-      description: `Current wait time set to ${waitTime} minutes`,
-    });
-  };
+  const manageStoreItems: ProfileMenuItem[] = [
+    { icon: Store, label: "Store Info", route: "/salon-dashboard/store-info" },
+    { icon: Clock, label: "Store Timings", route: "/salon-dashboard/store-timings" },
+    { icon: Users, label: "Manage Staff", comingSoon: true },
+  ];
 
-  const handleQuickTimeUpdate = (minutes: number) => {
-    setWaitTime(minutes);
-    handleUpdateWaitTime();
-  };
+  const settingsItems: ProfileMenuItem[] = [
+    { icon: Calendar, label: "Schedule Off", route: "/salon-dashboard/schedule-off" },
+    { icon: Timer, label: "Update Wait Time", route: "/salon-dashboard/wait-time" },
+    { icon: Bell, label: "Customer Notification", route: "/salon-dashboard/notifications" },
+    { icon: BarChart3, label: "Analytics", comingSoon: true },
+  ];
+
+  const ordersItems: ProfileMenuItem[] = [
+    { icon: History, label: "Order History", route: "/salon-dashboard/order-history" },
+    { icon: Star, label: "Reviews", comingSoon: true },
+  ];
+
+  const helpItems: ProfileMenuItem[] = [
+    { icon: HelpCircle, label: "Help Centre", route: "/salon-dashboard/help" },
+  ];
+
+  const MenuButton = ({ item }: { item: ProfileMenuItem }) => (
+    <button
+      onClick={() => item.route && !item.comingSoon && navigate(item.route)}
+      disabled={item.comingSoon}
+      className={`flex flex-col items-center justify-center p-3 rounded-xl border bg-muted/50 hover:bg-muted transition-colors min-w-[80px] relative ${
+        item.comingSoon ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/30'
+      }`}
+    >
+      {item.comingSoon && (
+        <Badge variant="secondary" className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0.5">
+          Soon
+        </Badge>
+      )}
+      <div className="w-11 h-11 rounded-lg bg-background flex items-center justify-center mb-2 shadow-sm">
+        <item.icon className="h-5 w-5 text-foreground" />
+      </div>
+      <span className="text-xs text-foreground text-center font-medium leading-tight">{item.label}</span>
+    </button>
+  );
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading salon dashboard...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -73,109 +105,67 @@ const SalonProfilePage = () => {
 
   return (
     <SalonDashboardLayout>
-      <div className="p-4 space-y-4">
-        {/* Booking Control Card */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900">Booking Control</h3>
-                <p className="text-sm text-gray-500">
-                  {bookingStatus ? "Currently accepting new bookings" : "Bookings are paused"}
-                </p>
-              </div>
-              <Button 
-                variant={bookingStatus ? "destructive" : "default"}
-                onClick={() => setBookingStatus(!bookingStatus)}
-                className="gap-2"
-              >
-                <Pause className="h-4 w-4" />
-                {bookingStatus ? "Stop Bookings" : "Resume Bookings"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Update Wait Time */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-gray-900">
-              <Clock className="h-5 w-5" />
-              Update Wait Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="waitTime" className="text-gray-700">Current Wait Time (minutes)</Label>
-              <div className="flex gap-2 mt-2">
-                <Input
-                  id="waitTime"
-                  type="number"
-                  value={waitTime}
-                  onChange={(e) => setWaitTime(Number(e.target.value))}
-                  className="flex-1 border-gray-200"
-                />
-                <Button onClick={handleUpdateWaitTime}>Update</Button>
-              </div>
-            </div>
-            
-            <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" size="sm" className="border-gray-200" onClick={() => handleQuickTimeUpdate(15)}>
-                15 min
-              </Button>
-              <Button variant="outline" size="sm" className="border-gray-200" onClick={() => handleQuickTimeUpdate(30)}>
-                30 min
-              </Button>
-              <Button variant="outline" size="sm" className="border-gray-200" onClick={() => handleQuickTimeUpdate(45)}>
-                45 min
-              </Button>
-              <Button variant="outline" size="sm" className="border-gray-200" onClick={() => handleQuickTimeUpdate(60)}>
-                1 hour
-              </Button>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-              <p className="text-sm font-medium text-gray-900 mb-1">Wait Time Guidelines</p>
-              <ul className="text-xs text-gray-500 space-y-1">
-                <li>• Update regularly based on current queue</li>
-                <li>• Consider service complexity and staff availability</li>
-                <li>• Communicate changes to waiting customers</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Notification Controls */}
+      <div className="p-4 space-y-4 pb-24">
+        {/* Salon Info Banner */}
         {salon && (
-          <NotificationControls salonId={salon.id} />
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+            <h2 className="font-semibold text-foreground text-lg">{salon.name}</h2>
+            <p className="text-sm text-muted-foreground">{salon.address || salon.city || 'Location not set'}</p>
+          </div>
         )}
 
-        {/* Quick Actions */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
+        {/* Manage Store Card */}
+        <Card className="border shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-gray-900">Quick Actions</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">Manage Store</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="h-14 flex-col gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50" onClick={() => navigate('/salon-dashboard')}>
-                <Eye className="h-5 w-5" />
-                <span className="text-xs">View Queue</span>
-              </Button>
-              
-              <Button variant="outline" className="h-14 flex-col gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50">
-                <Settings className="h-5 w-5" />
-                <span className="text-xs">Salon Settings</span>
-              </Button>
-              
-              <Button variant="outline" className="h-14 flex-col gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50">
-                <BarChart3 className="h-5 w-5" />
-                <span className="text-xs">Analytics</span>
-              </Button>
-              
-              <Button variant="outline" className="h-14 flex-col gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50">
-                <Users className="h-5 w-5" />
-                <span className="text-xs">Customers</span>
-              </Button>
+            <div className="flex gap-3 flex-wrap">
+              {manageStoreItems.map((item) => (
+                <MenuButton key={item.label} item={item} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Settings Card */}
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-foreground">Settings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3 flex-wrap">
+              {settingsItems.map((item) => (
+                <MenuButton key={item.label} item={item} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Orders Card */}
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-foreground">Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3 flex-wrap">
+              {ordersItems.map((item) => (
+                <MenuButton key={item.label} item={item} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Help Card */}
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-foreground">Help</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3 flex-wrap">
+              {helpItems.map((item) => (
+                <MenuButton key={item.label} item={item} />
+              ))}
             </div>
           </CardContent>
         </Card>
