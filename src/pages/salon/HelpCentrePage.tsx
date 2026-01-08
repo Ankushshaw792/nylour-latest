@@ -4,15 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-
 const HelpCentrePage = () => {
   const navigate = useNavigate();
-
   const SUPPORT_PHONE = "+91 70031 07472";
   const SUPPORT_EMAIL = "ankushshaw007@gmail.com";
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 p-4">
@@ -36,10 +32,7 @@ const HelpCentrePage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <a
-              href={`tel:${SUPPORT_PHONE.replace(/\s/g, '')}`}
-              className="flex items-center gap-3 p-4 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
-            >
+            <a href={`tel:${SUPPORT_PHONE.replace(/\s/g, '')}`} className="flex items-center gap-3 p-4 rounded-lg border bg-muted/50 hover:bg-muted transition-colors">
               <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
                 <Phone className="h-5 w-5 text-green-600" />
               </div>
@@ -49,10 +42,7 @@ const HelpCentrePage = () => {
               </div>
             </a>
 
-            <a
-              href={`mailto:${SUPPORT_EMAIL}`}
-              className="flex items-center gap-3 p-4 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
-            >
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="flex items-center gap-3 p-4 rounded-lg border bg-muted/50 hover:bg-muted transition-colors">
               <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
                 <Mail className="h-5 w-5 text-blue-600" />
               </div>
@@ -62,9 +52,7 @@ const HelpCentrePage = () => {
               </div>
             </a>
 
-            <div
-              className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30 opacity-60 cursor-not-allowed"
-            >
+            <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30 opacity-60 cursor-not-allowed">
               <div className="w-10 h-10 rounded-lg bg-green-100/50 flex items-center justify-center">
                 <MessageCircle className="h-5 w-5 text-green-600/50" />
               </div>
@@ -77,9 +65,7 @@ const HelpCentrePage = () => {
               </span>
             </div>
 
-            <div
-              className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30 opacity-60 cursor-not-allowed"
-            >
+            <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30 opacity-60 cursor-not-allowed">
               <div className="w-10 h-10 rounded-lg bg-purple-100/50 flex items-center justify-center">
                 <PenLine className="h-5 w-5 text-purple-600/50" />
               </div>
@@ -96,18 +82,9 @@ const HelpCentrePage = () => {
 
         {/* FAQ Link */}
         <Card className="border shadow-sm bg-muted/30">
-          <CardContent className="p-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              Need quick answers? Check our{" "}
-              <span className="text-primary font-medium cursor-pointer hover:underline">
-                FAQ section
-              </span>
-            </p>
-          </CardContent>
+          
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default HelpCentrePage;
