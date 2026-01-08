@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Save, Store, Mail, Phone, MapPin } from "lucide-react";
+import { ArrowLeft, Save, Store, Phone, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { SalonLocationPicker } from "@/components/salon/SalonLocationPicker";
 
 const StoreInfoPage = () => {
   const { user } = useAuth();
@@ -23,6 +24,8 @@ const StoreInfoPage = () => {
     city: "",
     phone: "",
     email: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
 
   useEffect(() => {
@@ -44,6 +47,8 @@ const StoreInfoPage = () => {
             city: salonData.city || "",
             phone: salonData.phone || "",
             email: salonData.email || "",
+            latitude: salonData.latitude ? Number(salonData.latitude) : null,
+            longitude: salonData.longitude ? Number(salonData.longitude) : null,
           });
         }
       } catch (error) {
@@ -144,27 +149,22 @@ const StoreInfoPage = () => {
               Location
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Enter full address"
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                placeholder="Enter city"
-                className="mt-1.5"
-              />
-            </div>
+          <CardContent>
+            <SalonLocationPicker
+              address={formData.address}
+              city={formData.city}
+              latitude={formData.latitude}
+              longitude={formData.longitude}
+              onChange={(locationData) => {
+                setFormData({
+                  ...formData,
+                  address: locationData.address,
+                  city: locationData.city,
+                  latitude: locationData.latitude,
+                  longitude: locationData.longitude,
+                });
+              }}
+            />
           </CardContent>
         </Card>
 
