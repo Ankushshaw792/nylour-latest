@@ -45,7 +45,7 @@ const SalonProfilePage = () => {
   };
   const manageStoreItems: ProfileMenuItem[] = [{
     icon: Store,
-    label: "Store Info",
+    label: "Info",
     route: "/salon-dashboard/store-info"
   }, {
     icon: Clock,
