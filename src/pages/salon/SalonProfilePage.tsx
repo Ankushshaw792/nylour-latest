@@ -110,8 +110,7 @@ const SalonProfilePage = () => {
   }
   return <SalonDashboardLayout>
       <div className="p-4 space-y-4 pb-24">
-        {/* Salon Info Banner */}
-        {salon}
+        {/* Salon Info Banner - handled by SalonDashboardLayout header */}
 
         {/* Manage Store Card */}
         <Card className="border shadow-sm">
