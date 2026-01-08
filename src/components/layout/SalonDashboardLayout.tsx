@@ -50,7 +50,7 @@ export const SalonDashboardLayout = ({
             </div>
 
             {/* Right Section - Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0">
               
               {/* Online/Offline Toggle - Classic Slider Switch */}
               <button 
