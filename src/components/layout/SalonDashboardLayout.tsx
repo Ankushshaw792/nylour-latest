@@ -43,7 +43,7 @@ export const SalonDashboardLayout = ({
               </h1>
               <div className="flex items-center gap-1.5">
                 <span className="w-1 h-1 rounded-full bg-gray-400" />
-                <p className="text-sm text-gray-500 truncate">
+                <p className="text-gray-500 truncate text-xs">
                   {salon?.city || salon?.address || "Location"}
                 </p>
               </div>
