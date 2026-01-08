@@ -9,12 +9,15 @@ import { Button } from "@/components/ui/button";
 import { AuthSheet } from "@/components/auth/AuthSheet";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { SalonStatusBadge } from "@/components/salon/SalonStatusBadge";
+import { SalonCard } from "@/components/salon/SalonCard";
 import { LocationSelector } from "@/components/location/LocationSelector";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserLocation } from "@/hooks/useUserLocation";
+import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateDistance, formatDistance } from "@/lib/locationUtils";
+import { cn } from "@/lib/utils";
 
 interface SalonData {
   id: string;
@@ -287,82 +290,13 @@ const NearbySalons = () => {
             ))
           ) : (
             filteredSalons.map((salon) => (
-              <Card
+              <SalonCard
                 key={salon.id}
-                className="overflow-hidden rounded-xl border border-border hover:shadow-lg transition-all duration-300 cursor-pointer bg-white card-hover"
-                onClick={() => {
-                  if (user) {
-                    navigate(`/salon/${salon.id}`);
-                  } else {
-                    setAuthSheetOpen(true);
-                  }
-                }}
-              >
-                <CardContent className="p-0">
-                  {/* Salon Image */}
-                  <div className="relative h-48 bg-muted">
-                    <img
-                      src={salon.image_url || "/placeholder.svg"}
-                      alt={`${salon.name} salon exterior view - ${salon.address}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-3 right-3">
-                      <FavoriteButton salonId={salon.id} size="sm" />
-                    </div>
-                    <Badge 
-                      variant="secondary" 
-                      className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-foreground font-medium"
-                    >
-                      {salon.queueCount} in queue
-                    </Badge>
-                  </div>
-
-                  {/* Salon Info */}
-                  <div className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-foreground mb-1">{salon.name}</h3>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          {salon.address}
-                        </p>
-                      </div>
-                      <SalonStatusBadge salonId={salon.id} />
-                    </div>
-
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1 text-sm">
-                          <Clock className="h-4 w-4 text-primary" />
-                          <span className="text-primary font-medium">{salon.waitTime}</span>
-                        </div>
-                        <span className="text-muted-foreground text-sm">{salon.distanceText}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">{salon.primaryService}</p>
-                        <p className="text-lg font-bold text-foreground">{salon.servicePrice}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (user) {
-                            navigate(`/salon/${salon.id}`);
-                          } else {
-                            setAuthSheetOpen(true);
-                          }
-                        }}
-                      >
-                        Book Now
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                salon={salon}
+                user={user}
+                onNavigate={(salonId) => navigate(`/salon/${salonId}`)}
+                onAuthRequired={() => setAuthSheetOpen(true)}
+              />
             ))
           )}
         </div>

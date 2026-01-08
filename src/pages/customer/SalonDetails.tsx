@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2 } from "lucide-react";
+import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -50,6 +52,7 @@ const SalonDetails = () => {
   const navigate = useNavigate();
   const { user, loading } = useRequireAuth();
   const { addItem, removeItem, updateQuantity, items, totalPrice, totalItems } = useCart();
+  const { isOpen, isLoading: statusLoading, nextOpenInfo, closingTime } = useSalonOpenStatus(id);
   const [salon, setSalon] = useState<SalonDetails | null>(null);
   const [loadingSalon, setLoadingSalon] = useState(true);
 
@@ -234,10 +237,10 @@ const SalonDetails = () => {
           </div>
         )
       }}
-      bottomButtonProps={totalItems > 0 ? {
+      bottomButtonProps={totalItems > 0 && isOpen ? {
         text: "Book Now",
         onClick: () => navigate(`/book/${salon?.id}`),
-        disabled: totalItems === 0,
+        disabled: totalItems === 0 || !isOpen,
         price: totalPrice,
         itemCount: totalItems
       } : undefined}
@@ -250,6 +253,16 @@ const SalonDetails = () => {
       />
 
       <div className="p-4 space-y-6">
+        {/* Closed Alert */}
+        {!statusLoading && isOpen === false && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              This salon is currently closed. {nextOpenInfo || 'Please check back later.'}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Wait Time Section */}
         <Card>
           <CardContent className="p-4">
@@ -263,8 +276,12 @@ const SalonDetails = () => {
                 <p className="text-sm text-muted-foreground">In Queue</p>
               </div>
               <div className="text-center flex-1">
-                <p className="text-2xl font-bold text-green-500">Open</p>
-                <p className="text-sm text-muted-foreground">{salon.hours}</p>
+                <p className={`text-2xl font-bold ${isOpen === false ? 'text-destructive' : 'text-green-500'}`}>
+                  {statusLoading ? '...' : isOpen ? 'Open' : 'Closed'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {isOpen ? (closingTime ? `Closes ${closingTime}` : salon.hours) : nextOpenInfo || 'Closed today'}
+                </p>
               </div>
             </div>
           </CardContent>

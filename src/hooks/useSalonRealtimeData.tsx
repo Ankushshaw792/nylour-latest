@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 // Use simple string types instead of non-existent enums
 type BookingStatus = string;
@@ -87,7 +88,8 @@ export const useSalonRealtimeData = () => {
       setSalon(salonData);
 
       // Fetch bookings for today with joins (prevents N+1 queries and ensures correct customer details)
-      const today = new Date().toISOString().split('T')[0];
+      // Use local date to avoid timezone issues
+      const today = format(new Date(), 'yyyy-MM-dd');
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
@@ -314,7 +316,7 @@ export const useSalonRealtimeData = () => {
     }
   }, [getAuthUserId, salon]);
 
-  // Start service
+  // Start service - update queue by booking_id (works for walk-ins too)
   const startService = useCallback(async (bookingId: string) => {
     try {
       // Get booking details for notification
@@ -337,16 +339,19 @@ export const useSalonRealtimeData = () => {
 
       if (error) throw error;
 
-      // Update queue entry status if exists
-      if (bookingData?.customer_id) {
-        await supabase
-          .from('queue_entries')
-          .update({ status: 'in_service' })
-          .eq('customer_id', bookingData.customer_id)
-          .eq('salon_id', bookingData.salon_id)
-          .eq('status', 'waiting');
+      // Update queue entry by booking_id (works for both online and walk-ins)
+      // The backend trigger also does this, but we do it here for immediate UI feedback
+      await supabase
+        .from('queue_entries')
+        .update({ 
+          status: 'in_service',
+          service_start_time: new Date().toISOString()
+        })
+        .eq('booking_id', bookingId)
+        .eq('status', 'waiting');
 
-        // Send notification using auth user_id
+      // Send notification using auth user_id (only for online bookings with customer_id)
+      if (bookingData?.customer_id) {
         const authUserId = await getAuthUserId(bookingData.customer_id);
         if (authUserId) {
           const salonName = salon?.name || 'The salon';
@@ -377,7 +382,7 @@ export const useSalonRealtimeData = () => {
     }
   }, [getAuthUserId, salon]);
 
-  // Complete service
+  // Complete service - update queue by booking_id (works for walk-ins too)
   const completeService = useCallback(async (bookingId: string) => {
     try {
       // Get booking details for notification
@@ -400,16 +405,19 @@ export const useSalonRealtimeData = () => {
 
       if (error) throw error;
 
-      // Update queue entry status if exists
-      if (bookingData?.customer_id) {
-        await supabase
-          .from('queue_entries')
-          .update({ status: 'completed' })
-          .eq('customer_id', bookingData.customer_id)
-          .eq('salon_id', bookingData.salon_id)
-          .in('status', ['waiting', 'in_service']);
+      // Update queue entry by booking_id (works for both online and walk-ins)
+      // The backend trigger also does this, but we do it here for immediate UI feedback
+      await supabase
+        .from('queue_entries')
+        .update({ 
+          status: 'completed',
+          service_end_time: new Date().toISOString()
+        })
+        .eq('booking_id', bookingId)
+        .in('status', ['waiting', 'in_service']);
 
-        // Send notification using auth user_id
+      // Send notification using auth user_id (only for online bookings with customer_id)
+      if (bookingData?.customer_id) {
         const authUserId = await getAuthUserId(bookingData.customer_id);
         if (authUserId) {
           const salonName = salon?.name || 'The salon';
@@ -440,7 +448,7 @@ export const useSalonRealtimeData = () => {
     }
   }, [getAuthUserId, salon]);
 
-  // Mark booking as no-show with reason
+  // Mark booking as no-show with reason - update queue by booking_id (works for walk-ins too)
   const markNoShow = useCallback(async (bookingId: string, reason?: string) => {
     try {
       // Get booking details for notification
@@ -467,16 +475,16 @@ export const useSalonRealtimeData = () => {
 
       if (error) throw error;
 
-      // Update queue entry if exists
-      if (bookingData?.customer_id) {
-        await supabase
-          .from('queue_entries')
-          .update({ status: 'completed' })
-          .eq('customer_id', bookingData.customer_id)
-          .eq('salon_id', bookingData.salon_id)
-          .in('status', ['waiting', 'in_service']);
+      // Update queue entry by booking_id (works for both online and walk-ins)
+      // The backend trigger also does this, but we do it here for immediate UI feedback
+      await supabase
+        .from('queue_entries')
+        .update({ status: 'completed' })
+        .eq('booking_id', bookingId)
+        .in('status', ['waiting', 'in_service']);
 
-        // Send notification using auth user_id
+      // Send notification using auth user_id (only for online bookings with customer_id)
+      if (bookingData?.customer_id) {
         const authUserId = await getAuthUserId(bookingData.customer_id);
         if (authUserId) {
           const salonName = salon?.name || 'The salon';
@@ -560,7 +568,7 @@ export const useSalonRealtimeData = () => {
     }
   }, [getAuthUserId]);
 
-  // Add walk-in customer
+  // Add walk-in customer - use local date to avoid timezone issues
   const addWalkInCustomer = useCallback(async (customerData: {
     name: string;
     phone: string;
@@ -583,13 +591,14 @@ export const useSalonRealtimeData = () => {
       const salonServiceId = salonServiceData?.id || customerData.service_id;
 
       // Create booking - ALWAYS null customer_id for walk-ins to keep them salon-only
+      // Use local date to avoid timezone issues (not UTC)
       const { error: bookingError } = await supabase
         .from('bookings')
         .insert({
           customer_id: null, // Always null for walk-ins
           salon_id: salon.id,
           service_id: salonServiceId, // Use salon_services.id, not services.id
-          booking_date: new Date().toISOString().split('T')[0],
+          booking_date: format(new Date(), 'yyyy-MM-dd'), // Local date, not UTC
           booking_time: new Date().toTimeString().split(' ')[0],
           status: 'confirmed' as BookingStatus,
           total_price: servicePrice,
