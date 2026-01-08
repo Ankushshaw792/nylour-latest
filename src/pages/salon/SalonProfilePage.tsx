@@ -66,7 +66,7 @@ const SalonProfilePage = () => {
     route: "/salon-dashboard/wait-time"
   }, {
     icon: Bell,
-    label: "Customer Notification",
+    label: "Reminder",
     route: "/salon-dashboard/notifications"
   }, {
     icon: BarChart3,
