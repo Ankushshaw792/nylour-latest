@@ -62,7 +62,7 @@ const SalonProfilePage = () => {
     route: "/salon-dashboard/schedule-off"
   }, {
     icon: Timer,
-    label: "Update Wait Time",
+    label: "Timings",
     route: "/salon-dashboard/wait-time"
   }, {
     icon: Bell,
