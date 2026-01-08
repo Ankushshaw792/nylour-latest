@@ -41,7 +41,7 @@
     --accent-foreground: 173 80% 40%;
 
     /* Status Colors */
-    --success: 142 71% 45%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
@@ -125,10 +125,6 @@
 
     --accent: 178 84% 10%;
     --accent-foreground: 172 66% 50%;
-
-    /* Status Colors */
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 85% 97%;
