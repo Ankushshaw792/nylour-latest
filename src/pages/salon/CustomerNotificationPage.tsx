@@ -148,21 +148,21 @@ const CustomerNotificationPage = () => {
               Send pre-defined messages to waiting customers
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-3">
-              {QUICK_NOTIFICATIONS.map((notif, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="h-auto p-3 flex flex-col items-start text-left"
-                  onClick={() => sendNotification(notif.title, notif.message)}
-                  disabled={sending}
-                >
-                  <span className="font-medium">{notif.title}</span>
-                  <span className="text-xs text-muted-foreground">{notif.message}</span>
-                </Button>
-              ))}
-            </div>
+          <CardContent className="space-y-3">
+            {QUICK_NOTIFICATIONS.map((notif, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                className="w-full h-auto py-3 px-4 flex flex-col items-start text-left justify-start gap-1 whitespace-normal"
+                onClick={() => sendNotification(notif.title, notif.message)}
+                disabled={sending}
+              >
+                <span className="font-semibold text-sm">{notif.title}</span>
+                <span className="text-xs text-muted-foreground leading-relaxed break-words">
+                  {notif.message}
+                </span>
+              </Button>
+            ))}
           </CardContent>
         </Card>
 
