@@ -28,9 +28,15 @@ import BookingsOverview from "./pages/salon/BookingsOverview";
 import CheckInUpdate from "./pages/salon/CheckInUpdate";
 import ComprehensiveDashboard from "./pages/salon/ComprehensiveDashboard";
 import ServicesManagement from "./pages/salon/ServicesManagement";
-
 import SalonProfilePage from "./pages/salon/SalonProfilePage";
 import GalleryManagement from "./pages/salon/GalleryManagement";
+import StoreInfoPage from "./pages/salon/StoreInfoPage";
+import StoreTimingsPage from "./pages/salon/StoreTimingsPage";
+import ScheduleOffPage from "./pages/salon/ScheduleOffPage";
+import UpdateWaitTimePage from "./pages/salon/UpdateWaitTimePage";
+import CustomerNotificationPage from "./pages/salon/CustomerNotificationPage";
+import OrderHistoryPage from "./pages/salon/OrderHistoryPage";
+import HelpCentrePage from "./pages/salon/HelpCentrePage";
 
 import NotFound from "./pages/NotFound";
 
@@ -66,6 +72,13 @@ const App = () => (
             <Route path="/salon-dashboard/checkin" element={<MobileLayout><CheckInUpdate /></MobileLayout>} />
             <Route path="/salon-dashboard/profile" element={<MobileLayout><SalonProfilePage /></MobileLayout>} />
             <Route path="/salon-dashboard/gallery" element={<MobileLayout><GalleryManagement /></MobileLayout>} />
+            <Route path="/salon-dashboard/store-info" element={<MobileLayout><StoreInfoPage /></MobileLayout>} />
+            <Route path="/salon-dashboard/store-timings" element={<MobileLayout><StoreTimingsPage /></MobileLayout>} />
+            <Route path="/salon-dashboard/schedule-off" element={<MobileLayout><ScheduleOffPage /></MobileLayout>} />
+            <Route path="/salon-dashboard/wait-time" element={<MobileLayout><UpdateWaitTimePage /></MobileLayout>} />
+            <Route path="/salon-dashboard/notifications" element={<MobileLayout><CustomerNotificationPage /></MobileLayout>} />
+            <Route path="/salon-dashboard/order-history" element={<MobileLayout><OrderHistoryPage /></MobileLayout>} />
+            <Route path="/salon-dashboard/help" element={<MobileLayout><HelpCentrePage /></MobileLayout>} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
