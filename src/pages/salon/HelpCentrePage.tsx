@@ -96,20 +96,20 @@ const HelpCentrePage = () => {
               </div>
             </a>
 
-            <a
-              href={`https://wa.me/${SUPPORT_PHONE.replace(/[^0-9]/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-4 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
+            <div
+              className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30 opacity-60 cursor-not-allowed"
             >
-              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                <MessageCircle className="h-5 w-5 text-green-600" />
+              <div className="w-10 h-10 rounded-lg bg-green-100/50 flex items-center justify-center">
+                <MessageCircle className="h-5 w-5 text-green-600/50" />
               </div>
-              <div>
-                <p className="font-medium text-sm">WhatsApp</p>
+              <div className="flex-1">
+                <p className="font-medium text-sm text-muted-foreground">WhatsApp</p>
                 <p className="text-xs text-muted-foreground">Chat with us on WhatsApp</p>
               </div>
-            </a>
+              <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                Coming Soon
+              </span>
+            </div>
           </CardContent>
         </Card>
 
