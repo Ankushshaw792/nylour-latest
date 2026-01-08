@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle, ExternalLink, ChevronRight } from "lucide-react";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import SalonGalleryCarousel from "@/components/salon/SalonGalleryCarousel";
+import { LiveQueueDialog } from "@/components/queue/LiveQueueDialog";
 import haircutImage from "@/assets/haircut-service.jpg";
 import beardTrimImage from "@/assets/beard-trim-service.jpg";
 import hairWashImage from "@/assets/hair-wash-service.jpg";
@@ -59,6 +60,8 @@ const SalonDetails = () => {
   const { latitude: userLat, longitude: userLng } = useUserLocation();
   const [salon, setSalon] = useState<SalonDetails | null>(null);
   const [loadingSalon, setLoadingSalon] = useState(true);
+  const [showQueueDialog, setShowQueueDialog] = useState(false);
+  const [avgServiceTime, setAvgServiceTime] = useState(30);
 
   const getMapsUrl = () => {
     if (!salon) return '';
@@ -147,8 +150,9 @@ const SalonDetails = () => {
 
         const queueCount = queueData?.length || 0;
         // Use salon's avg_service_time (default 30 mins) for wait calculation
-        const avgServiceTime = salonData.avg_service_time || 30;
-        const avgWaitTime = queueCount * avgServiceTime;
+        const salonAvgTime = salonData.avg_service_time || 30;
+        setAvgServiceTime(salonAvgTime);
+        const avgWaitTime = queueCount * salonAvgTime;
 
         // Get salon hours (mock for now)
         const hours = "9:00 AM - 9:00 PM";
@@ -298,8 +302,14 @@ const SalonDetails = () => {
                 <p className="text-2xl font-bold text-purple-500">{salon.waitTime}</p>
                 <p className="text-sm text-muted-foreground">Wait Time</p>
               </div>
-              <div className="text-center flex-1">
-                <p className="text-2xl font-bold">{salon.queueCount}</p>
+              <div 
+                className="text-center flex-1 cursor-pointer hover:bg-muted/50 rounded-lg py-2 transition-colors active:bg-muted"
+                onClick={() => setShowQueueDialog(true)}
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <p className="text-2xl font-bold">{salon.queueCount}</p>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
                 <p className="text-sm text-muted-foreground">In Queue</p>
               </div>
               <div className="text-center flex-1">
@@ -313,6 +323,14 @@ const SalonDetails = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Live Queue Dialog */}
+        <LiveQueueDialog
+          salonId={salon.id}
+          isOpen={showQueueDialog}
+          onClose={() => setShowQueueDialog(false)}
+          avgServiceTime={avgServiceTime}
+        />
 
         {/* Salon Details Section */}
         <Card>
