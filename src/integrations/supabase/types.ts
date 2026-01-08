@@ -404,8 +404,10 @@ export type Database = {
       salon_services: {
         Row: {
           created_at: string
+          display_order: number | null
           duration: number
           id: string
+          image_url: string | null
           is_active: boolean | null
           price: number
           salon_id: string | null
@@ -413,8 +415,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_order?: number | null
           duration?: number
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           price: number
           salon_id?: string | null
@@ -422,8 +426,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_order?: number | null
           duration?: number
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           price?: number
           salon_id?: string | null
