@@ -56,13 +56,20 @@ export const SalonDashboardLayout = ({
               <button 
                 onClick={handleToggleOnline} 
                 disabled={loading} 
-                className={`flex items-center px-4 py-1.5 rounded-full transition-colors disabled:opacity-50 text-sm font-medium ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 ${
                   salon?.is_active 
-                    ? "bg-green-500 text-white hover:bg-green-600" 
-                    : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                    ? "bg-green-500 hover:bg-green-600" 
+                    : "bg-gray-200 hover:bg-gray-300"
                 }`}
               >
-                {salon?.is_active ? "Online" : "Offline"}
+                <span className={`text-sm font-medium ${salon?.is_active ? "text-white" : "text-gray-600"}`}>
+                  {salon?.is_active ? "Online" : "Offline"}
+                </span>
+                <Switch 
+                  checked={salon?.is_active || false}
+                  onCheckedChange={handleToggleOnline}
+                  className="data-[state=checked]:bg-white data-[state=unchecked]:bg-gray-400 h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:bg-green-500 [&>span]:data-[state=unchecked]:bg-white"
+                />
               </button>
 
               {/* Notification Bell */}
