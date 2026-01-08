@@ -1,7 +1,7 @@
 import React, { ReactNode } from "react";
 import { ChevronDown, Bell, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
 import { useNavigate } from "react-router-dom";
@@ -56,19 +56,19 @@ export const SalonDashboardLayout = ({
               <button 
                 onClick={handleToggleOnline} 
                 disabled={loading} 
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 ${
+                className={`relative flex items-center justify-center w-20 h-8 rounded-full transition-colors disabled:opacity-50 ${
                   salon?.is_active 
-                    ? "bg-green-500 hover:bg-green-600" 
-                    : "bg-gray-200 hover:bg-gray-300"
+                    ? "bg-green-500" 
+                    : "bg-gray-300"
                 }`}
               >
-                <span className={`text-sm font-medium ${salon?.is_active ? "text-white" : "text-gray-600"}`}>
+                <span className={`absolute text-xs font-semibold ${salon?.is_active ? "text-white" : "text-gray-600"}`}>
                   {salon?.is_active ? "Online" : "Offline"}
                 </span>
-                <Switch 
-                  checked={salon?.is_active || false}
-                  onCheckedChange={handleToggleOnline}
-                  className="data-[state=checked]:bg-white data-[state=unchecked]:bg-gray-400 h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:bg-green-500 [&>span]:data-[state=unchecked]:bg-white"
+                <span 
+                  className={`absolute w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                    salon?.is_active ? "translate-x-5" : "-translate-x-5"
+                  }`}
                 />
               </button>
 
