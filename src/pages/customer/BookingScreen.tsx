@@ -11,9 +11,11 @@ import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { BookingSummaryCard } from "@/components/bookings/BookingSummaryCard";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useActiveBooking } from "@/hooks/useActiveBooking";
+import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 const BookingScreen = () => {
   const { id } = useParams();
@@ -21,11 +23,20 @@ const BookingScreen = () => {
   const { user, loading } = useRequireAuth();
   const { items, totalPrice } = useCart();
   const { hasActiveBooking, activeBooking, isLoading: bookingCheckLoading } = useActiveBooking(user?.id || null);
+  const { isOpen, isLoading: statusLoading, nextOpenInfo } = useSalonOpenStatus(id);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Redirect if salon is closed
+  useEffect(() => {
+    if (!statusLoading && isOpen === false) {
+      toast.error(`This salon is currently closed. ${nextOpenInfo || 'Please try again later.'}`);
+      navigate(`/salon/${id}`);
+    }
+  }, [isOpen, statusLoading, nextOpenInfo, navigate, id]);
 
   // Fetch user profile to get mobile number
   useEffect(() => {
@@ -46,7 +57,7 @@ const BookingScreen = () => {
     fetchUserProfile();
   }, [user]);
 
-  if (loading || bookingCheckLoading) {
+  if (loading || bookingCheckLoading || statusLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
@@ -72,14 +83,14 @@ const BookingScreen = () => {
         throw new Error('Customer profile not found. Please try again.');
       }
 
-      // Create booking record with pending status
+      // Create booking record with pending status - use local date to avoid timezone issues
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')
         .insert({
           customer_id: userProfile.id,
           salon_id: id,
           service_id: items[0].id,
-          booking_date: new Date().toISOString().split('T')[0],
+          booking_date: format(new Date(), 'yyyy-MM-dd'), // Local date, not UTC
           booking_time: new Date().toTimeString().split(' ')[0],
           duration: items.reduce((total, item) => total + (parseInt(item.duration) * item.quantity), 0),
           total_price: bookingFee,
