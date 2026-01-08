@@ -59,18 +59,18 @@ export const SalonDashboardLayout = ({
                 className={`relative flex items-center w-20 h-8 rounded-full transition-colors disabled:opacity-50 ${
                   salon?.is_active 
                     ? "bg-success" 
-                    : "bg-gray-300"
+                    : "bg-muted"
                 }`}
               >
                 <span 
-                  className={`absolute w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 ${
+                  className={`absolute w-6 h-6 bg-background rounded-full shadow-md transition-all duration-300 ${
                     salon?.is_active ? "left-12" : "left-1"
                   }`}
                 />
                 <span className={`absolute text-[10px] font-semibold transition-all duration-300 ${
                   salon?.is_active 
-                    ? "left-2 text-white" 
-                    : "right-2 text-gray-600"
+                    ? "left-2 text-success-foreground" 
+                    : "right-2 text-muted-foreground"
                 }`}>
                   {salon?.is_active ? "Online" : "Offline"}
                 </span>
