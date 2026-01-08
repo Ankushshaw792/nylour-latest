@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import { ChevronDown, Bell, User } from "lucide-react";
+import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -52,13 +52,16 @@ export const SalonDashboardLayout = ({
             {/* Right Section - Actions */}
             <div className="flex items-center gap-2">
               
-              {/* Online/Offline Toggle - Minimal Pill */}
-              <button onClick={handleToggleOnline} disabled={loading} className="flex items-center px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors disabled:opacity-50 gap-[5px] text-xs text-justify">
-                <span className={`w-2 h-2 rounded-full ${salon?.is_active ? "bg-green-500" : "bg-gray-400"}`} />
-                <span className="text-sm font-medium text-gray-700">
+              {/* Online/Offline Toggle - Classic Slider Switch */}
+              <button 
+                onClick={handleToggleOnline} 
+                disabled={loading}
+                className={`relative flex items-center w-24 h-8 rounded-full transition-colors duration-300 disabled:opacity-50 ${salon?.is_active ? "bg-green-500" : "bg-red-500"}`}
+              >
+                <span className={`absolute text-white text-xs font-semibold transition-all duration-300 ${salon?.is_active ? "left-2.5" : "right-2.5"}`}>
                   {salon?.is_active ? "Online" : "Offline"}
                 </span>
-                <ChevronDown className="h-4 w-4 text-gray-500" />
+                <span className={`absolute w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 ${salon?.is_active ? "right-1" : "left-1"}`} />
               </button>
 
               {/* Notification Bell */}
