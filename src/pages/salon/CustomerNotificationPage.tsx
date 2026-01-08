@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Bell, Send, Zap } from "lucide-react";
+import { ArrowLeft, Bell, Send, Zap, Clock, Rocket, UserCheck, Coffee } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 const QUICK_NOTIFICATIONS = [
-  { title: "Running Late", message: "We're experiencing some delays. Thank you for your patience!" },
-  { title: "Ahead of Schedule", message: "Good news! We're moving faster than expected. Please be ready!" },
-  { title: "Your Turn Soon", message: "You're next in line! Please make your way to the salon." },
-  { title: "Break Time", message: "We're taking a short break. We'll resume shortly." },
+  { title: "Running Late", message: "We're experiencing some delays. Thank you for your patience!", icon: Clock },
+  { title: "Ahead of Schedule", message: "Good news! We're moving faster than expected. Please be ready!", icon: Rocket },
+  { title: "Your Turn Soon", message: "You're next in line! Please make your way to the salon.", icon: UserCheck },
+  { title: "Break Time", message: "We're taking a short break. We'll resume shortly.", icon: Coffee },
 ];
 
 const CustomerNotificationPage = () => {
@@ -149,20 +149,28 @@ const CustomerNotificationPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {QUICK_NOTIFICATIONS.map((notif, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                className="w-full h-auto py-3 px-4 flex flex-col items-start text-left justify-start gap-1 whitespace-normal"
-                onClick={() => sendNotification(notif.title, notif.message)}
-                disabled={sending}
-              >
-                <span className="font-semibold text-sm">{notif.title}</span>
-                <span className="text-xs text-muted-foreground leading-relaxed break-words">
-                  {notif.message}
-                </span>
-              </Button>
-            ))}
+            {QUICK_NOTIFICATIONS.map((notif, index) => {
+              const IconComponent = notif.icon;
+              return (
+                <Button
+                  key={index}
+                  variant="outline"
+                  className="w-full h-auto py-3 px-4 flex items-start text-left justify-start gap-3 whitespace-normal"
+                  onClick={() => sendNotification(notif.title, notif.message)}
+                  disabled={sending}
+                >
+                  <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <IconComponent className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="font-semibold text-sm">{notif.title}</span>
+                    <span className="text-xs text-muted-foreground leading-relaxed break-words">
+                      {notif.message}
+                    </span>
+                  </div>
+                </Button>
+              );
+            })}
           </CardContent>
         </Card>
 
