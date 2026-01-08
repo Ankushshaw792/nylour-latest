@@ -75,7 +75,7 @@ const SalonProfilePage = () => {
   }];
   const ordersItems: ProfileMenuItem[] = [{
     icon: History,
-    label: "Order History",
+    label: "History",
     route: "/salon-dashboard/order-history"
   }, {
     icon: Star,
