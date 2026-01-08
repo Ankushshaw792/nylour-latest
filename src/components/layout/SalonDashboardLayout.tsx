@@ -56,20 +56,24 @@ export const SalonDashboardLayout = ({
               <button 
                 onClick={handleToggleOnline} 
                 disabled={loading} 
-                className={`relative flex items-center justify-center w-20 h-8 rounded-full transition-colors disabled:opacity-50 ${
+                className={`relative flex items-center w-20 h-8 rounded-full transition-colors disabled:opacity-50 ${
                   salon?.is_active 
-                    ? "bg-green-500" 
+                    ? "bg-success" 
                     : "bg-gray-300"
                 }`}
               >
-                <span className={`absolute text-xs font-semibold ${salon?.is_active ? "text-white" : "text-gray-600"}`}>
-                  {salon?.is_active ? "Online" : "Offline"}
-                </span>
                 <span 
-                  className={`absolute w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                    salon?.is_active ? "translate-x-5" : "-translate-x-5"
+                  className={`absolute w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 ${
+                    salon?.is_active ? "left-12" : "left-1"
                   }`}
                 />
+                <span className={`absolute text-[10px] font-semibold transition-all duration-300 ${
+                  salon?.is_active 
+                    ? "left-2 text-white" 
+                    : "right-2 text-gray-600"
+                }`}>
+                  {salon?.is_active ? "Online" : "Offline"}
+                </span>
               </button>
 
               {/* Notification Bell */}
