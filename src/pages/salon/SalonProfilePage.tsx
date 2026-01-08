@@ -58,7 +58,7 @@ const SalonProfilePage = () => {
   }];
   const settingsItems: ProfileMenuItem[] = [{
     icon: Calendar,
-    label: "Schedule Off",
+    label: "Rush",
     route: "/salon-dashboard/schedule-off"
   }, {
     icon: Timer,
