@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle } from "lucide-react";
+import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { useUserLocation } from "@/hooks/useUserLocation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -36,7 +37,9 @@ interface SalonDetails {
   id: string;
   name: string;
   address: string;
-  phone: string;
+  phone: string | null;
+  latitude: number | null;
+  longitude: number | null;
   rating: number;
   reviews: number;
   waitTime: string;
@@ -53,8 +56,33 @@ const SalonDetails = () => {
   const { user, loading } = useRequireAuth();
   const { addItem, removeItem, updateQuantity, items, totalPrice, totalItems } = useCart();
   const { isOpen, isLoading: statusLoading, nextOpenInfo, closingTime } = useSalonOpenStatus(id);
+  const { latitude: userLat, longitude: userLng } = useUserLocation();
   const [salon, setSalon] = useState<SalonDetails | null>(null);
   const [loadingSalon, setLoadingSalon] = useState(true);
+
+  const handleOpenMaps = () => {
+    if (!salon) return;
+    
+    let mapsUrl: string;
+    if (salon.latitude && salon.longitude) {
+      // If we have user location, use directions
+      if (userLat && userLng) {
+        mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${salon.latitude},${salon.longitude}`;
+      } else {
+        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${salon.latitude},${salon.longitude}`;
+      }
+    } else {
+      // Fallback to address search
+      mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(salon.address || salon.name)}`;
+    }
+    window.open(mapsUrl, '_blank');
+  };
+
+  const handleCallPhone = () => {
+    if (salon?.phone) {
+      window.location.href = `tel:${salon.phone}`;
+    }
+  };
 
   // Fetch salon details from database
   useEffect(() => {
@@ -71,6 +99,9 @@ const SalonDetails = () => {
             id,
             name,
             address,
+            phone,
+            latitude,
+            longitude,
             image_url,
             avg_service_time,
             salon_services (
@@ -150,7 +181,9 @@ const SalonDetails = () => {
           id: salonData.id,
           name: salonData.name,
           address: salonData.address,
-          phone: 'Contact salon for phone number', // Phone now protected
+          phone: salonData.phone,
+          latitude: salonData.latitude,
+          longitude: salonData.longitude,
           rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10, // Mock rating
           reviews: Math.floor(Math.random() * 200) + 50, // Mock reviews
           waitTime: `${avgWaitTime} min`,
@@ -292,13 +325,22 @@ const SalonDetails = () => {
           <CardContent className="p-4">
             <h2 className="text-2xl font-bold mb-3">{salon.name}</h2>
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-primary" />
-                <span className="text-foreground">{salon.address}</span>
+              <div 
+                className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors active:bg-muted"
+                onClick={handleOpenMaps}
+              >
+                <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
+                <span className="text-foreground flex-1">{salon.address}</span>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </div>
-              <div className="flex items-center gap-3">
-                <Phone className="h-5 w-5 text-primary" />
-                <span className="text-foreground">{salon.phone}</span>
+              <div 
+                className={`flex items-center gap-3 rounded-lg p-2 -m-2 transition-colors ${salon.phone ? 'cursor-pointer hover:bg-muted/50 active:bg-muted' : ''}`}
+                onClick={salon.phone ? handleCallPhone : undefined}
+              >
+                <Phone className="h-5 w-5 text-primary flex-shrink-0" />
+                <span className={`flex-1 ${salon.phone ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {salon.phone || 'Phone not available'}
+                </span>
               </div>
             </div>
           </CardContent>
