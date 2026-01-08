@@ -50,14 +50,10 @@ export const SalonDashboardLayout = ({
             </div>
 
             {/* Right Section - Actions */}
-            <div className="flex items-center gap-0">
+            <div className="flex items-center gap-[5px]">
               
               {/* Online/Offline Toggle - Classic Slider Switch */}
-              <button 
-                onClick={handleToggleOnline} 
-                disabled={loading}
-                className={`relative flex items-center w-20 h-7 rounded-full transition-colors duration-300 disabled:opacity-50 ${salon?.is_active ? "bg-green-500" : "bg-red-500"}`}
-              >
+              <button onClick={handleToggleOnline} disabled={loading} className={`relative flex items-center w-20 h-7 rounded-full transition-colors duration-300 disabled:opacity-50 ${salon?.is_active ? "bg-green-500" : "bg-red-500"}`}>
                 <span className={`absolute text-white text-xs font-semibold transition-all duration-300 ${salon?.is_active ? "left-2" : "right-2"}`}>
                   {salon?.is_active ? "Online" : "Offline"}
                 </span>
