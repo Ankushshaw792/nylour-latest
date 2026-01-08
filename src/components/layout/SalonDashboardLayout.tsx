@@ -1,10 +1,11 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect, useRef } from "react";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
+import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 interface SalonDashboardLayoutProps {
   children: ReactNode;
   title?: string;
@@ -20,13 +21,45 @@ export const SalonDashboardLayout = ({
     updateSalonStatus,
     loading
   } = useSalonRealtimeData();
+  const { isOpen: isWithinBusinessHours, isLoading: hoursLoading, nextOpenInfo } = useSalonOpenStatus(salon?.id);
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const hasAutoOfflined = useRef(false);
+
+  // Auto-offline when outside business hours
+  useEffect(() => {
+    if (!loading && !hoursLoading && salon?.is_active && isWithinBusinessHours === false && !hasAutoOfflined.current) {
+      hasAutoOfflined.current = true;
+      updateSalonStatus({ is_active: false });
+      toast({
+        title: "Shop is now Offline",
+        description: "Your business hours have ended. Update your timings to go online.",
+      });
+    }
+    // Reset the flag when salon becomes inactive or back within hours
+    if (!salon?.is_active || isWithinBusinessHours === true) {
+      hasAutoOfflined.current = false;
+    }
+  }, [salon?.is_active, isWithinBusinessHours, loading, hoursLoading, updateSalonStatus, toast]);
+
   const handleToggleOnline = async () => {
     if (!salon) return;
+
+    // If trying to go online, check business hours first
+    if (!salon.is_active && isWithinBusinessHours === false) {
+      toast({
+        title: "Cannot go Online",
+        description: nextOpenInfo || "You are outside your configured business hours. Please update your store timings or wait for the next business day.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     await updateSalonStatus({
       is_active: !salon.is_active
     });
   };
+
   const handleProfileClick = () => {
     navigate("/salon-dashboard/profile");
   };
