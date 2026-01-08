@@ -60,22 +60,16 @@ const SalonDetails = () => {
   const [salon, setSalon] = useState<SalonDetails | null>(null);
   const [loadingSalon, setLoadingSalon] = useState(true);
 
-  const handleOpenMaps = () => {
-    if (!salon) return;
+  const getMapsUrl = () => {
+    if (!salon) return '';
     
-    let mapsUrl: string;
     if (salon.latitude && salon.longitude) {
-      // If we have user location, use directions
       if (userLat && userLng) {
-        mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${salon.latitude},${salon.longitude}`;
-      } else {
-        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${salon.latitude},${salon.longitude}`;
+        return `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${salon.latitude},${salon.longitude}`;
       }
-    } else {
-      // Fallback to address search
-      mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(salon.address || salon.name)}`;
+      return `https://www.google.com/maps/search/?api=1&query=${salon.latitude},${salon.longitude}`;
     }
-    window.open(mapsUrl, '_blank');
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(salon.address || salon.name)}`;
   };
 
   const handleCallPhone = () => {
@@ -325,14 +319,16 @@ const SalonDetails = () => {
           <CardContent className="p-4">
             <h2 className="text-2xl font-bold mb-3">{salon.name}</h2>
             <div className="space-y-3">
-              <div 
-                className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors active:bg-muted"
-                onClick={handleOpenMaps}
+              <a 
+                href={getMapsUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors active:bg-muted no-underline"
               >
                 <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
                 <span className="text-foreground flex-1">{salon.address}</span>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
-              </div>
+              </a>
               <div 
                 className={`flex items-center gap-3 rounded-lg p-2 -m-2 transition-colors ${salon.phone ? 'cursor-pointer hover:bg-muted/50 active:bg-muted' : ''}`}
                 onClick={salon.phone ? handleCallPhone : undefined}
