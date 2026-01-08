@@ -58,7 +58,7 @@ export const SalonDashboardLayout = ({
                 disabled={loading} 
                 className={`relative flex items-center w-20 h-8 rounded-full transition-colors disabled:opacity-50 ${
                   salon?.is_active 
-                    ? "bg-success" 
+                    ? "bg-green-500" 
                     : "bg-gray-300"
                 }`}
               >
