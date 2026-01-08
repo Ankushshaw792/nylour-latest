@@ -206,21 +206,15 @@ const NearbySalons = () => {
   return (
     <CustomerLayout
       headerProps={{
-        title: "Find Salons",
+        leftContent: <LocationSelector compact />,
         showBackButton: false,
         showProfile: true,
         showNotifications: true,
         onProfileClick: handleProfileClick
       }}
     >
-      {/* Location Section */}
+      {/* Search & Filters Section */}
       <div className="bg-card border-b border-border p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex-1">
-            <LocationSelector />
-          </div>
-        </div>
-
         {/* Search Bar */}
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />

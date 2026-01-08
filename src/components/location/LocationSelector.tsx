@@ -11,7 +11,11 @@ import {
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { useState, useEffect } from "react";
 
-export function LocationSelector() {
+interface LocationSelectorProps {
+  compact?: boolean;
+}
+
+export function LocationSelector({ compact = false }: LocationSelectorProps) {
   const [open, setOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,14 +75,14 @@ export function LocationSelector() {
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
-        <div className="flex items-center cursor-pointer">
-          <MapPin className="h-4 w-4 mr-2 text-primary" />
-          <div className="flex-1">
+        <div className="flex items-center cursor-pointer min-w-0">
+          <MapPin className={compact ? "h-4 w-4 mr-1.5 text-primary flex-shrink-0" : "h-4 w-4 mr-2 text-primary flex-shrink-0"} />
+          <div className="flex-1 min-w-0">
             <div className="flex items-center">
-              <span className="font-semibold text-foreground">{displayArea}</span>
-              <ChevronDown className="h-4 w-4 ml-1 text-muted-foreground" />
+              <span className={compact ? "font-semibold text-foreground text-sm truncate" : "font-semibold text-foreground truncate"}>{displayArea}</span>
+              <ChevronDown className="h-4 w-4 ml-1 text-muted-foreground flex-shrink-0" />
             </div>
-            <p className="text-xs text-muted-foreground">{displayAddress}</p>
+            <p className={compact ? "text-[10px] text-muted-foreground truncate" : "text-xs text-muted-foreground truncate"}>{displayAddress}</p>
           </div>
         </div>
       </SheetTrigger>

@@ -8,6 +8,7 @@ interface CustomerLayoutProps {
   children: ReactNode;
   headerProps?: {
     title?: string;
+    leftContent?: ReactNode;
     showBackButton?: boolean;
     showProfile?: boolean;
     showNotifications?: boolean;

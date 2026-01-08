@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface FixedHeaderProps {
   title?: string;
+  leftContent?: ReactNode;
   showBackButton?: boolean;
   showProfile?: boolean;
   showNotifications?: boolean;
@@ -18,6 +19,7 @@ interface FixedHeaderProps {
 
 export const FixedHeader = ({
   title,
+  leftContent,
   showBackButton = false,
   showProfile = true,
   showNotifications = true,
@@ -60,20 +62,24 @@ export const FixedHeader = ({
     <header className={`fixed top-0 left-0 right-0 z-50 glass border-b border-border ${className}`}>
       <div className="flex items-center justify-between px-4 py-3 h-14">
         {/* Left Section */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           {showBackButton && (
             <Button
               variant="ghost"
               size="mobile-icon"
               onClick={handleBackClick}
-              className="text-foreground hover:bg-muted"
+              className="text-foreground hover:bg-muted flex-shrink-0"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
           )}
-          <h1 className="text-lg font-semibold text-foreground">
-            {getPageTitle()}
-          </h1>
+          {leftContent ? (
+            <div className="flex-1 min-w-0">{leftContent}</div>
+          ) : (
+            <h1 className="text-lg font-semibold text-foreground truncate">
+              {getPageTitle()}
+            </h1>
+          )}
         </div>
 
         {/* Right Section */}
