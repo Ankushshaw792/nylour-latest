@@ -331,7 +331,7 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
     : 'Walk-in Customer';
   
   const serviceName = booking.salon_services?.services?.name || 'Service';
-  const servicePrice = booking.total_price || booking.salon_services?.price || 0;
+  const servicePrice = booking.salon_services?.price || booking.total_price || 0;
   // For walk-ins, phone is stored as: "Walk-in: CustomerName - PhoneNumber"
   const phone = booking.customers?.phone || 
     (booking.notes?.includes('Walk-in:') 
