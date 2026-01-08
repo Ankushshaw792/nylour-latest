@@ -84,7 +84,7 @@ const SalonProfilePage = () => {
   }];
   const helpItems: ProfileMenuItem[] = [{
     icon: HelpCircle,
-    label: "Help Centre",
+    label: "Help",
     route: "/salon-dashboard/help"
   }];
   const MenuButton = ({
