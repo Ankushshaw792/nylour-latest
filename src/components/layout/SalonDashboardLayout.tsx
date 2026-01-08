@@ -53,7 +53,7 @@ export const SalonDashboardLayout = ({
             <div className="flex items-center gap-2">
               
               {/* Online/Offline Toggle - Minimal Pill */}
-              <button onClick={handleToggleOnline} disabled={loading} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors disabled:opacity-50">
+              <button onClick={handleToggleOnline} disabled={loading} className="flex items-center px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors disabled:opacity-50 gap-[5px] text-xs text-justify">
                 <span className={`w-2 h-2 rounded-full ${salon?.is_active ? "bg-green-500" : "bg-gray-400"}`} />
                 <span className="text-sm font-medium text-gray-700">
                   {salon?.is_active ? "Online" : "Offline"}
