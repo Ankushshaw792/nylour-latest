@@ -231,7 +231,7 @@ export const useSalonRealtimeData = () => {
             user_id: authUserId,
             title: 'Booking Confirmed! ✓',
             message: `${salonName} has accepted your booking. Get ready for your appointment!`,
-            type: 'booking_confirmation',
+            type: 'booking',
             related_id: bookingId
           });
           if (notifError) {
@@ -289,7 +289,7 @@ export const useSalonRealtimeData = () => {
             user_id: authUserId,
             title: 'Booking Not Available',
             message: `Sorry, ${salonName} couldn't accommodate your booking. Reason: ${cancellationReason}`,
-            type: 'booking_cancelled',
+            type: 'booking',
             related_id: bookingId
           });
           if (notifError) {
@@ -352,7 +352,7 @@ export const useSalonRealtimeData = () => {
             user_id: authUserId,
             title: 'Service Started! 💇',
             message: `Your service at ${salonName} has begun. Enjoy!`,
-            type: 'queue_update',
+            type: 'queue',
             related_id: bookingId
           });
           if (notifError) {
@@ -415,7 +415,7 @@ export const useSalonRealtimeData = () => {
             user_id: authUserId,
             title: 'Service Complete! ⭐',
             message: `Thanks for visiting ${salonName}! We hope to see you again soon.`,
-            type: 'general',
+            type: 'booking',
             related_id: bookingId
           });
           if (notifError) {
@@ -482,7 +482,7 @@ export const useSalonRealtimeData = () => {
             user_id: authUserId,
             title: 'Booking Marked as No-Show',
             message: `You were marked as no-show at ${salonName}. Reason: ${cancellationReason}`,
-            type: 'booking_cancelled',
+            type: 'booking',
             related_id: bookingId
           });
           if (notifError) {
@@ -538,7 +538,7 @@ export const useSalonRealtimeData = () => {
           user_id: authUserId,
           title: 'Message from Salon',
           message: message,
-          type: 'queue_update',
+          type: 'reminder',
           related_id: bookingId
         });
 
@@ -626,7 +626,7 @@ export const useSalonRealtimeData = () => {
           user_id: authUserId,
           title: 'Your turn is coming up!',
           message: 'Please be ready. Your service will begin shortly.',
-          type: 'queue_update',
+          type: 'reminder',
           related_id: bookingId
         });
 
