@@ -75,10 +75,10 @@ const PaymentPage = () => {
       const transactionRef = `TXN${Date.now().toString().slice(-10)}`;
       
       // Update booking with payment details
+      // Keep status as 'pending' - owner will approve and move to queue
       const { error: bookingError } = await supabase
         .from('bookings')
         .update({ 
-          status: 'confirmed',
           payment_status: 'completed',
           payment_method: paymentDetails.method,
           payment_reference: transactionRef,
