@@ -113,50 +113,52 @@ const HelpCentrePage = () => {
           </CardContent>
         </Card>
 
-        {/* Contact Form */}
-        <Card className="border shadow-sm">
+        {/* Contact Form - Coming Soon */}
+        <Card className="border shadow-sm opacity-60">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Send a Message</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base text-muted-foreground">Send a Message</CardTitle>
+              <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                Coming Soon
+              </span>
+            </div>
             <CardDescription>
               Fill out the form and we'll get back to you
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="name">Your Name *</Label>
+              <Label htmlFor="name" className="text-muted-foreground">Your Name *</Label>
               <Input
                 id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Enter your name"
                 className="mt-1.5"
+                disabled
               />
             </div>
             <div>
-              <Label htmlFor="email">Email (optional)</Label>
+              <Label htmlFor="email" className="text-muted-foreground">Email (optional)</Label>
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="Enter your email"
                 className="mt-1.5"
+                disabled
               />
             </div>
             <div>
-              <Label htmlFor="message">Message *</Label>
+              <Label htmlFor="message" className="text-muted-foreground">Message *</Label>
               <Textarea
                 id="message"
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 placeholder="How can we help you?"
                 className="mt-1.5"
                 rows={4}
+                disabled
               />
             </div>
-            <Button onClick={handleSubmit} disabled={sending} className="w-full gap-2">
+            <Button disabled className="w-full gap-2">
               <Send className="h-4 w-4" />
-              {sending ? "Sending..." : "Send Message"}
+              Send Message
             </Button>
           </CardContent>
         </Card>
