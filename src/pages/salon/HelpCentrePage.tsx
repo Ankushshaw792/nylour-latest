@@ -81,9 +81,7 @@ const HelpCentrePage = () => {
         </Card>
 
         {/* FAQ Link */}
-        <Card className="border shadow-sm bg-muted/30">
-          
-        </Card>
+        
       </div>
     </div>;
 };
