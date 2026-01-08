@@ -53,7 +53,7 @@ const SalonProfilePage = () => {
     route: "/salon-dashboard/store-timings"
   }, {
     icon: Users,
-    label: "Manage Staff",
+    label: "Timings",
     comingSoon: true
   }];
   const settingsItems: ProfileMenuItem[] = [{
