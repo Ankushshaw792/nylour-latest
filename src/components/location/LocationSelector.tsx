@@ -77,7 +77,7 @@ export function LocationSelector({ compact = false }: LocationSelectorProps) {
       <SheetTrigger asChild>
         <div className="flex items-center cursor-pointer min-w-0">
           <MapPin className={compact ? "h-4 w-4 mr-1.5 text-primary flex-shrink-0" : "h-4 w-4 mr-2 text-primary flex-shrink-0"} />
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0">
             <div className="flex items-center">
               <span className={compact ? "font-semibold text-foreground text-sm truncate" : "font-semibold text-foreground truncate"}>{displayArea}</span>
               <ChevronDown className="h-4 w-4 ml-1 text-muted-foreground flex-shrink-0" />
