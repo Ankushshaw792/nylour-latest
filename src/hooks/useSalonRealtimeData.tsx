@@ -58,6 +58,8 @@ interface SalonStatus {
   accepts_walkins: boolean;
   avg_service_time: number;
   max_queue_size: number;
+  address?: string;
+  city?: string;
 }
 
 export const useSalonRealtimeData = () => {
@@ -74,7 +76,7 @@ export const useSalonRealtimeData = () => {
     try {
       const { data: salonData, error: salonError } = await supabase
         .from('salons')
-        .select('id, name, is_active, accepts_walkins, avg_service_time, max_queue_size')
+        .select('id, name, is_active, accepts_walkins, avg_service_time, max_queue_size, address, city')
         .eq('owner_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)

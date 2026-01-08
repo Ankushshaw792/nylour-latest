@@ -158,18 +158,15 @@ const SalonProfilePage = () => {
   }
 
   return (
-    <SalonDashboardLayout
-      title="Salon Management"
-      description="Manage your queue, bookings and customer check-ins"
-    >
-      <div className="p-4 space-y-6">
+    <SalonDashboardLayout>
+      <div className="p-4 space-y-4">
         {/* Stop Bookings Button */}
-        <Card>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-lg">Booking Control</h3>
-                <p className="text-sm text-muted-foreground">
+                <h3 className="font-semibold text-gray-900">Booking Control</h3>
+                <p className="text-sm text-gray-500">
                   {bookingStatus ? "Currently accepting new bookings" : "Bookings are paused"}
                 </p>
               </div>
@@ -186,81 +183,81 @@ const SalonProfilePage = () => {
         </Card>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card>
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-4 text-center">
-              <Clock className="h-6 w-6 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-primary">{stats.currentWaitTime}m</p>
-              <p className="text-xs text-muted-foreground">Current Wait Time</p>
+              <Clock className="h-5 w-5 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-gray-900">{stats.currentWaitTime}m</p>
+              <p className="text-xs text-gray-500">Current Wait Time</p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-4 text-center">
-              <Users className="h-6 w-6 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-primary">{stats.queueLength}</p>
-              <p className="text-xs text-muted-foreground">Queue Length</p>
+              <Users className="h-5 w-5 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-gray-900">{stats.queueLength}</p>
+              <p className="text-xs text-gray-500">Queue Length</p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-4 text-center">
-              <TrendingUp className="h-6 w-6 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-primary">{stats.avgServiceTime}m</p>
-              <p className="text-xs text-muted-foreground">Avg Service Time</p>
+              <TrendingUp className="h-5 w-5 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-gray-900">{stats.avgServiceTime}m</p>
+              <p className="text-xs text-gray-500">Avg Service Time</p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-4 text-center">
-              <Wifi className="h-6 w-6 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-primary">{stats.capacity}</p>
-              <p className="text-xs text-muted-foreground">Capacity</p>
+              <Wifi className="h-5 w-5 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-gray-900">{stats.capacity}</p>
+              <p className="text-xs text-gray-500">Capacity</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Update Wait Time */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-gray-900">
               <Clock className="h-5 w-5" />
               Update Wait Time
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="waitTime">Current Wait Time (minutes)</Label>
+              <Label htmlFor="waitTime" className="text-gray-700">Current Wait Time (minutes)</Label>
               <div className="flex gap-2 mt-2">
                 <Input
                   id="waitTime"
                   type="number"
                   value={waitTime}
                   onChange={(e) => setWaitTime(Number(e.target.value))}
-                  className="flex-1"
+                  className="flex-1 border-gray-200"
                 />
                 <Button onClick={handleUpdateWaitTime}>Update</Button>
               </div>
             </div>
             
             <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" size="sm" onClick={() => handleQuickTimeUpdate(15)}>
+              <Button variant="outline" size="sm" className="border-gray-200" onClick={() => handleQuickTimeUpdate(15)}>
                 15 min
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleQuickTimeUpdate(30)}>
+              <Button variant="outline" size="sm" className="border-gray-200" onClick={() => handleQuickTimeUpdate(30)}>
                 30 min
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleQuickTimeUpdate(45)}>
+              <Button variant="outline" size="sm" className="border-gray-200" onClick={() => handleQuickTimeUpdate(45)}>
                 45 min
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleQuickTimeUpdate(60)}>
+              <Button variant="outline" size="sm" className="border-gray-200" onClick={() => handleQuickTimeUpdate(60)}>
                 1 hour
               </Button>
             </div>
 
-            <div className="bg-muted p-3 rounded-lg">
-              <p className="text-sm font-medium mb-1">Wait Time Guidelines</p>
-              <ul className="text-xs text-muted-foreground space-y-1">
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+              <p className="text-sm font-medium text-gray-900 mb-1">Wait Time Guidelines</p>
+              <ul className="text-xs text-gray-500 space-y-1">
                 <li>• Update regularly based on current queue</li>
                 <li>• Consider service complexity and staff availability</li>
                 <li>• Communicate changes to waiting customers</li>
@@ -270,12 +267,12 @@ const SalonProfilePage = () => {
         </Card>
 
         {/* Booking Status Toggle */}
-        <Card>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Booking Status</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-medium text-gray-900">Booking Status</p>
+                <p className="text-sm text-gray-500">
                   Allow new customers to book appointments
                 </p>
               </div>
@@ -293,23 +290,23 @@ const SalonProfilePage = () => {
         </Card>
 
         {/* Customer Check-in */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer Check-in</CardTitle>
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-gray-900">Customer Check-in</CardTitle>
           </CardHeader>
           <CardContent>
             {customers.length > 0 ? (
               <div className="space-y-3">
                 {customers.map((customer) => (
-                  <div key={customer.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div key={customer.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium">{customer.name}</p>
+                        <p className="font-medium text-gray-900">{customer.name}</p>
                         <Badge variant={customer.status === 'ready' ? 'default' : 'secondary'}>
                           {customer.status === 'ready' ? 'Ready' : 'Waiting'}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-gray-500">
                         {customer.service} • Arrived at {customer.time}
                       </p>
                     </div>
@@ -325,8 +322,8 @@ const SalonProfilePage = () => {
               </div>
             ) : (
               <div className="text-center py-8">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No customers in queue</p>
+                <Users className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No customers in queue</p>
               </div>
             )}
           </CardContent>
@@ -338,30 +335,30 @@ const SalonProfilePage = () => {
         )}
 
         {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-gray-900">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => navigate('/salon-dashboard/gallery')}>
+              <Button variant="outline" className="h-14 flex-col gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50" onClick={() => navigate('/salon-dashboard/gallery')}>
                 <ImageIcon className="h-5 w-5" />
-                <span className="text-sm">Manage Gallery</span>
+                <span className="text-xs">Manage Gallery</span>
               </Button>
               
-              <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => navigate('/salon-dashboard')}>
+              <Button variant="outline" className="h-14 flex-col gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50" onClick={() => navigate('/salon-dashboard')}>
                 <Eye className="h-5 w-5" />
-                <span className="text-sm">View Queue</span>
+                <span className="text-xs">View Queue</span>
               </Button>
               
-              <Button variant="outline" className="h-16 flex-col gap-2">
+              <Button variant="outline" className="h-14 flex-col gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50">
                 <Settings className="h-5 w-5" />
-                <span className="text-sm">Salon Settings</span>
+                <span className="text-xs">Salon Settings</span>
               </Button>
               
-              <Button variant="outline" className="h-16 flex-col gap-2">
+              <Button variant="outline" className="h-14 flex-col gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50">
                 <BarChart3 className="h-5 w-5" />
-                <span className="text-sm">Analytics</span>
+                <span className="text-xs">Analytics</span>
               </Button>
             </div>
           </CardContent>
