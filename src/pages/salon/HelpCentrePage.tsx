@@ -18,7 +18,7 @@ const HelpCentrePage = () => {
     message: "",
   });
 
-  const SUPPORT_PHONE = "+91 98765 43210"; // Replace with actual support number
+  const SUPPORT_PHONE = "+91 70031 07472";
   const SUPPORT_EMAIL = "support@salonapp.com"; // Replace with actual email
 
   const handleSubmit = async () => {
