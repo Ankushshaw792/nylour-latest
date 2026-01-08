@@ -74,6 +74,8 @@ const SalonDetails = () => {
               id,
               price,
               duration,
+              image_url,
+              display_order,
               services (
                 id,
                 name,
@@ -123,18 +125,23 @@ const SalonDetails = () => {
         // Get salon hours (mock for now)
         const hours = "9:00 AM - 9:00 PM";
 
-        // Process services with images and icons
+        // Process services - use uploaded image_url if available, otherwise fallback
         const serviceImages = [haircutImage, beardTrimImage, hairWashImage];
         const serviceIcons = [Scissors, Sparkles, Sparkles];
         
-        const processedServices: SalonService[] = salonData.salon_services?.map((salonService: any, index: number) => ({
+        // Sort services by display_order
+        const sortedServices = [...(salonData.salon_services || [])].sort(
+          (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
+        );
+        
+        const processedServices: SalonService[] = sortedServices.map((salonService: any, index: number) => ({
           id: salonService.id, // Use salon_services.id for bookings foreign key
           name: salonService.services.name,
           price: salonService.price,
           duration: salonService.duration,
-          image: serviceImages[index % serviceImages.length],
+          image: salonService.image_url || serviceImages[index % serviceImages.length],
           icon: serviceIcons[index % serviceIcons.length]
-        })) || [];
+        }));
 
         const processedSalon: SalonDetails = {
           id: salonData.id,
