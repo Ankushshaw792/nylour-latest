@@ -57,6 +57,15 @@ const ServicesManagement = () => {
   
   // Upload state
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  
+  // Custom service state
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [customServiceData, setCustomServiceData] = useState({
+    name: "",
+    description: "",
+    price: 200,
+    duration: 30,
+  });
 
   // Fetch salon services
   const fetchServices = async () => {
@@ -199,6 +208,8 @@ const ServicesManagement = () => {
   const handleOpenAddDialog = () => {
     setFormData({ price: 0, duration: 30 });
     setSelectedServiceId("");
+    setIsCustomMode(false);
+    setCustomServiceData({ name: "", description: "", price: 200, duration: 30 });
     setIsAddDialogOpen(true);
   };
 
@@ -217,6 +228,59 @@ const ServicesManagement = () => {
   const getUnusedServices = () => {
     const existingServiceIds = services.map(s => s.service_id);
     return availableServices.filter(s => !existingServiceIds.includes(s.id));
+  };
+
+  // Add custom service handler
+  const handleAddCustomService = async () => {
+    if (!customServiceData.name.trim() || !salon?.id) {
+      toast.error('Please enter a service name');
+      return;
+    }
+    if (customServiceData.price <= 0) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+
+    // Step 1: Create the custom service in services table
+    const { data: newService, error: serviceError } = await supabase
+      .from('services')
+      .insert({
+        name: customServiceData.name.trim(),
+        description: customServiceData.description.trim() || null,
+        default_duration: customServiceData.duration,
+      })
+      .select()
+      .single();
+
+    if (serviceError) {
+      console.error('Error creating service:', serviceError);
+      toast.error('Failed to create custom service');
+      return;
+    }
+
+    // Step 2: Link it to the salon
+    const maxOrder = services.length > 0 ? Math.max(...services.map(s => s.display_order)) : -1;
+    
+    const { error: linkError } = await supabase
+      .from('salon_services')
+      .insert({
+        salon_id: salon.id,
+        service_id: newService.id,
+        price: customServiceData.price,
+        duration: customServiceData.duration,
+        display_order: maxOrder + 1,
+      });
+
+    if (linkError) {
+      console.error('Error linking service:', linkError);
+      toast.error('Failed to add service to salon');
+      return;
+    }
+
+    toast.success('Custom service added successfully');
+    setIsAddDialogOpen(false);
+    setCustomServiceData({ name: "", description: "", price: 200, duration: 30 });
+    fetchServices();
   };
 
   // Drag and drop handlers
@@ -542,64 +606,143 @@ const ServicesManagement = () => {
             <DialogTitle>Add New Service</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="service-select">Select Service</Label>
-              <select
-                id="service-select"
-                className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                value={selectedServiceId}
-                onChange={(e) => handleServiceSelect(e.target.value)}
+            {/* Toggle Tabs */}
+            <div className="flex gap-2">
+              <Button
+                variant={!isCustomMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsCustomMode(false)}
+                className="flex-1"
               >
-                <option value="">Choose a service...</option>
-                {getUnusedServices().map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </select>
-              {getUnusedServices().length === 0 && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  All available services have been added
-                </p>
-              )}
+                Select Pre-made
+              </Button>
+              <Button
+                variant={isCustomMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsCustomMode(true)}
+                className="flex-1"
+              >
+                Create Custom
+              </Button>
             </div>
 
-            {selectedServiceId && (
+            {!isCustomMode ? (
               <>
                 <div>
-                  <Label htmlFor="add-price">Price (₹)</Label>
+                  <Label htmlFor="service-select">Select Service</Label>
+                  <select
+                    id="service-select"
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={selectedServiceId}
+                    onChange={(e) => handleServiceSelect(e.target.value)}
+                  >
+                    <option value="">Choose a service...</option>
+                    {getUnusedServices().map((service) => (
+                      <option key={service.id} value={service.id}>
+                        {service.name}
+                      </option>
+                    ))}
+                  </select>
+                  {getUnusedServices().length === 0 && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      All available services have been added
+                    </p>
+                  )}
+                </div>
+
+                {selectedServiceId && (
+                  <>
+                    <div>
+                      <Label htmlFor="add-price">Price (₹)</Label>
+                      <Input
+                        id="add-price"
+                        type="number"
+                        placeholder="Enter price"
+                        value={formData.price || ""}
+                        onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="add-duration">Duration (minutes)</Label>
+                      <Input
+                        id="add-duration"
+                        type="number"
+                        value={formData.duration}
+                        onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 30 })}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleAddNewService} 
+                    disabled={!selectedServiceId || formData.price <= 0}
+                  >
+                    Add Service
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <Label htmlFor="custom-name">Service Name *</Label>
                   <Input
-                    id="add-price"
-                    type="number"
-                    placeholder="Enter price"
-                    value={formData.price || ""}
-                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                    id="custom-name"
+                    placeholder="e.g., Hair Spa Treatment"
+                    value={customServiceData.name}
+                    onChange={(e) => setCustomServiceData({ ...customServiceData, name: e.target.value })}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="add-duration">Duration (minutes)</Label>
+                  <Label htmlFor="custom-description">Description (optional)</Label>
                   <Input
-                    id="add-duration"
-                    type="number"
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 30 })}
+                    id="custom-description"
+                    placeholder="Brief description of the service"
+                    value={customServiceData.description}
+                    onChange={(e) => setCustomServiceData({ ...customServiceData, description: e.target.value })}
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="custom-price">Price (₹)</Label>
+                    <Input
+                      id="custom-price"
+                      type="number"
+                      value={customServiceData.price || ""}
+                      onChange={(e) => setCustomServiceData({ ...customServiceData, price: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="custom-duration">Duration (min)</Label>
+                    <Input
+                      id="custom-duration"
+                      type="number"
+                      value={customServiceData.duration}
+                      onChange={(e) => setCustomServiceData({ ...customServiceData, duration: parseInt(e.target.value) || 30 })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleAddCustomService} 
+                    disabled={!customServiceData.name.trim() || customServiceData.price <= 0}
+                  >
+                    Add Custom Service
+                  </Button>
                 </div>
               </>
             )}
-
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleAddNewService} 
-                disabled={!selectedServiceId || formData.price <= 0}
-              >
-                Add Service
-              </Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
