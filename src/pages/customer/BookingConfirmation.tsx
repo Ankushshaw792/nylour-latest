@@ -26,16 +26,16 @@ const BookingConfirmation = () => {
       if (!user || !bookingId) return;
 
       try {
-        // Fetch customer profile for cancellation count
+        // Fetch customer profile for cancellation count and customer id
         const { data: profileData } = await supabase
           .from("customers")
-          .select("cancellation_count")
+          .select("id, cancellation_count")
           .eq("user_id", user.id)
           .maybeSingle();
         
         setCustomerProfile(profileData);
 
-        // Fetch booking with basic data
+        // Fetch booking with basic data - use customer profile id, not auth user id
         const { data: bookingData, error } = await supabase
           .from("bookings")
           .select(`
@@ -47,7 +47,7 @@ const BookingConfirmation = () => {
             )
           `)
           .eq("id", bookingId)
-          .eq("customer_id", user.id)
+          .eq("customer_id", profileData?.id || user.id)
           .maybeSingle();
 
         if (error || !bookingData) {
