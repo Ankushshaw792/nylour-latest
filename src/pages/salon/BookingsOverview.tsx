@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus, UserX, MessageSquare } from "lucide-react";
+import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus, UserX, MessageSquare, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,12 +29,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SalonCancellationDialog } from "@/components/salon/SalonCancellationDialog";
+import ArrivalCountdownTimer from "@/components/queue/ArrivalCountdownTimer";
 
 const BookingsOverview = () => {
   const { user, loading: authLoading } = useRequireAuth();
-  const { bookings, loading, acceptBooking, rejectBooking, startService, completeService, markNoShow, sendReminder, sendCustomReminder, addWalkInCustomer, salon } = useSalonRealtimeData();
+  const { bookings, loading, acceptBooking, rejectBooking, startService, completeService, markNoShow, sendReminder, sendCustomReminder, addWalkInCustomer, addWalkInCustomerFirst, salon } = useSalonRealtimeData();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddFirstDialogOpen, setIsAddFirstDialogOpen] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [selectedBookingForMessage, setSelectedBookingForMessage] = useState<{ customerId: string; bookingId: string } | null>(null);
   const [customMessage, setCustomMessage] = useState("");
@@ -101,6 +103,29 @@ const BookingsOverview = () => {
     setWalkInPhone("");
     setWalkInService("");
   };
+
+  const handleAddWalkInFirst = async () => {
+    if (!walkInName || !walkInPhone || !walkInService) return;
+    
+    await addWalkInCustomerFirst({
+      name: walkInName,
+      phone: walkInPhone,
+      service_id: walkInService
+    });
+    
+    setIsAddFirstDialogOpen(false);
+    setWalkInName("");
+    setWalkInPhone("");
+    setWalkInService("");
+  };
+
+  // Check if there's an online customer with arrival deadline at position 1
+  const hasOnlineCustomerWaiting = bookings.some(b => 
+    b.status === 'confirmed' && 
+    b.arrival_deadline && 
+    new Date(b.arrival_deadline) > new Date() &&
+    b.customer_id !== null
+  );
 
   const handleSendCustomMessage = async () => {
     if (!selectedBookingForMessage || !customMessage.trim()) return;
@@ -260,6 +285,65 @@ const BookingsOverview = () => {
 
           {/* Queue Bookings (Confirmed/In Progress) */}
           <TabsContent value="queue" className="space-y-4">
+            {/* Add Walk-in First Button - Only show when online customer is waiting */}
+            {hasOnlineCustomerWaiting && (
+              <Dialog open={isAddFirstDialogOpen} onOpenChange={setIsAddFirstDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full mb-2" variant="default">
+                    <Timer className="h-4 w-4 mr-2" />
+                    Add Walk-in to First Position
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Walk-in to First Position</DialogTitle>
+                    <DialogDescription>
+                      This walk-in customer will be served before online customers waiting to arrive
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="first-name">Customer Name</Label>
+                      <Input
+                        id="first-name"
+                        value={walkInName}
+                        onChange={(e) => setWalkInName(e.target.value)}
+                        placeholder="Enter name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="first-phone">Phone Number</Label>
+                      <Input
+                        id="first-phone"
+                        type="tel"
+                        value={walkInPhone}
+                        onChange={(e) => setWalkInPhone(e.target.value)}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="first-service">Service</Label>
+                      <Select value={walkInService} onValueChange={setWalkInService}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select service" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableServices.map(service => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name} - ₹{service.price}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={handleAddWalkInFirst} className="w-full">
+                      Add to First Position
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            
             {queueBookings.length > 0 ? (
               queueBookings.map((booking) => (
                 <BookingCard
@@ -399,6 +483,16 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
                 {booking.status}
               </Badge>
             </div>
+
+            {/* Arrival Countdown for online bookings with deadline */}
+            {booking.arrival_deadline && booking.status === 'confirmed' && !isWalkIn && (
+              <div className="mb-3">
+                <ArrivalCountdownTimer 
+                  arrivalDeadline={booking.arrival_deadline} 
+                  compact={true}
+                />
+              </div>
+            )}
 
             {/* Booking Info Grid */}
             <div className="grid grid-cols-2 gap-2 mb-3 text-sm">

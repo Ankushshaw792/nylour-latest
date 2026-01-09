@@ -11,6 +11,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ArrivalCountdownTimer from "@/components/queue/ArrivalCountdownTimer";
 
 const QueueStatus = () => {
   const navigate = useNavigate();
@@ -131,14 +132,15 @@ const QueueStatus = () => {
           }
         }
 
-        // Combine the data with service name and actual price
+        // Combine the data with service name, actual price, and arrival_deadline
         const combinedData = {
           ...activeQueueData,
           bookings: bookingData ? {
             ...bookingData,
             service_name: serviceName,
             service_price: servicePrice,
-            service_duration: serviceDuration
+            service_duration: serviceDuration,
+            arrival_deadline: bookingData.arrival_deadline
           } : null
         };
 
@@ -392,6 +394,17 @@ const QueueStatus = () => {
       }}
     >
       <div className="p-4 space-y-6">
+        {/* Arrival Countdown Timer - Show prominently if booking has deadline */}
+        {booking.arrival_deadline && booking.status === 'confirmed' && (
+          <ArrivalCountdownTimer 
+            arrivalDeadline={booking.arrival_deadline}
+            onExpired={() => {
+              toast.error("Your booking has been cancelled due to non-arrival");
+              navigate("/bookings");
+            }}
+          />
+        )}
+
         {/* Live Queue Status */}
         <Card className="bg-gradient-card">
           <CardContent className="p-6">

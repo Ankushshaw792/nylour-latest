@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BookingSummaryDialog } from "@/components/bookings/BookingSummaryDialog";
 import { CancellationDialog } from "@/components/bookings/CancellationDialog";
+import ArrivalCountdownTimer from "@/components/queue/ArrivalCountdownTimer";
 
 const BookingsPage = () => {
   const { user, loading } = useRequireAuth();
@@ -52,7 +53,7 @@ const BookingsPage = () => {
 
         const today = new Date().toISOString().split('T')[0];
         
-        // Fetch CURRENT bookings - based on status and booking_date
+        // Fetch CURRENT bookings - based on status and booking_date (including arrival_deadline)
         const { data: currentData, error: currentError } = await supabase
           .from("bookings")
           .select(`
@@ -315,7 +316,15 @@ const BookingsPage = () => {
                       </div>
                     </div>
 
-                    {queueEntry && queueEntry.status === "waiting" && (
+                    {/* Arrival Countdown Timer for confirmed bookings with deadline */}
+                    {booking.status === "confirmed" && booking.arrival_deadline && (
+                      <ArrivalCountdownTimer 
+                        arrivalDeadline={booking.arrival_deadline} 
+                        className="mb-3"
+                      />
+                    )}
+
+                    {queueEntry && queueEntry.status === "waiting" && !booking.arrival_deadline && (
                       <div className="bg-primary/10 p-3 rounded-lg mb-3">
                         <div className="flex items-center justify-between">
                           <div>
