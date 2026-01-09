@@ -482,7 +482,7 @@ const QueueStatus = () => {
                             ? 'ring-2 ring-amber-500' 
                             : ''
                       }`}>
-                        <AvatarImage src={isCurrentUser ? (avatarUrl || "") : (member.customer?.avatar_url || "")} />
+                        <AvatarImage src={isCurrentUser ? (avatarUrl ?? undefined) : (member.customer?.avatar_url ?? undefined)} />
                         <AvatarFallback className={`text-sm font-bold ${
                           isCurrentUser 
                             ? 'bg-primary text-primary-foreground' 
