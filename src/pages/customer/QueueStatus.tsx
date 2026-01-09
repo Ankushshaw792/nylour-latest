@@ -345,9 +345,10 @@ const QueueStatus = () => {
   const currentPosition = queueEntry.position;
   const progress = totalQueueMembers > 0 ? Math.max(0, ((totalQueueMembers - currentPosition) / totalQueueMembers) * 100) : 0;
 
-  // Calculate estimated wait time based on position and avg service time
+  // Calculate estimated wait time based on actual people ahead in queue
   const avgServiceTime = queueEntry.bookings?.salons?.avg_service_time || 30;
-  const estimatedWaitMinutes = Math.max(0, (currentPosition - 1) * avgServiceTime);
+  const peopleAhead = queueMembers.filter(m => m.position < currentPosition).length;
+  const estimatedWaitMinutes = peopleAhead * avgServiceTime;
 
   // Extract booking and salon data with null checks
   const booking = queueEntry.bookings;
