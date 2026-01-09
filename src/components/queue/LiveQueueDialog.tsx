@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, Clock, Loader2, ChevronRight } from "lucide-react";
+import { Users, Clock, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -7,12 +7,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 
 interface QueueEntry {
   id: string;
   position: number;
   customer_name: string;
+  avatar_url: string | null;
   service_name: string;
   estimated_wait: number;
   status: string;
@@ -49,10 +51,11 @@ export const LiveQueueDialog = ({
           status,
           customer_id,
           booking_id,
-          customers (
-            first_name,
-            last_name
-          ),
+        customers (
+          first_name,
+          last_name,
+          avatar_url
+        ),
           bookings (
             salon_services (
               services (
@@ -80,6 +83,7 @@ export const LiveQueueDialog = ({
           id: entry.id,
           position: entry.position || index + 1,
           customer_name: `${firstName} ${lastInitial}`.trim(),
+          avatar_url: entry.customers?.avatar_url || null,
           service_name: serviceName,
           estimated_wait: index * avgServiceTime,
           status: entry.status,
@@ -156,16 +160,19 @@ export const LiveQueueDialog = ({
                       : "bg-muted/30 border-border"
                   }`}
                 >
-                  {/* Position Badge */}
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                      index === 0
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {entry.position}
-                  </div>
+                  {/* Customer Avatar */}
+                  <Avatar className={`w-8 h-8 ${index === 0 ? "ring-2 ring-primary" : ""}`}>
+                    <AvatarImage src={entry.avatar_url || ""} />
+                    <AvatarFallback
+                      className={`font-bold text-sm ${
+                        index === 0
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {entry.position}
+                    </AvatarFallback>
+                  </Avatar>
 
                   {/* Customer Info */}
                   <div className="flex-1 min-w-0">

@@ -3,6 +3,7 @@ import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus, UserX,
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
 import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
@@ -351,9 +352,12 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           {/* Customer Avatar */}
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isWalkIn ? 'bg-amber-100' : 'bg-primary/20'}`}>
-            <User className={`h-6 w-6 ${isWalkIn ? 'text-amber-600' : 'text-primary'}`} />
-          </div>
+          <Avatar className="w-12 h-12">
+            <AvatarImage src={booking.customers?.avatar_url || ""} />
+            <AvatarFallback className={isWalkIn ? 'bg-amber-100' : 'bg-primary/20'}>
+              <User className={`h-6 w-6 ${isWalkIn ? 'text-amber-600' : 'text-primary'}`} />
+            </AvatarFallback>
+          </Avatar>
 
           {/* Booking Details */}
           <div className="flex-1">

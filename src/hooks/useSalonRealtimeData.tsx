@@ -22,6 +22,7 @@ interface Booking {
     first_name: string | null;
     last_name: string | null;
     phone: string | null;
+    avatar_url: string | null;
   } | null;
   salon_services?: {
     price: number;
@@ -45,6 +46,7 @@ interface QueueEntry {
     first_name: string | null;
     last_name: string | null;
     phone: string | null;
+    avatar_url: string | null;
   } | null;
   services?: {
     name: string;
@@ -102,7 +104,7 @@ export const useSalonRealtimeData = () => {
           status,
           total_price,
           notes,
-          customers(first_name, last_name, phone),
+          customers(first_name, last_name, phone, avatar_url),
           salon_services(price, duration, services(name, default_duration))
         `)
         .eq('salon_id', salonData.id)
