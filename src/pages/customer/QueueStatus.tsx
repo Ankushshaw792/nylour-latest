@@ -399,8 +399,7 @@ const QueueStatus = () => {
           <ArrivalCountdownTimer 
             arrivalDeadline={booking.arrival_deadline}
             onExpired={() => {
-              toast.error("Your booking has been cancelled due to non-arrival");
-              navigate("/bookings");
+              toast.warning("Time's up! Please reach the salon immediately.");
             }}
           />
         )}
