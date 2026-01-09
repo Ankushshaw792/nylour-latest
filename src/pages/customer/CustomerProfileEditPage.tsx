@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCustomer } from "@/contexts/CustomerContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const CustomerProfileEditPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { refetchProfile } = useCustomer();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -90,6 +92,7 @@ const CustomerProfileEditPage = () => {
         .eq('user_id', user.id);
 
       setAvatarUrl(urlData.publicUrl);
+      await refetchProfile();
       toast.success('Profile photo updated');
     } catch (error) {
       console.error('Upload error:', error);

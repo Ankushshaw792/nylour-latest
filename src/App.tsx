@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { CustomerProvider } from "@/contexts/CustomerContext";
 
 // Landing Page
 import Home from "./pages/Home";
@@ -50,7 +51,8 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <CartProvider>
+      <CustomerProvider>
+        <CartProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -94,7 +96,8 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
-      </CartProvider>
+        </CartProvider>
+      </CustomerProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
