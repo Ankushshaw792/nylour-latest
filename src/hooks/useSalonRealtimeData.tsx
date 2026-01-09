@@ -104,8 +104,10 @@ export const useSalonRealtimeData = () => {
           status,
           total_price,
           notes,
+          party_size,
           customers(first_name, last_name, phone, avatar_url),
-          salon_services(price, duration, services(name, default_duration))
+          salon_services(price, duration, services(name, default_duration)),
+          booking_companions(id, name, phone)
         `)
         .eq('salon_id', salonData.id)
         .eq('booking_date', today)

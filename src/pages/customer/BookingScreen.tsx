@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Smartphone, Bell, Users, Edit, AlertCircle } from "lucide-react";
+import { ArrowLeft, Smartphone, Bell, Users, Edit, AlertCircle, User, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { BookingSummaryCard } from "@/components/bookings/BookingSummaryCard";
+import { CompanionDetailsDialog, Companion } from "@/components/bookings/CompanionDetailsDialog";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useActiveBooking } from "@/hooks/useActiveBooking";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
@@ -29,6 +31,13 @@ const BookingScreen = () => {
   const [contactPhone, setContactPhone] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Party size state
+  const [partyType, setPartyType] = useState<"alone" | "group">("alone");
+  const [companions, setCompanions] = useState<Companion[]>([]);
+  const [showCompanionDialog, setShowCompanionDialog] = useState(false);
+
+  const partySize = partyType === "alone" ? 1 : companions.length + 1;
 
   // Redirect if salon is closed
   useEffect(() => {
@@ -70,6 +79,13 @@ const BookingScreen = () => {
   const handleBooking = async () => {
     if (!user || items.length === 0) return;
     
+    // Validate companions if group booking
+    if (partyType === "group" && companions.length === 0) {
+      toast.error("Please add companion details");
+      setShowCompanionDialog(true);
+      return;
+    }
+    
     setIsProcessing(true);
     
     try {
@@ -95,13 +111,32 @@ const BookingScreen = () => {
           duration: items.reduce((total, item) => total + (parseInt(item.duration) * item.quantity), 0),
           total_price: bookingFee,
           status: 'pending',
-          notes: `Contact: ${contactName} - ${contactPhone}`
+          notes: `Contact: ${contactName} - ${contactPhone}`,
+          party_size: partySize
         })
         .select()
         .maybeSingle();
 
       if (bookingError) throw bookingError;
       if (!bookingData) throw new Error('Failed to create booking');
+
+      // Insert companions if any
+      if (companions.length > 0) {
+        const companionRecords = companions.map((c) => ({
+          booking_id: bookingData.id,
+          name: c.name.trim(),
+          phone: c.phone.trim()
+        }));
+        
+        const { error: companionError } = await supabase
+          .from('booking_companions')
+          .insert(companionRecords);
+          
+        if (companionError) {
+          console.error('Companion insert error:', companionError);
+          // Don't fail the booking, just log the error
+        }
+      }
 
       toast.success('Booking details saved! Please complete payment.');
       navigate(`/payment/${bookingData.id}`);
@@ -110,6 +145,20 @@ const BookingScreen = () => {
       toast.error(error.message || 'Failed to create booking. Please try again.');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleCompanionConfirm = (newCompanions: Companion[]) => {
+    setCompanions(newCompanions);
+    setShowCompanionDialog(false);
+  };
+
+  const handlePartyTypeChange = (value: string) => {
+    setPartyType(value as "alone" | "group");
+    if (value === "group") {
+      setShowCompanionDialog(true);
+    } else {
+      setCompanions([]);
     }
   };
 
@@ -124,9 +173,22 @@ const BookingScreen = () => {
       bottomButtonProps={{
         text: isProcessing ? "Processing..." : "Confirm Booking",
         onClick: handleBooking,
-        disabled: isProcessing || !contactName.trim() || !contactPhone.trim() || hasActiveBooking
+        disabled: isProcessing || !contactName.trim() || !contactPhone.trim() || hasActiveBooking || (partyType === "group" && companions.length === 0)
       }}
     >
+      {/* Companion Details Dialog */}
+      <CompanionDetailsDialog
+        isOpen={showCompanionDialog}
+        onClose={() => {
+          setShowCompanionDialog(false);
+          if (companions.length === 0) {
+            setPartyType("alone");
+          }
+        }}
+        onConfirm={handleCompanionConfirm}
+        initialCompanions={companions}
+      />
+
       {/* Active Booking Warning */}
       {hasActiveBooking && (
         <Alert variant="destructive" className="m-4">
@@ -217,6 +279,88 @@ const BookingScreen = () => {
           </CardContent>
         </Card>
 
+        {/* Number of People Section */}
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="font-semibold text-lg mb-4">Number of People</h3>
+            
+            <RadioGroup
+              value={partyType}
+              onValueChange={handlePartyTypeChange}
+              className="space-y-3"
+            >
+              <label
+                htmlFor="alone"
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  partyType === "alone"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <RadioGroupItem value="alone" id="alone" />
+                <User className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="font-medium">Just me</p>
+                  <p className="text-sm text-muted-foreground">Booking for yourself only</p>
+                </div>
+              </label>
+              
+              <label
+                htmlFor="group"
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  partyType === "group"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <RadioGroupItem value="group" id="group" />
+                <Users className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="font-medium">With others</p>
+                  <p className="text-sm text-muted-foreground">Booking for multiple people</p>
+                </div>
+              </label>
+            </RadioGroup>
+
+            {/* Show companions summary if group booking */}
+            {partyType === "group" && companions.length > 0 && (
+              <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">
+                    👥 {partySize} people total
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCompanionDialog(true)}
+                    className="text-primary h-auto p-1"
+                  >
+                    Edit
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  {companions.map((c, i) => (
+                    <p key={i} className="text-sm text-muted-foreground">
+                      • {c.name} ({c.phone})
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {partyType === "group" && companions.length === 0 && (
+              <Button
+                variant="outline"
+                className="w-full mt-4"
+                onClick={() => setShowCompanionDialog(true)}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Companion Details
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
         {/* 3. Booking Summary Section */}
         <Card>
           <CardContent className="p-4">
@@ -227,6 +371,12 @@ const BookingScreen = () => {
                 <span className="text-muted-foreground">Booking Fee</span>
                 <span className="font-medium">₹{bookingFee}</span>
               </div>
+              {partySize > 1 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Party Size</span>
+                  <span className="font-medium">{partySize} people</span>
+                </div>
+              )}
             </div>
 
             <Separator className="my-4" />

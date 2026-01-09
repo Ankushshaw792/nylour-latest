@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus, UserX, MessageSquare } from "lucide-react";
+import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus, UserX, MessageSquare, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -368,7 +368,7 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
           <div className="flex-1">
             <div className="flex items-start justify-between mb-2">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="font-semibold">{customerName}</h4>
                   {isWalkIn && (
                     <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
@@ -380,8 +380,21 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
                       Online
                     </Badge>
                   )}
+                  {/* Party size badge */}
+                  {(booking.party_size || 1) > 1 && (
+                    <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-300">
+                      <Users className="h-3 w-3 mr-1" />
+                      {booking.party_size} people
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm font-medium text-foreground mt-1">{serviceName}</p>
+                {/* Show companions if available */}
+                {booking.booking_companions && booking.booking_companions.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    With: {booking.booking_companions.map((c: any) => c.name).join(', ')}
+                  </p>
+                )}
               </div>
               <Badge 
                 variant={
