@@ -14,38 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      booking_companions: {
-        Row: {
-          booking_id: string
-          created_at: string
-          id: string
-          name: string
-          phone: string
-        }
-        Insert: {
-          booking_id: string
-          created_at?: string
-          id?: string
-          name: string
-          phone: string
-        }
-        Update: {
-          booking_id?: string
-          created_at?: string
-          id?: string
-          name?: string
-          phone?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "booking_companions_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       bookings: {
         Row: {
           booking_date: string
@@ -56,7 +24,6 @@ export type Database = {
           duration: number | null
           id: string
           notes: string | null
-          party_size: number | null
           payment_method: string | null
           payment_reference: string | null
           payment_status: string | null
@@ -76,7 +43,6 @@ export type Database = {
           duration?: number | null
           id?: string
           notes?: string | null
-          party_size?: number | null
           payment_method?: string | null
           payment_reference?: string | null
           payment_status?: string | null
@@ -96,7 +62,6 @@ export type Database = {
           duration?: number | null
           id?: string
           notes?: string | null
-          party_size?: number | null
           payment_method?: string | null
           payment_reference?: string | null
           payment_status?: string | null
