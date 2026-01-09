@@ -112,7 +112,7 @@ const ArrivalCountdownTimer = ({
 
         <p className="text-xs text-muted-foreground mt-2 text-center">
           {isExpired 
-            ? "Your booking has been cancelled due to non-arrival"
+            ? "Reach Soon to avoid Cancellation"
             : timeRemaining <= 120 
               ? "⚠️ Hurry! Arrive now to avoid cancellation"
               : timeRemaining <= 300
