@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   User, 
@@ -15,12 +14,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useCustomer } from "@/contexts/CustomerContext";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { LucideIcon } from "lucide-react";
 
 interface MenuItem {
@@ -33,39 +30,8 @@ interface MenuItem {
 const ProfilePage = () => {
   const { user, loading } = useRequireAuth();
   const { signOut } = useAuth();
+  const { customerProfile, avatarUrl, loading: profileLoading } = useCustomer();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<any>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-
-  // Fetch profile data
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from("customers")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error("Error fetching profile:", error);
-          toast.error("Failed to load profile");
-        } else {
-          setProfile(data);
-        }
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-      } finally {
-        setProfileLoading(false);
-      }
-    };
-
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
 
   const handleSignOut = async () => {
     try {
@@ -77,21 +43,21 @@ const ProfilePage = () => {
   };
 
   const getDisplayName = () => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name} ${profile.last_name}`;
+    if (customerProfile?.first_name && customerProfile?.last_name) {
+      return `${customerProfile.first_name} ${customerProfile.last_name}`;
     }
-    if (profile?.first_name) {
-      return profile.first_name;
+    if (customerProfile?.first_name) {
+      return customerProfile.first_name;
     }
     return user?.email?.split('@')[0] || "User";
   };
 
   const getInitials = () => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+    if (customerProfile?.first_name && customerProfile?.last_name) {
+      return `${customerProfile.first_name[0]}${customerProfile.last_name[0]}`.toUpperCase();
     }
-    if (profile?.first_name) {
-      return profile.first_name[0].toUpperCase();
+    if (customerProfile?.first_name) {
+      return customerProfile.first_name[0].toUpperCase();
     }
     return user?.email?.[0]?.toUpperCase() || "U";
   };
@@ -157,7 +123,7 @@ const ProfilePage = () => {
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={profile?.avatar_url} alt="Profile" />
+                <AvatarImage src={avatarUrl || ""} alt="Profile" />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xl">
                   {getInitials()}
                 </AvatarFallback>

@@ -3,6 +3,7 @@ import { User, Users, Phone, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -90,25 +91,33 @@ const ComprehensiveDashboard = () => {
               <Card key={entry.id} className="card-hover">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className="text-xs">
-                          #{entry.position}
-                        </Badge>
-                        <h3 className="font-semibold">
-                          {entry.customers?.first_name || 'Unknown'} {entry.customers?.last_name || 'Customer'}
-                        </h3>
-                        <Badge 
-                          variant={entry.status === 'in_progress' ? 'default' : 'secondary'}
-                          className={entry.status === 'in_progress' ? 'bg-success text-success-foreground' : ''}
-                        >
-                          {entry.status === 'in_progress' ? 'In Progress' : 'Waiting'}
-                        </Badge>
+                    <div className="flex items-center gap-3 flex-1">
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={entry.customers?.avatar_url || ""} />
+                        <AvatarFallback className="bg-primary/20">
+                          <User className="h-5 w-5 text-primary" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="text-xs">
+                            #{entry.position}
+                          </Badge>
+                          <h3 className="font-semibold">
+                            {entry.customers?.first_name || 'Unknown'} {entry.customers?.last_name || 'Customer'}
+                          </h3>
+                          <Badge 
+                            variant={entry.status === 'in_progress' ? 'default' : 'secondary'}
+                            className={entry.status === 'in_progress' ? 'bg-success text-success-foreground' : ''}
+                          >
+                            {entry.status === 'in_progress' ? 'In Progress' : 'Waiting'}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{entry.services?.name || 'Service'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Phone: {entry.customers?.phone || 'N/A'} • Joined: {new Date(entry.check_in_time).toLocaleTimeString()}
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground">{entry.services?.name || 'Service'}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Phone: {entry.customers?.phone || 'N/A'} • Joined: {new Date(entry.check_in_time).toLocaleTimeString()}
-                      </p>
                     </div>
                     
                     <div className="text-right">

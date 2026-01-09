@@ -5,14 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useCustomer } from "@/contexts/CustomerContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const QueueStatus = () => {
   const navigate = useNavigate();
   const { user, loading } = useRequireAuth();
+  const { avatarUrl } = useCustomer();
   const [queueEntry, setQueueEntry] = useState<any>(null);
   const [queueMembers, setQueueMembers] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -153,12 +156,12 @@ const QueueStatus = () => {
         if (membersError) {
           console.error("Error fetching queue members:", membersError);
         } else {
-          // Fetch customer names for queue members - use 'id' since customer_id references customers.id
+          // Fetch customer names and avatars for queue members
           if (membersData && membersData.length > 0) {
             const customerIds = membersData.map(m => m.customer_id);
             const { data: customersData } = await supabase
               .from("customers")
-              .select("id, first_name, last_name")
+              .select("id, first_name, last_name, avatar_url")
               .in("id", customerIds);
 
             // Fetch booking info for each queue member to get service names and durations
@@ -472,17 +475,24 @@ const QueueStatus = () => {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div 
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                      <Avatar className={`w-8 h-8 ${
+                        isCurrentUser 
+                          ? 'ring-2 ring-primary' 
+                          : isActive 
+                            ? 'ring-2 ring-amber-500' 
+                            : ''
+                      }`}>
+                        <AvatarImage src={isCurrentUser ? (avatarUrl || "") : (member.customer?.avatar_url || "")} />
+                        <AvatarFallback className={`text-sm font-bold ${
                           isCurrentUser 
                             ? 'bg-primary text-primary-foreground' 
                             : isActive 
                               ? 'bg-amber-500 text-white' 
                               : 'bg-muted-foreground/20 text-foreground'
-                        }`}
-                      >
-                        {member.position}
-                      </div>
+                        }`}>
+                          {member.position}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <p className={`font-medium ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
                           {displayName}
