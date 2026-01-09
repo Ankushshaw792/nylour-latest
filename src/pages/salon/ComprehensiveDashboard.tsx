@@ -93,7 +93,12 @@ const ComprehensiveDashboard = () => {
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3 flex-1">
                       <Avatar className="w-10 h-10">
-                        <AvatarImage src={entry.customers?.avatar_url || ""} />
+                        <AvatarImage
+                          src={entry.customers?.avatar_url ?? undefined}
+                          alt="Customer avatar"
+                          referrerPolicy="no-referrer"
+                          crossOrigin="anonymous"
+                        />
                         <AvatarFallback className="bg-primary/20">
                           <User className="h-5 w-5 text-primary" />
                         </AvatarFallback>

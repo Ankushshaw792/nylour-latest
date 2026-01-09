@@ -353,7 +353,12 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
         <div className="flex items-start gap-4">
           {/* Customer Avatar */}
           <Avatar className="w-12 h-12">
-            <AvatarImage src={booking.customers?.avatar_url || ""} />
+            <AvatarImage
+              src={booking.customers?.avatar_url ?? undefined}
+              alt={isWalkIn ? "Walk-in customer" : `${customerName} avatar`}
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
+            />
             <AvatarFallback className={isWalkIn ? 'bg-amber-100' : 'bg-primary/20'}>
               <User className={`h-6 w-6 ${isWalkIn ? 'text-amber-600' : 'text-primary'}`} />
             </AvatarFallback>
