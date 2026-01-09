@@ -1,19 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { CreditCard, Wallet } from "lucide-react";
+import { Gift, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UPIPaymentSheet } from "@/components/payment/UPIPaymentSheet";
-import { CardPaymentSheet } from "@/components/payment/CardPaymentSheet";
-import { WalletPaymentSheet } from "@/components/payment/WalletPaymentSheet";
-import { PaymentProcessingOverlay } from "@/components/payment/PaymentProcessingOverlay";
 
+// Toggle this to false when ready to charge users
+const FREE_BOOKING_MODE = true;
 const BOOKING_FEE = 10;
 
 const PaymentPage = () => {
@@ -22,17 +19,7 @@ const PaymentPage = () => {
   const { user, loading } = useRequireAuth();
   const [booking, setBooking] = useState<any>(null);
   const [salon, setSalon] = useState<any>(null);
-  const [paymentMethod, setPaymentMethod] = useState("upi");
-  
-  // Payment sheet states
-  const [showUPISheet, setShowUPISheet] = useState(false);
-  const [showCardSheet, setShowCardSheet] = useState(false);
-  const [showWalletSheet, setShowWalletSheet] = useState(false);
-  
-  // Processing states
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showProcessingOverlay, setShowProcessingOverlay] = useState(false);
-  const [paymentDetails, setPaymentDetails] = useState<{ method: string; reference: string }>({ method: "", reference: "" });
 
   useEffect(() => {
     const fetchBookingDetails = async () => {
@@ -67,67 +54,32 @@ const PaymentPage = () => {
     fetchBookingDetails();
   }, [bookingId, user]);
 
-  const processPayment = useCallback(async () => {
-    if (!booking || !user) return;
+  const handleFreeBooking = async () => {
+    if (!booking || !user || isProcessing) return;
+    
+    setIsProcessing(true);
     
     try {
-      // Generate transaction reference
-      const transactionRef = `TXN${Date.now().toString().slice(-10)}`;
-      
-      // Update booking with payment details
-      // Keep status as 'pending' - owner will approve and move to queue
+      // Update booking with free promotion details
       const { error: bookingError } = await supabase
         .from('bookings')
         .update({ 
           payment_status: 'completed',
-          payment_method: paymentDetails.method,
-          payment_reference: transactionRef,
-          notes: `Payment: ${paymentDetails.method.toUpperCase()} - ₹${BOOKING_FEE} | Ref: ${transactionRef}`
+          payment_method: 'free_promotion',
+          payment_reference: `FREE${Date.now().toString().slice(-8)}`,
+          notes: 'Free booking - Launch promotion'
         })
         .eq('id', booking.id);
 
       if (bookingError) throw bookingError;
 
-      // Queue entry is created automatically by database trigger
-      // Navigate to confirmation page
+      toast.success('Booking confirmed!');
       navigate(`/booking-confirmation/${booking.id}`);
     } catch (error) {
-      console.error('Payment error:', error);
-      toast.error('Payment failed. Please try again.');
-      setShowProcessingOverlay(false);
+      console.error('Booking error:', error);
+      toast.error('Something went wrong. Please try again.');
+      setIsProcessing(false);
     }
-  }, [booking, user, paymentDetails, navigate]);
-
-  const handlePaymentMethodClick = () => {
-    if (paymentMethod === "upi") {
-      setShowUPISheet(true);
-    } else if (paymentMethod === "card") {
-      setShowCardSheet(true);
-    } else if (paymentMethod === "wallet") {
-      setShowWalletSheet(true);
-    }
-  };
-
-  const handleUPIConfirm = (upiId: string) => {
-    setPaymentDetails({ method: "UPI", reference: upiId });
-    setShowUPISheet(false);
-    setIsProcessing(true);
-    setShowProcessingOverlay(true);
-  };
-
-  const handleCardConfirm = (cardDetails: { number: string; expiry: string; cvv: string; name: string }) => {
-    const maskedCard = `****${cardDetails.number.replace(/\s/g, "").slice(-4)}`;
-    setPaymentDetails({ method: "Card", reference: maskedCard });
-    setShowCardSheet(false);
-    setIsProcessing(true);
-    setShowProcessingOverlay(true);
-  };
-
-  const handleWalletConfirm = (walletName: string) => {
-    setPaymentDetails({ method: walletName.charAt(0).toUpperCase() + walletName.slice(1) + " Wallet", reference: walletName });
-    setShowWalletSheet(false);
-    setIsProcessing(true);
-    setShowProcessingOverlay(true);
   };
 
   if (loading || !booking) {
@@ -139,143 +91,87 @@ const PaymentPage = () => {
   }
 
   return (
-    <>
-      <CustomerLayout
-        headerProps={{
-          title: "Payment",
-          showBackButton: true,
-          showProfile: false,
-          showNotifications: false
-        }}
-        bottomButtonProps={{
-          text: `Pay ₹${BOOKING_FEE} Now`,
-          onClick: handlePaymentMethodClick,
-          disabled: isProcessing
-        }}
-      >
-        {/* Hero Section */}
-        <div className="bg-gradient-hero text-white p-4">        
-          <div className="text-center">
-            <h2 className="text-xl font-bold">{salon?.name}</h2>
-            <p className="text-white/90">Complete your payment</p>
-          </div>
+    <CustomerLayout
+      headerProps={{
+        title: "Confirm Booking",
+        showBackButton: true,
+        showProfile: false,
+        showNotifications: false
+      }}
+      bottomButtonProps={{
+        text: isProcessing ? "Confirming..." : "Book for Free",
+        onClick: handleFreeBooking,
+        disabled: isProcessing,
+        variant: "success"
+      }}
+    >
+      {/* Hero Section */}
+      <div className="bg-gradient-hero text-white p-4">        
+        <div className="text-center">
+          <h2 className="text-xl font-bold">{salon?.name}</h2>
+          <p className="text-white/90">Confirm your booking</p>
         </div>
+      </div>
 
-        <div className="p-4 space-y-4">
-          {/* Payment Summary */}
-          <Card>
+      <div className="p-4 space-y-4">
+        {/* Free Promo Banner */}
+        {FREE_BOOKING_MODE && (
+          <Card className="border-green-200 dark:border-green-800 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
             <CardContent className="p-4">
-              <h3 className="font-semibold text-lg mb-4">Payment Summary</h3>
-              
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Booking Fee</span>
-                  <span className="font-medium">₹{BOOKING_FEE}</span>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
+                  <Gift className="h-6 w-6 text-green-600" />
                 </div>
-              </div>
-
-              <Separator className="my-4" />
-              
-              <div className="flex justify-between items-center text-lg font-bold">
-                <span>Total Amount</span>
-                <span>₹{BOOKING_FEE}</span>
-              </div>
-
-              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  <strong>Note:</strong> This is a booking fee to secure your slot. Service charges will be paid at the salon.
-                </p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-green-800 dark:text-green-200">Launch Offer!</h3>
+                    <Sparkles className="h-4 w-4 text-yellow-500" />
+                  </div>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    Free bookings during our launch period
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
+        )}
 
-          {/* Payment Method */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="font-semibold text-lg mb-4">Select Payment Method</h3>
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="space-y-3">
-                  <div className={`flex items-center space-x-3 p-3 border rounded-lg transition-colors cursor-pointer ${paymentMethod === 'upi' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
-                    <RadioGroupItem value="upi" id="upi" />
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                        <span className="text-sm font-bold text-purple-600">UPI</span>
-                      </div>
-                      <div>
-                        <Label htmlFor="upi" className="font-medium cursor-pointer">UPI</Label>
-                        <p className="text-xs text-muted-foreground">Pay using any UPI app</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={`flex items-center space-x-3 p-3 border rounded-lg transition-colors cursor-pointer ${paymentMethod === 'card' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
-                    <RadioGroupItem value="card" id="card" />
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <Label htmlFor="card" className="font-medium cursor-pointer">Credit / Debit Card</Label>
-                        <p className="text-xs text-muted-foreground">Visa, Mastercard, RuPay</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={`flex items-center space-x-3 p-3 border rounded-lg transition-colors cursor-pointer ${paymentMethod === 'wallet' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
-                    <RadioGroupItem value="wallet" id="wallet" />
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                        <Wallet className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <Label htmlFor="wallet" className="font-medium cursor-pointer">Digital Wallet</Label>
-                        <p className="text-xs text-muted-foreground">Paytm, PhonePe, Amazon Pay</p>
-                      </div>
-                    </div>
-                  </div>
+        {/* Booking Summary */}
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="font-semibold text-lg mb-4">Booking Summary</h3>
+            
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Booking Fee</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground line-through">₹{BOOKING_FEE}</span>
+                  <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">
+                    FREE
+                  </Badge>
                 </div>
-              </RadioGroup>
-            </CardContent>
-          </Card>
+              </div>
+            </div>
 
-          {/* Spacer for bottom button */}
-          <div className="h-20" />
-        </div>
-      </CustomerLayout>
+            <Separator className="my-4" />
+            
+            <div className="flex justify-between items-center text-lg font-bold">
+              <span>Total Amount</span>
+              <span className="text-green-600">₹0</span>
+            </div>
 
-      {/* Payment Sheets */}
-      <UPIPaymentSheet
-        open={showUPISheet}
-        onOpenChange={setShowUPISheet}
-        amount={BOOKING_FEE}
-        onConfirm={handleUPIConfirm}
-        isProcessing={isProcessing}
-      />
-      
-      <CardPaymentSheet
-        open={showCardSheet}
-        onOpenChange={setShowCardSheet}
-        amount={BOOKING_FEE}
-        onConfirm={handleCardConfirm}
-        isProcessing={isProcessing}
-      />
-      
-      <WalletPaymentSheet
-        open={showWalletSheet}
-        onOpenChange={setShowWalletSheet}
-        amount={BOOKING_FEE}
-        onConfirm={handleWalletConfirm}
-        isProcessing={isProcessing}
-      />
+            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                <strong>Note:</strong> Service charges will be paid directly at the salon after your appointment.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Processing Overlay */}
-      <PaymentProcessingOverlay
-        isVisible={showProcessingOverlay}
-        onComplete={processPayment}
-        paymentMethod={paymentDetails.method}
-        amount={BOOKING_FEE}
-      />
-    </>
+        {/* Spacer for bottom button */}
+        <div className="h-20" />
+      </div>
+    </CustomerLayout>
   );
 };
 
