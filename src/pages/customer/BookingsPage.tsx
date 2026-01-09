@@ -320,6 +320,7 @@ const BookingsPage = () => {
                     {booking.status === "confirmed" && booking.arrival_deadline && (
                       <ArrivalCountdownTimer 
                         arrivalDeadline={booking.arrival_deadline} 
+                        onExpired={() => navigate("/queue-status")}
                         className="mb-3"
                       />
                     )}

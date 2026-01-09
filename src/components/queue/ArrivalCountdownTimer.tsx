@@ -77,7 +77,7 @@ const ArrivalCountdownTimer = ({
       <div className={cn("flex items-center gap-2", className)}>
         <Clock className={cn("h-4 w-4", getStatusColor())} />
         <span className={cn("font-mono font-semibold text-sm", getStatusColor())}>
-          {isExpired ? "Expired" : formatTime(timeRemaining)}
+          {formatTime(timeRemaining)}
         </span>
       </div>
     );
@@ -94,11 +94,11 @@ const ArrivalCountdownTimer = ({
               <Clock className={cn("h-5 w-5", getStatusColor())} />
             )}
             <span className="font-medium text-sm">
-              {isExpired ? "Time Expired" : "Time to Arrive"}
+              {isExpired ? "Hurry!" : "Time to Arrive"}
             </span>
           </div>
           <span className={cn("font-mono font-bold text-2xl", getStatusColor())}>
-            {isExpired ? "00:00" : formatTime(timeRemaining)}
+            {formatTime(timeRemaining)}
           </span>
         </div>
 
@@ -112,9 +112,9 @@ const ArrivalCountdownTimer = ({
 
         <p className="text-xs text-muted-foreground mt-2 text-center">
           {isExpired 
-            ? "Reach Soon to avoid Cancellation"
+            ? "Reach the salon now!"
             : timeRemaining <= 120 
-              ? "⚠️ Hurry! Arrive now to avoid cancellation"
+              ? "⚠️ Hurry! Arrive now"
               : timeRemaining <= 300
                 ? "Please head to the salon soon"
                 : "Arrive at the salon within this time"
