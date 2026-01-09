@@ -18,6 +18,7 @@ interface QueueEntry {
   service_name: string;
   estimated_wait: number;
   status: string;
+  party_size: number;
 }
 
 interface LiveQueueDialogProps {
@@ -51,12 +52,13 @@ export const LiveQueueDialog = ({
           status,
           customer_id,
           booking_id,
-        customers (
-          first_name,
-          last_name,
-          avatar_url
-        ),
+          customers (
+            first_name,
+            last_name,
+            avatar_url
+          ),
           bookings (
+            party_size,
             salon_services (
               services (
                 name
@@ -78,6 +80,7 @@ export const LiveQueueDialog = ({
         const firstName = entry.customers?.first_name || "Customer";
         const lastInitial = entry.customers?.last_name ? entry.customers.last_name.charAt(0) + "." : "";
         const serviceName = entry.bookings?.salon_services?.services?.name || "Service";
+        const partySize = entry.bookings?.party_size || 1;
         
         return {
           id: entry.id,
@@ -87,6 +90,7 @@ export const LiveQueueDialog = ({
           service_name: serviceName,
           estimated_wait: index * avgServiceTime,
           status: entry.status,
+          party_size: partySize,
         };
       });
 
@@ -176,7 +180,14 @@ export const LiveQueueDialog = ({
 
                   {/* Customer Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{entry.customer_name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">{entry.customer_name}</p>
+                      {entry.party_size > 1 && (
+                        <span className="text-xs text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded flex-shrink-0">
+                          +{entry.party_size - 1}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground truncate">
                       {entry.service_name}
                     </p>
