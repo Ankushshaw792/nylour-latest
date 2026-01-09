@@ -21,6 +21,11 @@ import BookingConfirmation from "./pages/customer/BookingConfirmation";
 import QueueStatus from "./pages/customer/QueueStatus";
 import BookingsPage from "./pages/customer/BookingsPage";
 import ProfilePage from "./pages/customer/ProfilePage";
+import CustomerProfileEditPage from "./pages/customer/CustomerProfileEditPage";
+import SpendAnalysisPage from "./pages/customer/SpendAnalysisPage";
+import CustomerOrderHistoryPage from "./pages/customer/CustomerOrderHistoryPage";
+import CustomerFavoritesPage from "./pages/customer/CustomerFavoritesPage";
+import CustomerHelpPage from "./pages/customer/CustomerHelpPage";
 
 // Salon Dashboard Pages
 import QueueManagement from "./pages/salon/QueueManagement";
@@ -65,6 +70,11 @@ const App = () => (
               <Route path="/queue-status" element={<QueueStatus />} />
               <Route path="/bookings" element={<BookingsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/profile/edit" element={<CustomerProfileEditPage />} />
+              <Route path="/profile/spend-analysis" element={<SpendAnalysisPage />} />
+              <Route path="/profile/order-history" element={<CustomerOrderHistoryPage />} />
+              <Route path="/profile/favorites" element={<CustomerFavoritesPage />} />
+              <Route path="/profile/help" element={<CustomerHelpPage />} />
               
               {/* Salon Dashboard Routes */}
             <Route path="/salon-dashboard" element={<MobileLayout><BookingsOverview /></MobileLayout>} />

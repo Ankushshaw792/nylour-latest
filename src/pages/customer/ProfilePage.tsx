@@ -1,52 +1,41 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, MapPin, Phone, Mail, Settings, Heart, CreditCard, Bell, LogOut, Edit, Calendar, Star } from "lucide-react";
+import { 
+  User, 
+  BarChart3, 
+  CreditCard, 
+  ClipboardList, 
+  Heart, 
+  Star, 
+  HelpCircle, 
+  Info, 
+  LogOut,
+  ChevronRight
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
-import { PhoneEditDialog } from "@/components/profile/PhoneEditDialog";
-import { AddressEditDialog } from "@/components/profile/AddressEditDialog";
-import { PreferencesEditDialog } from "@/components/profile/PreferencesEditDialog";
-import { FavoritesDialog } from "@/components/profile/FavoritesDialog";
-import { NotificationsDialog } from "@/components/profile/NotificationsDialog";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { LucideIcon } from "lucide-react";
+
+interface MenuItem {
+  icon: LucideIcon;
+  label: string;
+  route?: string;
+  comingSoon?: boolean;
+}
 
 const ProfilePage = () => {
   const { user, loading } = useRequireAuth();
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isPhoneEditOpen, setIsPhoneEditOpen] = useState(false);
-  const [isAddressEditOpen, setIsAddressEditOpen] = useState(false);
-  const [isPreferencesEditOpen, setIsPreferencesEditOpen] = useState(false);
-  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
-
-  const quickActions = [
-    {
-      icon: Calendar,
-      label: "Booking History",
-      action: () => navigate("/bookings")
-    },
-    {
-      icon: Heart,
-      label: "Favorite Salons",
-      action: () => setIsFavoritesOpen(true)
-    },
-    {
-      icon: Bell,
-      label: "Notifications", 
-      action: () => setIsNotificationsOpen(true)
-    }
-  ];
 
   // Fetch profile data
   useEffect(() => {
@@ -78,26 +67,6 @@ const ProfilePage = () => {
     }
   }, [user]);
 
-  const handleProfileUpdate = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Error refetching profile:", error);
-      } else {
-        setProfile(data);
-      }
-    } catch (error) {
-      console.error("Error refetching profile:", error);
-    }
-  };
-
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -127,6 +96,44 @@ const ProfilePage = () => {
     return user?.email?.[0]?.toUpperCase() || "U";
   };
 
+  // Menu Items
+  const personalInfoItems: MenuItem[] = [
+    { icon: User, label: "Profile", route: "/profile/edit" },
+    { icon: BarChart3, label: "Spend Analysis", route: "/profile/spend-analysis" },
+    { icon: CreditCard, label: "Payments", comingSoon: true },
+  ];
+
+  const ordersItems: MenuItem[] = [
+    { icon: ClipboardList, label: "Order History", route: "/profile/order-history" },
+    { icon: Heart, label: "Favorites", route: "/profile/favorites" },
+    { icon: Star, label: "Reviews", comingSoon: true },
+  ];
+
+  const moreSettingsItems: MenuItem[] = [
+    { icon: HelpCircle, label: "Help", route: "/profile/help" },
+    { icon: Info, label: "About", comingSoon: true },
+  ];
+
+  const MenuButton = ({ item }: { item: MenuItem }) => (
+    <button
+      className={`flex flex-col items-center justify-center p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors min-h-[90px] relative ${
+        item.comingSoon ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+      }`}
+      onClick={() => !item.comingSoon && item.route && navigate(item.route)}
+      disabled={item.comingSoon}
+    >
+      {item.comingSoon && (
+        <span className="absolute top-2 right-2 text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+          Soon
+        </span>
+      )}
+      <item.icon className={`h-6 w-6 mb-2 ${item.comingSoon ? "text-muted-foreground" : "text-primary"}`} />
+      <span className={`text-xs font-medium text-center ${item.comingSoon ? "text-muted-foreground" : "text-foreground"}`}>
+        {item.label}
+      </span>
+    </button>
+  );
+
   if (loading || profileLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -144,147 +151,75 @@ const ProfilePage = () => {
         showNotifications: true
       }}
     >
-      <div className="p-4">
+      <div className="p-4 space-y-4">
         {/* User Info Header */}
-        <Card className="border border-border bg-white mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4 mb-4 relative">
-              <Avatar className="h-20 w-20">
+        <Card className="border shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
                 <AvatarImage src={profile?.avatar_url} alt="Profile" />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xl">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-foreground mb-1">{getDisplayName()}</h2>
+                <h2 className="text-lg font-bold text-foreground">{getDisplayName()}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsEditDialogOpen(true)} 
-                className="absolute top-0 right-0"
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/profile/edit")}
               >
-                <Edit className="h-4 w-4" />
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card className="border border-border bg-white">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-foreground">{profile?.total_visits || 0}</div>
-              <div className="text-xs text-muted-foreground">Total Visits</div>
-            </CardContent>
-          </Card>
-          <Card className="border border-border bg-white">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-foreground">₹{profile?.total_spent || 0}</div>
-              <div className="text-xs text-muted-foreground">Total Spent</div>
-            </CardContent>
-          </Card>
-          <Card className="border border-border bg-white">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-foreground">{profile?.cancellation_count || 0}</div>
-              <div className="text-xs text-muted-foreground">Cancellations</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Personal Information */}
-        <Card className="border border-border bg-white mb-6">
+        {/* Personal Info Card */}
+        <Card className="border shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-foreground">Personal Information</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Personal Info</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Phone className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-foreground">{profile?.phone || "Add phone number"}</p>
-                  <p className="text-xs text-muted-foreground">Phone Number</p>
-                </div>
-              </div>
-              <Edit 
-                className="h-4 w-4 text-muted-foreground cursor-pointer" 
-                onClick={() => setIsPhoneEditOpen(true)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-foreground">{profile?.address || "Add address"}</p>
-                  <p className="text-xs text-muted-foreground">Location</p>
-                </div>
-              </div>
-              <Edit 
-                className="h-4 w-4 text-muted-foreground cursor-pointer" 
-                onClick={() => setIsAddressEditOpen(true)}
-              />
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-3 gap-3">
+              {personalInfoItems.map((item, index) => (
+                <MenuButton key={index} item={item} />
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Preferences */}
-        <Card className="border border-border bg-white mb-6">
+        {/* Orders Card */}
+        <Card className="border shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-foreground">Preferences</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Orders</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-foreground">Favorite Services</p>
-                <p className="text-xs text-muted-foreground">
-                  {Array.isArray(profile?.favorite_services) && profile.favorite_services.length > 0
-                    ? profile.favorite_services.join(", ")
-                    : "Add favorite services"}
-                </p>
-              </div>
-              <Edit 
-                className="h-4 w-4 text-muted-foreground cursor-pointer" 
-                onClick={() => setIsPreferencesEditOpen(true)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-foreground">Preferred Time</p>
-                <p className="text-xs text-muted-foreground">
-                  {profile?.preferred_time || "Set preferred time"}
-                </p>
-              </div>
-              <Edit 
-                className="h-4 w-4 text-muted-foreground cursor-pointer" 
-                onClick={() => setIsPreferencesEditOpen(true)}
-              />
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-3 gap-3">
+              {ordersItems.map((item, index) => (
+                <MenuButton key={index} item={item} />
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <Card className="border border-border bg-white mb-6">
+        {/* More Settings Card */}
+        <Card className="border shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-foreground">Quick Actions</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">More Settings</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {quickActions.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 cursor-pointer transition-colors"
-                onClick={item.action}
-              >
-                <item.icon className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm text-foreground">{item.label}</span>
-              </div>
-            ))}
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-3 gap-3">
+              {moreSettingsItems.map((item, index) => (
+                <MenuButton key={index} item={item} />
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Favorites Section - Removed inline display */}
-        
-        {/* Logout */}
+        {/* Logout Button */}
         <Button 
           variant="outline" 
           className="w-full text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground gap-2"
@@ -293,55 +228,6 @@ const ProfilePage = () => {
           <LogOut className="h-4 w-4" />
           Logout
         </Button>
-
-        {/* Profile Edit Dialog */}
-        {profile && (
-          <ProfileEditDialog
-            open={isEditDialogOpen}
-            onOpenChange={setIsEditDialogOpen}
-            profile={profile}
-            onProfileUpdate={handleProfileUpdate}
-          />
-        )}
-
-        {/* Phone Edit Dialog */}
-        <PhoneEditDialog
-          open={isPhoneEditOpen}
-          onOpenChange={setIsPhoneEditOpen}
-          currentPhone={profile?.phone}
-          onPhoneUpdate={handleProfileUpdate}
-        />
-
-        {/* Address Edit Dialog */}
-        <AddressEditDialog
-          open={isAddressEditOpen}
-          onOpenChange={setIsAddressEditOpen}
-          currentAddress={profile?.address}
-          onAddressUpdate={handleProfileUpdate}
-        />
-
-        {/* Preferences Edit Dialog */}
-        <PreferencesEditDialog
-          open={isPreferencesEditOpen}
-          onOpenChange={setIsPreferencesEditOpen}
-          currentPreferences={{
-            favorite_services: profile?.favorite_services,
-            preferred_time: profile?.preferred_time
-          }}
-          onPreferencesUpdate={handleProfileUpdate}
-        />
-
-        {/* Favorites Dialog */}
-        <FavoritesDialog
-          open={isFavoritesOpen}
-          onOpenChange={setIsFavoritesOpen}
-        />
-
-        {/* Notifications Dialog */}
-        <NotificationsDialog
-          open={isNotificationsOpen}
-          onOpenChange={setIsNotificationsOpen}
-        />
       </div>
     </CustomerLayout>
   );
