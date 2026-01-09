@@ -9,6 +9,7 @@ import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
+import { useActiveBooking } from "@/hooks/useActiveBooking";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ const SalonDetails = () => {
   const { user, loading } = useRequireAuth();
   const { addItem, removeItem, updateQuantity, items, totalPrice, totalItems } = useCart();
   const { isOpen, isLoading: statusLoading, nextOpenInfo, closingTime } = useSalonOpenStatus(id);
+  const { hasActiveBooking, activeBooking, isLoading: bookingCheckLoading } = useActiveBooking(user?.id || null);
   const { latitude: userLat, longitude: userLng } = useUserLocation();
   const [salon, setSalon] = useState<SalonDetails | null>(null);
   const [loadingSalon, setLoadingSalon] = useState(true);
@@ -222,7 +224,7 @@ const SalonDetails = () => {
     updateQuantity(serviceId, newQuantity);
   };
 
-  if (loading || loadingSalon) {
+  if (loading || loadingSalon || bookingCheckLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-2">
@@ -268,10 +270,10 @@ const SalonDetails = () => {
           </div>
         )
       }}
-      bottomButtonProps={totalItems > 0 && isOpen ? {
+      bottomButtonProps={totalItems > 0 && isOpen && !hasActiveBooking ? {
         text: "Book Now",
         onClick: () => navigate(`/book/${salon?.id}`),
-        disabled: totalItems === 0 || !isOpen,
+        disabled: totalItems === 0 || !isOpen || hasActiveBooking,
         price: totalPrice,
         itemCount: totalItems
       } : undefined}
@@ -284,6 +286,17 @@ const SalonDetails = () => {
       />
 
       <div className="p-4 space-y-6">
+        {/* Active Booking Warning */}
+        {hasActiveBooking && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              You already have an active booking at {activeBooking?.salons?.name || 'another salon'}. 
+              Complete or cancel it before booking a new service.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Closed Alert */}
         {!statusLoading && isOpen === false && (
           <Alert variant="destructive">
@@ -393,6 +406,7 @@ const SalonDetails = () => {
                             size="sm"
                             className="bg-primary text-primary-foreground hover:bg-primary/90"
                             onClick={() => handleAddService(service)}
+                            disabled={hasActiveBooking}
                           >
                             <Plus className="h-4 w-4 mr-1" />
                             Add
