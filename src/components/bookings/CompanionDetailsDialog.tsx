@@ -72,15 +72,15 @@ export const CompanionDetailsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
             Add Companions
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-4 py-2">
           {/* Count selector */}
           <div className="bg-muted/50 rounded-lg p-4">
             <Label className="text-sm text-muted-foreground mb-2 block">
@@ -111,53 +111,51 @@ export const CompanionDetailsDialog = ({
           </div>
 
           {/* Companion forms */}
-          <ScrollArea className="flex-1 pr-2">
-            <div className="space-y-4">
-              {companions.map((companion, index) => (
-                <div
-                  key={index}
-                  className="border rounded-lg p-4 space-y-3 bg-card"
-                >
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <User className="h-4 w-4" />
-                    Companion {index + 1}
+          <div className="space-y-4">
+            {companions.map((companion, index) => (
+              <div
+                key={index}
+                className="border rounded-lg p-4 space-y-3 bg-card"
+              >
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  Companion {index + 1}
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor={`name-${index}`} className="text-xs">
+                      Full Name *
+                    </Label>
+                    <Input
+                      id={`name-${index}`}
+                      placeholder="Enter name"
+                      value={companion.name}
+                      onChange={(e) => updateCompanion(index, "name", e.target.value)}
+                    />
                   </div>
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor={`name-${index}`} className="text-xs">
-                        Full Name *
-                      </Label>
+                  <div>
+                    <Label htmlFor={`phone-${index}`} className="text-xs">
+                      Mobile Number *
+                    </Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id={`name-${index}`}
-                        placeholder="Enter name"
-                        value={companion.name}
-                        onChange={(e) => updateCompanion(index, "name", e.target.value)}
+                        id={`phone-${index}`}
+                        placeholder="10-digit number"
+                        value={companion.phone}
+                        onChange={(e) => updateCompanion(index, "phone", e.target.value)}
+                        className="pl-10"
+                        maxLength={10}
                       />
-                    </div>
-                    <div>
-                      <Label htmlFor={`phone-${index}`} className="text-xs">
-                        Mobile Number *
-                      </Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id={`phone-${index}`}
-                          placeholder="10-digit number"
-                          value={companion.phone}
-                          onChange={(e) => updateCompanion(index, "phone", e.target.value)}
-                          className="pl-10"
-                          maxLength={10}
-                        />
-                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <DialogFooter className="mt-4">
+        <DialogFooter className="flex-shrink-0 mt-4 pt-2 border-t">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
