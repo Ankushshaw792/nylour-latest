@@ -265,7 +265,7 @@ const BookingsPage = () => {
         showProfile: true,
         showNotifications: true,
         rightContent: (
-          <Button variant="outline" size="sm" onClick={() => navigate("/nearby-salons")}>
+          <Button variant="outline" size="sm" onClick={() => navigate("/customer")}>
             <Calendar className="h-4 w-4 mr-2" />
             Book Now
           </Button>
@@ -390,7 +390,7 @@ const BookingsPage = () => {
                 </div>
                 <h3 className="text-xl font-semibold text-foreground mb-2">No active bookings</h3>
                 <p className="text-muted-foreground mb-6">You don't have any active bookings right now.<br />Ready to book your next salon visit?</p>
-                <Button size="lg" onClick={() => navigate("/nearby-salons")}>
+                <Button size="lg" onClick={() => navigate("/customer")}>
                   Book Now
                 </Button>
               </div>
@@ -462,7 +462,7 @@ const BookingsPage = () => {
                       variant="outline" 
                       size="sm" 
                       className="w-full"
-                      onClick={() => navigate("/nearby-salons")}
+                      onClick={() => navigate("/customer")}
                     >
                       {booking.status === "completed" ? "Book Again" : "Rebook"}
                     </Button>
