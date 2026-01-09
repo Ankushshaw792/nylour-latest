@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCustomer } from "@/contexts/CustomerContext";
 
 interface FixedHeaderProps {
   title?: string;
@@ -30,6 +31,7 @@ export const FixedHeader = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { avatarUrl, customerProfile } = useCustomer();
 
   // Auto-generate title based on current route if not provided
   const getPageTitle = () => {
@@ -94,11 +96,11 @@ export const FixedHeader = ({
                   className="h-8 w-8 cursor-pointer ring-2 ring-border hover:ring-primary transition-all"
                   onClick={handleProfileClick}
                 >
-                  <AvatarImage src={user?.user_metadata?.avatar_url} />
+                  <AvatarImage src={avatarUrl || user?.user_metadata?.avatar_url} />
                   <AvatarFallback className="bg-primary text-primary-foreground font-medium text-sm">
-                    {user ? 
-                      `${user.user_metadata?.first_name?.[0] || ''}${user.user_metadata?.last_name?.[0] || ''}`.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'
-                      : 'U'
+                    {customerProfile?.first_name?.[0] || customerProfile?.last_name?.[0] 
+                      ? `${customerProfile?.first_name?.[0] || ''}${customerProfile?.last_name?.[0] || ''}`.toUpperCase()
+                      : user?.email?.[0]?.toUpperCase() || 'U'
                     }
                   </AvatarFallback>
                 </Avatar>
