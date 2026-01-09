@@ -48,6 +48,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          arrival_deadline: string | null
           booking_date: string
           booking_time: string | null
           cancellation_reason: string | null
@@ -68,6 +69,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          arrival_deadline?: string | null
           booking_date: string
           booking_time?: string | null
           cancellation_reason?: string | null
@@ -88,6 +90,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          arrival_deadline?: string | null
           booking_date?: string
           booking_time?: string | null
           cancellation_reason?: string | null
@@ -591,6 +594,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_walkin_first_position: {
+        Args: {
+          p_customer_name: string
+          p_phone?: string
+          p_salon_id: string
+          p_service_id: string
+        }
+        Returns: string
+      }
       apply_cancellation_fee: {
         Args: { p_booking_id: string; p_customer_id: string; p_reason: string }
         Returns: undefined
@@ -603,6 +615,7 @@ export type Database = {
         Args: { p_customer_id: string }
         Returns: boolean
       }
+      expire_overdue_arrivals: { Args: never; Returns: undefined }
       notify_next_customer: {
         Args: { p_message?: string; p_salon_id: string }
         Returns: undefined

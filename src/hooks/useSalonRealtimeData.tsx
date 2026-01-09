@@ -18,6 +18,7 @@ interface Booking {
   total_price: number;
   queue_position?: number | null;
   notes?: string | null;
+  arrival_deadline?: string | null;
   customers?: {
     first_name: string | null;
     last_name: string | null;
@@ -104,6 +105,7 @@ export const useSalonRealtimeData = () => {
           status,
           total_price,
           notes,
+          arrival_deadline,
           customers(first_name, last_name, phone, avatar_url),
           salon_services(price, duration, services(name, default_duration))
         `)
@@ -217,15 +219,15 @@ export const useSalonRealtimeData = () => {
 
       if (error) throw error;
 
-      // Send notification to customer using auth user_id
+      // Send notification to customer using auth user_id - include 10-minute arrival info
       if (bookingData?.customer_id) {
         const authUserId = await getAuthUserId(bookingData.customer_id);
         if (authUserId) {
           const salonName = salon?.name || 'The salon';
           const { error: notifError } = await supabase.from('notifications').insert({
             user_id: authUserId,
-            title: 'Booking Confirmed! ✓',
-            message: `${salonName} has accepted your booking. Get ready for your appointment!`,
+            title: 'Booking Confirmed! ⏱️',
+            message: `${salonName} has accepted your booking. You have 10 minutes to arrive at the salon!`,
             type: 'booking',
             related_id: bookingId
           });
@@ -723,6 +725,49 @@ export const useSalonRealtimeData = () => {
     fetchSalonData();
   }, [fetchSalonData]);
 
+  // Add walk-in customer to first position (when online customer is waiting to arrive)
+  const addWalkInCustomerFirst = useCallback(async (customerData: {
+    name: string;
+    phone: string;
+    service_id: string;
+  }) => {
+    if (!salon) return;
+
+    try {
+      // Get salon_services record to get the salon_services.id
+      const { data: salonServiceData } = await supabase
+        .from('salon_services')
+        .select('id')
+        .eq('salon_id', salon.id)
+        .eq('service_id', customerData.service_id)
+        .maybeSingle();
+
+      const salonServiceId = salonServiceData?.id || customerData.service_id;
+
+      // Call the database function to add walk-in to first position
+      const { data, error } = await supabase.rpc('add_walkin_first_position', {
+        p_salon_id: salon.id,
+        p_service_id: salonServiceId,
+        p_customer_name: customerData.name,
+        p_phone: customerData.phone
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Walk-in customer added to first position",
+      });
+    } catch (error) {
+      console.error('Error adding walk-in to first position:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add walk-in customer",
+        variant: "destructive",
+      });
+    }
+  }, [salon]);
+
   return {
     loading,
     salon,
@@ -735,6 +780,7 @@ export const useSalonRealtimeData = () => {
     completeService,
     markNoShow,
     addWalkInCustomer,
+    addWalkInCustomerFirst,
     sendReminder,
     sendCustomReminder,
     notifyNextCustomer,
