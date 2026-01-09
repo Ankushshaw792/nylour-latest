@@ -162,7 +162,7 @@ export const LiveQueueDialog = ({
                 >
                   {/* Customer Avatar */}
                   <Avatar className={`w-8 h-8 ${index === 0 ? "ring-2 ring-primary" : ""}`}>
-                    <AvatarImage src={entry.avatar_url || ""} />
+                    <AvatarImage src={entry.avatar_url ?? undefined} />
                     <AvatarFallback
                       className={`font-bold text-sm ${
                         index === 0

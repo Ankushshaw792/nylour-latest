@@ -131,7 +131,8 @@ export const useSalonRealtimeData = () => {
           position,
           estimated_wait_time,
           status,
-          check_in_time
+          check_in_time,
+          customers(first_name, last_name, phone, avatar_url)
         `)
         .eq('salon_id', salonData.id)
         .neq('status', 'completed')
@@ -142,19 +143,7 @@ export const useSalonRealtimeData = () => {
         console.error('Queue fetch error:', queueError);
         setQueue([]);
       } else {
-        // Map the raw data to include proper types
-        const mappedQueue: QueueEntry[] = (queueData || []).map((entry: any) => ({
-          id: entry.id,
-          customer_id: entry.customer_id,
-          booking_id: entry.booking_id,
-          position: entry.position,
-          estimated_wait_time: entry.estimated_wait_time,
-          status: entry.status,
-          check_in_time: entry.check_in_time,
-          customers: null,
-          services: null
-        }));
-        setQueue(mappedQueue);
+        setQueue((queueData || []) as any);
       }
 
     } catch (error) {
