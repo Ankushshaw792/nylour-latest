@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera, User, Mail, Phone, MapPin } from "lucide-react";
+import { ArrowLeft, Camera, User, Mail, Phone, MapPin, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,9 @@ const CustomerProfileEditPage = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState({
     first_name: "",
     last_name: "",
@@ -41,6 +44,7 @@ const CustomerProfileEditPage = () => {
             phone: data.phone || "",
             address: data.address || "",
           });
+          setAvatarUrl(data.avatar_url);
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -51,6 +55,49 @@ const CustomerProfileEditPage = () => {
 
     fetchProfile();
   }, [user]);
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('customer-avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('customer-avatars')
+        .getPublicUrl(fileName);
+
+      await supabase
+        .from('customers')
+        .update({ avatar_url: urlData.publicUrl })
+        .eq('user_id', user.id);
+
+      setAvatarUrl(urlData.publicUrl);
+      toast.success('Profile photo updated');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload photo');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -115,16 +162,33 @@ const CustomerProfileEditPage = () => {
         <div className="flex flex-col items-center">
           <div className="relative">
             <Avatar className="h-24 w-24">
-              <AvatarImage src="" alt="Profile" />
+              <AvatarImage src={avatarUrl || ""} alt="Profile" />
               <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
                 {getInitials()}
               </AvatarFallback>
             </Avatar>
-            <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-md">
-              <Camera className="h-4 w-4" />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-md disabled:opacity-50"
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4" />
+              )}
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
+            />
           </div>
-          <p className="text-xs text-muted-foreground mt-2">Tap to change photo</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            {uploading ? "Uploading..." : "Tap to change photo"}
+          </p>
         </div>
 
         {/* Form */}
