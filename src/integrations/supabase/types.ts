@@ -569,6 +569,10 @@ export type Database = {
         Args: { p_message?: string; p_salon_id: string }
         Returns: undefined
       }
+      salon_owner_has_customer: {
+        Args: { p_customer_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
