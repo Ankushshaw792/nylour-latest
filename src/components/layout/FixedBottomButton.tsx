@@ -6,7 +6,7 @@ interface FixedBottomButtonProps {
   disabled?: boolean;
   price?: number;
   itemCount?: number;
-  variant?: "default" | "gradient" | "outline" | "ghost";
+  variant?: "default" | "gradient" | "outline" | "ghost" | "success";
   className?: string;
 }
 
