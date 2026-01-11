@@ -83,25 +83,21 @@ const BookingsPage = () => {
             .select("id, services(name)")
             .in("id", serviceIds);
 
-          // Fetch queue entries for current bookings (today only)
-          const todayDate = new Date();
-          todayDate.setHours(0, 0, 0, 0);
-          const todayStart = todayDate.toISOString();
-          
+          // Fetch queue entries for current bookings by booking_id for accuracy
+          const bookingIds = currentData.map(b => b.id);
           const { data: queueData } = await supabase
             .from("queue_entries")
             .select("*")
-            .eq("customer_id", customer.id)
-            .eq("status", "waiting")
-            .gte("check_in_time", todayStart);
+            .in("booking_id", bookingIds)
+            .eq("status", "waiting");
 
-          // Merge service and queue data
+          // Merge service and queue data - use booking_id to match queue entries
           const enrichedCurrent = currentData.map(booking => {
             const salonService = salonServicesData?.find(s => s.id === booking.service_id);
             return {
               ...booking,
               service_name: (salonService?.services as any)?.name || "Service",
-              queue_entry: queueData?.find(q => q.salon_id === booking.salon_id)
+              queue_entry: queueData?.find(q => q.booking_id === booking.id)
             };
           });
           
@@ -316,8 +312,10 @@ const BookingsPage = () => {
                       </div>
                     </div>
 
-                    {/* Arrival Countdown Timer for confirmed bookings with deadline */}
-                    {booking.status === "confirmed" && booking.arrival_deadline && (
+                    {/* Arrival Countdown Timer - ONLY for confirmed bookings at position 1 */}
+                    {booking.status === "confirmed" && 
+                     booking.arrival_deadline && 
+                     queueEntry?.position === 1 && (
                       <ArrivalCountdownTimer 
                         arrivalDeadline={booking.arrival_deadline} 
                         onExpired={() => navigate("/queue-status")}

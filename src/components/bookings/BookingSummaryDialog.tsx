@@ -10,6 +10,14 @@ import { useNavigate } from 'react-router-dom';
 import QueueTimer from '@/components/queue/QueueTimer';
 import { CancellationDialog } from '@/components/bookings/CancellationDialog';
 
+interface BookingService {
+  id: string;
+  quantity: number;
+  unit_price: number;
+  unit_duration: number;
+  service_name: string;
+}
+
 interface BookingSummaryDialogProps {
   booking: any;
   isOpen: boolean;
@@ -20,26 +28,59 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
   const navigate = useNavigate();
   const [queueEntry, setQueueEntry] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [serviceName, setServiceName] = useState<string>("Service");
+  const [bookingServices, setBookingServices] = useState<BookingService[]>([]);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancellationCount, setCancellationCount] = useState(0);
 
-  // Fetch service name and queue data
+  // Fetch service names and queue data
   useEffect(() => {
     const fetchData = async () => {
       if (!booking || !isOpen) return;
+      setLoading(true);
 
       try {
-        // Fetch service name via salon_services
-        if (booking.service_id) {
-          const { data: salonServiceData } = await supabase
-            .from("salon_services")
-            .select("id, services(name)")
-            .eq("id", booking.service_id)
-            .maybeSingle();
+        // Fetch booking services from booking_services table
+        const { data: servicesData } = await supabase
+          .from("booking_services")
+          .select(`
+            id,
+            quantity,
+            unit_price,
+            unit_duration,
+            salon_services (
+              id,
+              services (name)
+            )
+          `)
+          .eq("booking_id", booking.id);
 
-          if (salonServiceData?.services) {
-            setServiceName((salonServiceData.services as any)?.name || "Service");
+        if (servicesData && servicesData.length > 0) {
+          const mappedServices: BookingService[] = servicesData.map((s: any) => ({
+            id: s.id,
+            quantity: s.quantity,
+            unit_price: s.unit_price,
+            unit_duration: s.unit_duration,
+            service_name: s.salon_services?.services?.name || "Service"
+          }));
+          setBookingServices(mappedServices);
+        } else {
+          // Fallback to single service from booking if no booking_services exist
+          if (booking.service_id) {
+            const { data: salonServiceData } = await supabase
+              .from("salon_services")
+              .select("id, price, duration, services(name)")
+              .eq("id", booking.service_id)
+              .maybeSingle();
+
+            if (salonServiceData) {
+              setBookingServices([{
+                id: salonServiceData.id,
+                quantity: 1,
+                unit_price: salonServiceData.price || booking.total_price || 0,
+                unit_duration: salonServiceData.duration || booking.duration || 30,
+                service_name: (salonServiceData.services as any)?.name || "Service"
+              }]);
+            }
           }
         }
 
@@ -56,23 +97,19 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
           }
         }
 
-        // Fetch queue data
+        // Fetch queue data by booking_id for accuracy
         const { data: queueData } = await supabase
           .from("queue_entries")
           .select("*")
-          .eq("customer_id", booking.customer_id)
-          .eq("salon_id", booking.salon_id)
+          .eq("booking_id", booking.id)
           .eq("status", "waiting")
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .maybeSingle();
 
-        if (queueData && queueData.length > 0) {
-          setQueueEntry(queueData[0]);
-        } else {
-          setQueueEntry(null);
-        }
+        setQueueEntry(queueData || null);
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -87,7 +124,7 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
           event: '*',
           schema: 'public',
           table: 'queue_entries',
-          filter: `salon_id=eq.${booking?.salon_id}`
+          filter: `booking_id=eq.${booking?.id}`
         },
         () => {
           fetchData();
@@ -140,9 +177,13 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
   if (!booking) return null;
 
   const salon = booking.salons;
-  const displayServiceName = booking.service_name || serviceName;
   const isCancelled = booking.status === "cancelled";
   const isActive = ["pending", "confirmed", "in_progress"].includes(booking.status);
+  
+  // Calculate totals from booking services
+  const totalPrice = bookingServices.reduce((sum, s) => sum + (s.unit_price * s.quantity), 0);
+  const totalDuration = bookingServices.reduce((sum, s) => sum + (s.unit_duration * s.quantity), 0);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md mx-auto max-h-[90vh] overflow-y-auto">
@@ -171,12 +212,38 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
 
           <Separator />
 
-          {/* Service & Booking Details */}
+          {/* Services List */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">Service</span>
-              <span className="text-foreground">{displayServiceName}</span>
-            </div>
+            <h4 className="font-medium">Services</h4>
+            
+            {loading ? (
+              <div className="flex items-center justify-center p-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  {bookingServices.map((service) => (
+                    <div key={service.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span>{service.service_name}</span>
+                        {service.quantity > 1 && (
+                          <Badge variant="secondary" className="text-xs">x{service.quantity}</Badge>
+                        )}
+                      </div>
+                      <span className="font-medium">₹{service.unit_price * service.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <span className="font-medium">Total</span>
+                  <span className="font-semibold text-primary">₹{totalPrice || booking.total_price}</span>
+                </div>
+              </>
+            )}
+
+            <Separator />
             
             <div className="flex items-center justify-between">
               <span className="font-medium">Date</span>
@@ -196,12 +263,7 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
 
             <div className="flex items-center justify-between">
               <span className="font-medium">Duration</span>
-              <span>{booking.duration} minutes</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="font-medium">Price</span>
-              <span className="font-semibold text-primary">₹{booking.total_price}</span>
+              <span>{totalDuration || booking.duration} minutes</span>
             </div>
 
             <div className="flex items-center justify-between">

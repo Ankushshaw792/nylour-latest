@@ -14,6 +14,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import ArrivalCountdownTimer from "@/components/queue/ArrivalCountdownTimer";
 
+interface BookingService {
+  id: string;
+  quantity: number;
+  unit_price: number;
+  unit_duration: number;
+  service_name: string;
+}
+
 interface BookingDetailsDialogProps {
   booking: any;
   isOpen: boolean;
@@ -28,6 +36,7 @@ export const BookingDetailsDialog = ({
   queuePosition,
 }: BookingDetailsDialogProps) => {
   const [companions, setCompanions] = useState<any[]>([]);
+  const [bookingServices, setBookingServices] = useState<BookingService[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Helper to parse walk-in info from notes
@@ -52,35 +61,69 @@ export const BookingDetailsDialog = ({
   const phone = booking?.customers?.phone || walkInInfo?.phone || "N/A";
   const avatarUrl = booking?.customers?.avatar_url;
 
-  // Service info
-  const serviceName = booking?.salon_services?.services?.name || "Service";
-  const servicePrice = booking?.salon_services?.price || booking?.total_price || 0;
-
   // Format date and time
   const bookingDate = booking?.booking_date
     ? format(new Date(booking.booking_date), "MMM dd, yyyy")
     : "";
   const bookingTime = booking?.booking_time?.slice(0, 5) || "";
 
-  // Fetch companions for group bookings
+  // Fetch companions and booking services
   useEffect(() => {
-    const fetchCompanions = async () => {
+    const fetchData = async () => {
       if (!booking?.id || !isOpen) return;
       setLoading(true);
       try {
-        const { data } = await supabase
+        // Fetch companions
+        const { data: companionsData } = await supabase
           .from("booking_companions")
           .select("*")
           .eq("booking_id", booking.id);
-        setCompanions(data || []);
+        setCompanions(companionsData || []);
+
+        // Fetch booking services from booking_services table
+        const { data: servicesData } = await supabase
+          .from("booking_services")
+          .select(`
+            id,
+            quantity,
+            unit_price,
+            unit_duration,
+            salon_services (
+              id,
+              services (name)
+            )
+          `)
+          .eq("booking_id", booking.id);
+
+        if (servicesData && servicesData.length > 0) {
+          const mappedServices: BookingService[] = servicesData.map((s: any) => ({
+            id: s.id,
+            quantity: s.quantity,
+            unit_price: s.unit_price,
+            unit_duration: s.unit_duration,
+            service_name: s.salon_services?.services?.name || "Service"
+          }));
+          setBookingServices(mappedServices);
+        } else {
+          // Fallback to single service from booking if no booking_services exist
+          const serviceName = booking?.salon_services?.services?.name || "Service";
+          const servicePrice = booking?.salon_services?.price || booking?.total_price || 0;
+          setBookingServices([{
+            id: booking.id,
+            quantity: 1,
+            unit_price: servicePrice,
+            unit_duration: booking?.duration || 30,
+            service_name: serviceName
+          }]);
+        }
       } catch (error) {
-        console.error("Error fetching companions:", error);
+        console.error("Error fetching booking details:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCompanions();
+    fetchData();
   }, [booking?.id, isOpen]);
 
   const handleCall = () => {
@@ -90,6 +133,10 @@ export const BookingDetailsDialog = ({
   };
 
   if (!booking) return null;
+
+  // Calculate totals
+  const totalPrice = bookingServices.reduce((sum, s) => sum + (s.unit_price * s.quantity), 0);
+  const totalDuration = bookingServices.reduce((sum, s) => sum + (s.unit_duration * s.quantity), 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -149,39 +196,60 @@ export const BookingDetailsDialog = ({
 
         <Separator />
 
-        {/* Service Details */}
+        {/* Service Details - Now shows ALL services */}
         <div className="space-y-3">
-          <h4 className="font-medium">Service Booked</h4>
-          <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-            <span>{serviceName}</span>
-            <span className="font-semibold text-primary">₹{servicePrice}</span>
-          </div>
+          <h4 className="font-medium">Services Booked</h4>
           
-          {/* Companions */}
-          {companions.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  +{companions.length} companion{companions.length > 1 ? "s" : ""}
-                </span>
-              </div>
-              <div className="space-y-2 pl-6">
-                {companions.map((companion) => (
-                  <div key={companion.id} className="flex justify-between items-center text-sm">
-                    <span>{companion.name}</span>
-                    <span className="text-muted-foreground">{companion.phone}</span>
+          {loading ? (
+            <div className="flex items-center justify-center p-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {bookingServices.map((service) => (
+                  <div key={service.id} className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span>{service.service_name}</span>
+                      {service.quantity > 1 && (
+                        <Badge variant="secondary" className="text-xs">x{service.quantity}</Badge>
+                      )}
+                    </div>
+                    <span className="font-semibold text-primary">₹{service.unit_price * service.quantity}</span>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+              
+              {/* Companions */}
+              {companions.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      +{companions.length} companion{companions.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="space-y-2 pl-6">
+                    {companions.map((companion) => (
+                      <div key={companion.id} className="flex justify-between items-center text-sm">
+                        <span>{companion.name}</span>
+                        <span className="text-muted-foreground">{companion.phone}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {/* Total */}
-          <div className="flex justify-between items-center pt-2 border-t">
-            <span className="font-medium">Total</span>
-            <span className="font-bold text-lg text-primary">₹{servicePrice}</span>
-          </div>
+              {/* Total */}
+              <div className="flex justify-between items-center pt-2 border-t">
+                <div>
+                  <span className="font-medium">Total</span>
+                  <span className="text-sm text-muted-foreground ml-2">({totalDuration} min)</span>
+                </div>
+                <span className="font-bold text-lg text-primary">₹{totalPrice}</span>
+              </div>
+            </>
+          )}
         </div>
 
         <Separator />
