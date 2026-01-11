@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Clock, MapPin, Phone, RefreshCw, CheckCircle2, MessageSquare, Calendar, Users, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,181 +21,193 @@ const QueueStatus = () => {
   const [queueMembers, setQueueMembers] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [currentCustomerId, setCurrentCustomerId] = useState<string | null>(null);
+  const [currentSalonId, setCurrentSalonId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Fetch active queue data and setup real-time updates
-  useEffect(() => {
-    const fetchActiveQueue = async () => {
-      if (!user) return;
+  const fetchActiveQueue = useCallback(async () => {
+    if (!user) {
+      setDataLoading(false);
+      return;
+    }
+    
+    try {
+      setFetchError(null);
       
-      try {
-        // First, get the customer record using user_id
-        const { data: customer, error: customerError } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("user_id", user.id)
+      // Step 1: Get the customer record using user_id
+      const { data: customer, error: customerError } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (customerError) {
+        console.error("Step 1 - Customer fetch error:", customerError);
+        setFetchError(`Customer lookup failed: ${customerError.message}`);
+        setQueueEntry(null);
+        setDataLoading(false);
+        return;
+      }
+      
+      if (!customer) {
+        console.log("No customer record found for user");
+        setQueueEntry(null);
+        setDataLoading(false);
+        return;
+      }
+      
+      // Store customer ID for use in UI
+      setCurrentCustomerId(customer.id);
+
+      // Step 2: Find user's active queue entry (use server-side date via status only, no client date filter)
+      // Query by status 'waiting' to find active entries
+      const { data: queueDataArray, error: queueError } = await supabase
+        .from("queue_entries")
+        .select("*")
+        .eq("customer_id", customer.id)
+        .in("status", ["waiting", "called"])
+        .order("check_in_time", { ascending: false })
+        .limit(1);
+
+      if (queueError) {
+        console.error("Step 2 - Queue entry fetch error:", queueError);
+        setFetchError(`Queue lookup failed: ${queueError.message}`);
+        setQueueEntry(null);
+        setDataLoading(false);
+        return;
+      }
+
+      const activeQueueData = queueDataArray && queueDataArray.length > 0 ? queueDataArray[0] : null;
+
+      if (!activeQueueData) {
+        console.log("No active queue entry found for customer:", customer.id);
+        setQueueEntry(null);
+        setDataLoading(false);
+        return;
+      }
+
+      // Store salon ID for scoped realtime subscription
+      setCurrentSalonId(activeQueueData.salon_id);
+
+      // Step 3: Fetch booking by booking_id (most reliable match)
+      const { data: bookingData, error: bookingError } = await supabase
+        .from("bookings")
+        .select(`
+          *,
+          salons!inner (
+            id,
+            name,
+            address,
+            phone,
+            avg_service_time
+          )
+        `)
+        .eq("id", activeQueueData.booking_id)
+        .maybeSingle();
+      
+      if (bookingError) {
+        console.error("Step 3 - Booking fetch error:", bookingError);
+        // Continue without booking details, but log the error
+      }
+
+      // Step 4: Fetch service details from salon_services (actual price) and services (name)
+      let serviceName = "Service";
+      let servicePrice = bookingData?.total_price || 0;
+      let serviceDuration = 30;
+      
+      if (bookingData?.service_id) {
+        const { data: salonServiceData } = await supabase
+          .from("salon_services")
+          .select("price, duration, service_id")
+          .eq("id", bookingData.service_id)
           .maybeSingle();
-
-        if (customerError || !customer) {
-          console.error("Error fetching customer:", customerError);
-          setQueueEntry(null);
-          setDataLoading(false);
-          return;
-        }
         
-        // Store customer ID for use in UI
-        setCurrentCustomerId(customer.id);
-
-        // Get today's date for filtering
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStart = today.toISOString();
-
-        // Find user's active queue entry (today only)
-        const { data: queueDataArray, error: queueError } = await supabase
-          .from("queue_entries")
-          .select("*")
-          .eq("customer_id", customer.id)
-          .eq("status", "waiting")
-          .gte("check_in_time", todayStart)
-          .order("check_in_time", { ascending: false })
-          .limit(1);
-
-        const activeQueueData = queueDataArray && queueDataArray.length > 0 ? queueDataArray[0] : null;
-
-        if (queueError) {
-          console.error("Error fetching active queue:", queueError);
-          toast.error("Failed to load queue status");
-          return;
-        }
-
-        if (!activeQueueData) {
-          console.log("No active queue entry found");
-          setQueueEntry(null);
-          setDataLoading(false);
-          return;
-        }
-
-        // Fetch the booking details separately
-        const { data: bookingDataArray, error: bookingError } = await supabase
-          .from("bookings")
-          .select(`
-            *,
-            salons!inner (
-              id,
-              name,
-              address,
-              phone,
-              avg_service_time
-            )
-          `)
-          .eq("customer_id", customer.id)
-          .eq("salon_id", activeQueueData.salon_id)
-          .in("status", ["pending", "confirmed", "in_progress"])
-          .order("created_at", { ascending: false })
-          .limit(1);
-        
-        // Store customer.id for later use in isCurrentUser check
-        const customerId = customer.id;
-
-        const bookingData = bookingDataArray && bookingDataArray.length > 0 ? bookingDataArray[0] : null;
-
-        if (bookingError) {
-          console.error("Error fetching booking:", bookingError);
-        }
-
-        // Fetch service details from salon_services (actual price) and services (name)
-        let serviceName = "Service";
-        let servicePrice = bookingData?.total_price || 0;
-        let serviceDuration = 30;
-        
-        if (bookingData?.service_id) {
-          // First get the salon_service to get actual price and duration
-          const { data: salonServiceData } = await supabase
-            .from("salon_services")
-            .select("price, duration, service_id")
-            .eq("id", bookingData.service_id)
-            .maybeSingle();
+        if (salonServiceData) {
+          servicePrice = salonServiceData.price;
+          serviceDuration = salonServiceData.duration || 30;
           
-          if (salonServiceData) {
-            servicePrice = salonServiceData.price;
-            serviceDuration = salonServiceData.duration || 30;
-            
-            // Get service name from services table
-            if (salonServiceData.service_id) {
-              const { data: serviceData } = await supabase
-                .from("services")
-                .select("name")
-                .eq("id", salonServiceData.service_id)
-                .maybeSingle();
-              serviceName = serviceData?.name || "Service";
-            }
+          if (salonServiceData.service_id) {
+            const { data: serviceData } = await supabase
+              .from("services")
+              .select("name")
+              .eq("id", salonServiceData.service_id)
+              .maybeSingle();
+            serviceName = serviceData?.name || "Service";
           }
         }
-
-        // Combine the data with service name, actual price, and arrival_deadline
-        const combinedData = {
-          ...activeQueueData,
-          bookings: bookingData ? {
-            ...bookingData,
-            service_name: serviceName,
-            service_price: servicePrice,
-            service_duration: serviceDuration,
-            arrival_deadline: bookingData.arrival_deadline
-          } : null
-        };
-
-        setQueueEntry(combinedData);
-
-        // Fetch all queue members using the RPC function (bypasses customers RLS)
-        const todayDate = new Date().toISOString().split('T')[0];
-        const { data: queueDisplayData, error: queueDisplayError } = await supabase.rpc('get_queue_display', {
-          p_salon_id: activeQueueData.salon_id,
-          p_date: todayDate
-        });
-
-        if (queueDisplayError) {
-          console.error("Error fetching queue display:", queueDisplayError);
-          setQueueMembers([]);
-        } else {
-          // Map RPC results to queue member format and sort by position
-          const enrichedMembers = (queueDisplayData || [])
-            .sort((a: any, b: any) => a.queue_position - b.queue_position)
-            .map((entry: any) => ({
-              id: entry.queue_entry_id,
-              booking_id: entry.booking_id,
-              customer_id: entry.is_walk_in ? null : entry.queue_entry_id,
-              position: entry.queue_position,
-              display_name: entry.display_name,
-              avatar_url: entry.avatar_url,
-              service_name: entry.service_summary || "Service",
-              // Service duration will be computed later using salon's avg_service_time
-              service_duration: null,
-              isWalkIn: entry.is_walk_in,
-              party_size: entry.party_size || 1,
-              // Track if this is the current user by matching booking_id or avatar presence
-              isCurrentUser: entry.booking_id === activeQueueData.booking_id
-            }));
-          setQueueMembers(enrichedMembers);
-        }
-      } catch (error) {
-        console.error("Error fetching queue data:", error);
-        toast.error("Failed to load queue status");
-      } finally {
-        setDataLoading(false);
       }
-    };
 
+      // Combine the data with service name, actual price, and arrival_deadline
+      const combinedData = {
+        ...activeQueueData,
+        bookings: bookingData ? {
+          ...bookingData,
+          service_name: serviceName,
+          service_price: servicePrice,
+          service_duration: serviceDuration,
+          arrival_deadline: bookingData.arrival_deadline
+        } : null
+      };
+
+      setQueueEntry(combinedData);
+
+      // Step 5: Fetch all queue members using the RPC function (no client date - let server use CURRENT_DATE)
+      const { data: queueDisplayData, error: queueDisplayError } = await supabase.rpc('get_queue_display', {
+        p_salon_id: activeQueueData.salon_id
+        // p_date omitted - server will use CURRENT_DATE default
+      });
+
+      if (queueDisplayError) {
+        console.error("Step 5 - Queue display RPC error:", queueDisplayError);
+        setQueueMembers([]);
+      } else {
+        // Map RPC results to queue member format and sort by position
+        const enrichedMembers = (queueDisplayData || [])
+          .sort((a: any, b: any) => (a.queue_position || 0) - (b.queue_position || 0))
+          .map((entry: any) => ({
+            id: entry.queue_entry_id,
+            booking_id: entry.booking_id,
+            customer_id: entry.is_walk_in ? null : entry.queue_entry_id,
+            position: entry.queue_position,
+            display_name: entry.display_name,
+            avatar_url: entry.avatar_url,
+            service_name: entry.service_summary || "Service",
+            service_duration: null,
+            isWalkIn: entry.is_walk_in,
+            party_size: entry.party_size || 1,
+            // Track if this is the current user by matching booking_id
+            isCurrentUser: entry.booking_id === activeQueueData.booking_id
+          }));
+        
+        console.log("Queue members loaded:", enrichedMembers.length, "entries");
+        setQueueMembers(enrichedMembers);
+      }
+    } catch (error: any) {
+      console.error("Unexpected error in fetchActiveQueue:", error);
+      setFetchError(`Unexpected error: ${error?.message || 'Unknown error'}`);
+      toast.error("Failed to load queue status");
+    } finally {
+      setDataLoading(false);
+    }
+  }, [user]);
+
+  // Initial fetch
+  useEffect(() => {
     fetchActiveQueue();
+  }, [fetchActiveQueue]);
 
-    // Setup real-time subscription for queue updates
+  // Setup real-time subscription scoped by salon
+  useEffect(() => {
+    if (!currentSalonId) return;
+
     const subscription = supabase
-      .channel('queue-updates')
+      .channel(`queue-updates-${currentSalonId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'queue_entries'
+          table: 'queue_entries',
+          filter: `salon_id=eq.${currentSalonId}`
         },
         (payload) => {
           console.log('Queue update received:', payload);
@@ -207,7 +219,8 @@ const QueueStatus = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'bookings'
+          table: 'bookings',
+          filter: `salon_id=eq.${currentSalonId}`
         },
         (payload) => {
           console.log('Booking update received:', payload);
@@ -219,13 +232,48 @@ const QueueStatus = () => {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [user]);
+  }, [currentSalonId, fetchActiveQueue]);
 
   if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
       </div>
+    );
+  }
+
+  // Error State - Show detailed error with retry
+  if (fetchError) {
+    return (
+      <CustomerLayout
+        headerProps={{
+          title: "Queue Status",
+          showBackButton: false,
+          showProfile: true,
+          showNotifications: true
+        }}
+      >
+        <div className="p-4 space-y-6">
+          <Card className="bg-destructive/10 border-destructive/20">
+            <CardContent className="p-6">
+              <div className="text-center">
+                <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                <h2 className="text-xl font-bold text-destructive mb-2">Failed to Load Queue</h2>
+                <p className="text-muted-foreground mb-2">There was a problem loading your queue status.</p>
+                <p className="text-xs text-muted-foreground mb-4 font-mono bg-muted/50 p-2 rounded">{fetchError}</p>
+                <Button onClick={() => {
+                  setDataLoading(true);
+                  setFetchError(null);
+                  fetchActiveQueue();
+                }}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </CustomerLayout>
     );
   }
 

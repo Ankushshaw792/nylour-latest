@@ -39,12 +39,11 @@ export const LiveQueueDialog = ({
   const fetchQueue = async () => {
     try {
       setLoading(true);
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
       // Use the RPC function that safely returns queue display data
+      // Don't pass p_date - let server use CURRENT_DATE default
       const { data, error } = await supabase.rpc('get_queue_display', {
-        p_salon_id: salonId,
-        p_date: today
+        p_salon_id: salonId
       });
 
       if (error) {

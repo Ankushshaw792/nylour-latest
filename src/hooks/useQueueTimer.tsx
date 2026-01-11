@@ -30,23 +30,26 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
     }
 
     try {
-      // Get today's date for filtering
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStart = today.toISOString();
-
-      // Get queue entry using the internal customer ID
+      // Get queue entry using the internal customer ID - no client-side date filter
+      // Use status 'waiting' or 'called' to find active entries
       const { data: queueEntry, error } = await supabase
         .from('queue_entries')
         .select('*')
         .eq('salon_id', salonId)
         .eq('customer_id', customerId)
-        .eq('status', 'waiting')
-        .gte('check_in_time', todayStart)
+        .in('status', ['waiting', 'called'])
+        .order('check_in_time', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (error || !queueEntry) {
-        console.log('No queue entry found for customer:', customerId);
+      if (error) {
+        console.error('Error fetching queue entry:', error);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!queueEntry) {
+        console.log('No active queue entry found for customer:', customerId);
         setTimerData({
           estimatedWaitMinutes: 0,
           queuePosition: 0,
@@ -66,17 +69,9 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
 
       const avgServiceTime = salonData?.avg_service_time || 30;
 
-      // Calculate queue position: count waiting entries with position less than current
-      const { data: positionData } = await supabase
-        .from('queue_entries')
-        .select('id')
-        .eq('salon_id', salonId)
-        .eq('status', 'waiting')
-        .gte('check_in_time', todayStart)
-        .lt('position', queueEntry.position);
-
+      // Calculate people ahead by position (position - 1 = people ahead since positions start at 1)
       const queuePosition = queueEntry.position;
-      const peopleAhead = positionData?.length || 0;
+      const peopleAhead = Math.max(0, queuePosition - 1);
 
       // Calculate estimated wait time: people ahead * avg service time
       const estimatedWaitMinutes = peopleAhead * avgServiceTime;
