@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
 interface QueueTimerData {
@@ -8,6 +8,11 @@ interface QueueTimerData {
   timeRemaining: number;
 }
 
+/**
+ * Hook to manage queue timer data
+ * @param salonId - The salon ID
+ * @param customerId - The INTERNAL customer ID from customers table (NOT auth.uid())
+ */
 export const useQueueTimer = (salonId: string | null, customerId: string | null) => {
   const [timerData, setTimerData] = useState<QueueTimerData>({
     estimatedWaitMinutes: 0,
@@ -18,8 +23,11 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
   const [isLoading, setIsLoading] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchQueueData = async () => {
-    if (!salonId || !customerId) return;
+  const fetchQueueData = useCallback(async () => {
+    if (!salonId || !customerId) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       // Get today's date for filtering
@@ -27,7 +35,7 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
       today.setHours(0, 0, 0, 0);
       const todayStart = today.toISOString();
 
-      // Get queue entry
+      // Get queue entry using the internal customer ID
       const { data: queueEntry, error } = await supabase
         .from('queue_entries')
         .select('*')
@@ -38,6 +46,7 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
         .maybeSingle();
 
       if (error || !queueEntry) {
+        console.log('No queue entry found for customer:', customerId);
         setTimerData({
           estimatedWaitMinutes: 0,
           queuePosition: 0,
@@ -58,7 +67,7 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
       const avgServiceTime = salonData?.avg_service_time || 30;
 
       // Calculate queue position: count waiting entries with position less than current
-      const { data: positionData, error: positionError } = await supabase
+      const { data: positionData } = await supabase
         .from('queue_entries')
         .select('id')
         .eq('salon_id', salonId)
@@ -88,7 +97,7 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [salonId, customerId]);
 
   const formatTime = (minutes: number): string => {
     if (minutes < 1) return 'Any moment now';
@@ -124,7 +133,7 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
 
     // Set up real-time subscription
     const channel = supabase
-      .channel('queue-updates')
+      .channel(`queue-timer-${salonId}-${customerId}`)
       .on(
         'postgres_changes',
         {
@@ -144,7 +153,7 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
       supabase.removeChannel(channel);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [salonId, customerId]);
+  }, [salonId, customerId, fetchQueueData]);
 
   return {
     ...timerData,
