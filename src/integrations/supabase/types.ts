@@ -667,6 +667,21 @@ export type Database = {
         Returns: boolean
       }
       expire_overdue_arrivals: { Args: never; Returns: undefined }
+      get_queue_display: {
+        Args: { p_date?: string; p_salon_id: string }
+        Returns: {
+          avatar_url: string
+          booking_id: string
+          check_in_time: string
+          display_name: string
+          is_walk_in: boolean
+          party_size: number
+          queue_entry_id: string
+          queue_position: number
+          queue_status: string
+          service_summary: string
+        }[]
+      }
       notify_next_customer: {
         Args: { p_message?: string; p_salon_id: string }
         Returns: undefined
