@@ -1,4 +1,5 @@
-import { ArrowRight, Store, Users, TrendingUp, Clock, DollarSign, Shield, CheckCircle, Smartphone, BarChart3, Calendar, Bell, Star, Phone, Mail, ChevronRight, Play } from "lucide-react";
+import { ArrowRight, Store, Users, TrendingUp, Clock, DollarSign, Shield, CheckCircle, Smartphone, BarChart3, Calendar, Bell, Star, ChevronRight, Play, Phone } from "lucide-react";
+import { LandingFooter } from "@/components/layout/LandingFooter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -139,9 +140,12 @@ export default function SalonRegister() {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
+            <button 
+              onClick={() => navigate('/')}
+              className="flex items-center hover:opacity-80 transition-opacity"
+            >
               <h1 className="text-2xl font-bold gradient-text">Nylour</h1>
-            </div>
+            </button>
             <div className="flex items-center space-x-4">
               <Button variant="ghost" onClick={() => setShowAuth(true)} className="text-muted-foreground hover:text-foreground">
                 Already have an account? Sign In
@@ -332,52 +336,7 @@ export default function SalonRegister() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t bg-card">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="text-2xl font-bold gradient-text mb-4">Nylour</h3>
-              <p className="text-muted-foreground mb-4">
-                Empowering salons with smart technology to grow their business.
-              </p>
-              <div className="flex space-x-4">
-                <Button size="sm" variant="outline">
-                  <Phone className="h-4 w-4 mr-2" />
-                  Call Support
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email Us
-                </Button>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">For Salons</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Register Your Salon</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Success Stories</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Contact Us</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-            <p>&copy; 2024 Nylour. All rights reserved. Built for salon owners, by salon enthusiasts.</p>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
 
       {/* Authentication Sheet */}
       <SalonAuthSheet open={showAuth} onOpenChange={setShowAuth} onAuthSuccess={handleAuthSuccess} />
