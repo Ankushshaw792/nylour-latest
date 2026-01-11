@@ -160,19 +160,23 @@ const QueueStatus = () => {
         } else {
           // Fetch customer names and avatars for queue members
           if (membersData && membersData.length > 0) {
-            const customerIds = membersData.map(m => m.customer_id);
-            const { data: customersData } = await supabase
-              .from("customers")
-              .select("id, first_name, last_name, avatar_url")
-              .in("id", customerIds);
+            const customerIds = membersData.map(m => m.customer_id).filter(Boolean);
+            let customersData: any[] = [];
+            if (customerIds.length > 0) {
+              const { data } = await supabase
+                .from("customers")
+                .select("id, first_name, last_name, avatar_url")
+                .in("id", customerIds);
+              customersData = data || [];
+            }
 
-            // Fetch booking info for each queue member to get service names and durations
+            // Fetch booking info for each queue member to get service names, durations, and notes
             const bookingIds = membersData.map(m => m.booking_id).filter(Boolean);
             let bookingsWithServices: any[] = [];
             if (bookingIds.length > 0) {
               const { data: bookingsData } = await supabase
                 .from("bookings")
-                .select("id, service_id")
+                .select("id, service_id, notes")
                 .in("id", bookingIds);
               
               if (bookingsData && bookingsData.length > 0) {
@@ -201,18 +205,32 @@ const QueueStatus = () => {
                   return {
                     ...b,
                     service_name: service?.name || "Service",
-                    service_duration: salonService?.duration || 30
+                    service_duration: salonService?.duration || 30,
+                    notes: b.notes
                   };
                 });
               }
             }
 
+            // Helper to parse walk-in name from notes
+            const parseWalkInName = (notes: string | null) => {
+              if (!notes || !notes.includes("Walk-in:")) return null;
+              const walkInPart = notes.split("Walk-in:")[1];
+              return walkInPart?.split(" - ")[0]?.trim() || null;
+            };
+
             // Combine queue members with customer and service data
             const enrichedMembers = membersData.map(member => {
               const memberBooking = bookingsWithServices.find(b => b.id === member.booking_id);
+              const customerData = customersData?.find(c => c.id === member.customer_id);
+              const isWalkIn = !member.customer_id || memberBooking?.notes?.includes("Walk-in:");
+              const walkInName = parseWalkInName(memberBooking?.notes);
+              
               return {
                 ...member,
-                customer: customersData?.find(c => c.id === member.customer_id),
+                customer: customerData,
+                walkInName: walkInName,
+                isWalkIn: isWalkIn,
                 service_name: memberBooking?.service_name || "Service",
                 service_duration: memberBooking?.service_duration || 30
               };
@@ -469,9 +487,21 @@ const QueueStatus = () => {
                 const isAhead = member.position < currentUserPosition;
                 const isBehind = member.position > currentUserPosition;
                 const isActive = member.position === 1;
-                const displayName = isCurrentUser 
-                  ? "You" 
-                  : `${member.customer?.first_name || "Customer"} ${member.customer?.last_name || ""}`.trim();
+                
+                // Determine display name: current user = "You", online = customer name, walk-in = parsed name
+                let displayName: string;
+                if (isCurrentUser) {
+                  displayName = "You";
+                } else if (member.customer?.first_name) {
+                  displayName = `${member.customer.first_name} ${member.customer.last_name || ""}`.trim();
+                } else if (member.walkInName) {
+                  displayName = member.walkInName;
+                } else {
+                  displayName = "Customer";
+                }
+                
+                // For walk-ins, don't show avatar (use position fallback)
+                const showAvatar = !member.isWalkIn && (isCurrentUser || member.customer?.avatar_url);
                 
                 // Calculate estimated time for people ahead (cumulative time from position 1 to their position)
                 const memberDuration = member.service_duration || avgServiceTime;
@@ -495,7 +525,9 @@ const QueueStatus = () => {
                             ? 'ring-2 ring-amber-500' 
                             : ''
                       }`}>
-                        <AvatarImage src={isCurrentUser ? (avatarUrl ?? undefined) : (member.customer?.avatar_url ?? undefined)} />
+                        {showAvatar && (
+                          <AvatarImage src={isCurrentUser ? (avatarUrl ?? undefined) : (member.customer?.avatar_url ?? undefined)} />
+                        )}
                         <AvatarFallback className={`text-sm font-bold ${
                           isCurrentUser 
                             ? 'bg-primary text-primary-foreground' 

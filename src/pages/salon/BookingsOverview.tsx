@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { SalonCancellationDialog } from "@/components/salon/SalonCancellationDialog";
 import ArrivalCountdownTimer from "@/components/queue/ArrivalCountdownTimer";
+import { BookingDetailsDialog } from "@/components/bookings/BookingDetailsDialog";
 
 const BookingsOverview = () => {
   const { user, loading: authLoading } = useRequireAuth();
@@ -405,12 +406,14 @@ interface BookingCardProps {
 }
 
 const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoShow, onSendReminder, onSendMessage, showActions }: BookingCardProps) => {
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  
   // Determine if this is a walk-in booking
   const isWalkIn = !booking.customer_id || booking.notes?.includes('Walk-in:');
   
   // Extract customer name from different possible sources
   const customerName = booking.customers 
-    ? `${booking.customers.first_name || ''} ${booking.customers.last_name || ''}`.trim()
+    ? `${booking.customers.first_name || ''} ${booking.customers.last_name || ''}`.trim() || 'Profile Incomplete'
     : booking.notes?.includes('Walk-in:')
     ? booking.notes.split('Walk-in:')[1]?.split(' - ')[0]?.trim() || 'Walk-in Customer'
     : 'Walk-in Customer';
@@ -425,180 +428,200 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
   const bookingDate = format(new Date(booking.booking_date), 'MMM dd, yyyy');
   const bookingTime = booking.booking_time.slice(0, 5);
   
-  const handleCall = () => {
+  // Get queue position from booking data
+  const queuePosition = booking.queue_position;
+  
+  const handleCall = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (phone && phone !== 'N/A') {
       window.location.href = `tel:${phone}`;
     }
   };
   
   return (
-    <Card className={`card-hover ${isWalkIn ? 'border-l-4 border-l-amber-500' : 'border-l-4 border-l-primary'}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-4">
-          {/* Customer Avatar */}
-          <Avatar className="w-12 h-12">
-            <AvatarImage
-              src={booking.customers?.avatar_url ?? undefined}
-              alt={isWalkIn ? "Walk-in customer" : `${customerName} avatar`}
-              referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
-            />
-            <AvatarFallback className={isWalkIn ? 'bg-amber-100' : 'bg-primary/20'}>
-              <User className={`h-6 w-6 ${isWalkIn ? 'text-amber-600' : 'text-primary'}`} />
-            </AvatarFallback>
-          </Avatar>
+    <>
+      <Card 
+        className={`card-hover cursor-pointer ${isWalkIn ? 'border-l-4 border-l-amber-500' : 'border-l-4 border-l-primary'}`}
+        onClick={() => setIsDetailsOpen(true)}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start gap-4">
+            {/* Customer Avatar */}
+            <Avatar className="w-12 h-12">
+              <AvatarImage
+                src={booking.customers?.avatar_url ?? undefined}
+                alt={isWalkIn ? "Walk-in customer" : `${customerName} avatar`}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
+              />
+              <AvatarFallback className={isWalkIn ? 'bg-amber-100' : 'bg-primary/20'}>
+                <User className={`h-6 w-6 ${isWalkIn ? 'text-amber-600' : 'text-primary'}`} />
+              </AvatarFallback>
+            </Avatar>
 
-          {/* Booking Details */}
-          <div className="flex-1">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-semibold">{customerName}</h4>
-                  {isWalkIn && (
-                    <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                      Walk-in
-                    </Badge>
-                  )}
-                  {!isWalkIn && (
-                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
-                      Online
-                    </Badge>
-                  )}
+            {/* Booking Details */}
+            <div className="flex-1">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-semibold">{customerName}</h4>
+                    {isWalkIn && (
+                      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                        Walk-in
+                      </Badge>
+                    )}
+                    {!isWalkIn && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                        Online
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-foreground mt-1">{serviceName}</p>
                 </div>
-                <p className="text-sm font-medium text-foreground mt-1">{serviceName}</p>
+                <Badge 
+                  variant={
+                    booking.status === 'confirmed' ? 'default' : 
+                    booking.status === 'pending' ? 'secondary' : 
+                    booking.status === 'completed' ? 'default' :
+                    'destructive'
+                  }
+                  className={
+                    booking.status === 'completed' ? 'bg-green-500 hover:bg-green-600 text-white' :
+                    booking.status === 'cancelled' || booking.status === 'rejected' ? 'bg-red-500 hover:bg-red-600 text-white' :
+                    ''
+                  }
+                >
+                  {booking.status}
+                </Badge>
               </div>
-              <Badge 
-                variant={
-                  booking.status === 'confirmed' ? 'default' : 
-                  booking.status === 'pending' ? 'secondary' : 
-                  booking.status === 'completed' ? 'default' :
-                  'destructive'
-                }
-                className={
-                  booking.status === 'completed' ? 'bg-green-500 hover:bg-green-600 text-white' :
-                  booking.status === 'cancelled' || booking.status === 'rejected' ? 'bg-red-500 hover:bg-red-600 text-white' :
-                  ''
-                }
-              >
-                {booking.status}
-              </Badge>
-            </div>
 
-            {/* Arrival Countdown for online bookings with deadline */}
-            {booking.arrival_deadline && booking.status === 'confirmed' && !isWalkIn && (
-              <div className="mb-3">
-                <ArrivalCountdownTimer 
-                  arrivalDeadline={booking.arrival_deadline} 
-                  compact={true}
-                />
-              </div>
-            )}
-
-            {/* Booking Info Grid */}
-            <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>{bookingTime}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span>{bookingDate}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Phone className="h-4 w-4" />
-                <span>{phone}</span>
-              </div>
-              <div className="flex items-center gap-1.5 font-semibold text-primary">
-                <span>₹{servicePrice}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end">
-              {showActions === 'accept-reject' && (
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => onReject?.(booking.id)}
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Reject
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => onAccept?.(booking.id)}
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Accept
-                  </Button>
+              {/* Arrival Countdown - ONLY for position 1 online bookings */}
+              {booking.arrival_deadline && 
+               booking.status === 'confirmed' && 
+               !isWalkIn && 
+               queuePosition === 1 && (
+                <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                  <ArrivalCountdownTimer 
+                    arrivalDeadline={booking.arrival_deadline} 
+                    compact={true}
+                  />
                 </div>
               )}
-              
-              {showActions === 'queue' && (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCall}
-                    disabled={phone === 'N/A'}
-                    title="Call customer"
-                  >
-                    <Phone className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => booking.customer_id && onSendReminder?.(booking.customer_id, booking.id)}
-                    disabled={!booking.customer_id}
-                    title="Send quick reminder"
-                  >
-                    <Bell className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => booking.customer_id && onSendMessage?.(booking.customer_id, booking.id)}
-                    disabled={!booking.customer_id}
-                    title="Send custom message"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
-                  {booking.status === 'confirmed' && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => onNoShow?.(booking.id)}
-                        title="Mark as no-show"
-                      >
-                        <UserX className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => onStart?.(booking.id)}
-                      >
-                        <Clock className="h-4 w-4 mr-1" />
-                        Start
-                      </Button>
-                    </>
-                  )}
-                  {booking.status === 'in_progress' && (
+
+              {/* Booking Info Grid */}
+              <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>{bookingTime}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>{bookingDate}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Phone className="h-4 w-4" />
+                  <span>{phone}</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-semibold text-primary">
+                  <span>₹{servicePrice}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                {showActions === 'accept-reject' && (
+                  <div className="flex gap-2">
                     <Button
                       size="sm"
-                      onClick={() => onComplete?.(booking.id)}
+                      variant="destructive"
+                      onClick={() => onReject?.(booking.id)}
                     >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Complete
+                      <X className="h-4 w-4 mr-1" />
+                      Reject
                     </Button>
-                  )}
-                </div>
-              )}
+                    <Button
+                      size="sm"
+                      onClick={() => onAccept?.(booking.id)}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Accept
+                    </Button>
+                  </div>
+                )}
+                
+                {showActions === 'queue' && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCall}
+                      disabled={phone === 'N/A'}
+                      title="Call customer"
+                    >
+                      <Phone className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => booking.customer_id && onSendReminder?.(booking.customer_id, booking.id)}
+                      disabled={!booking.customer_id}
+                      title="Send quick reminder"
+                    >
+                      <Bell className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => booking.customer_id && onSendMessage?.(booking.customer_id, booking.id)}
+                      disabled={!booking.customer_id}
+                      title="Send custom message"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </Button>
+                    {booking.status === 'confirmed' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => onNoShow?.(booking.id)}
+                          title="Mark as no-show"
+                        >
+                          <UserX className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => onStart?.(booking.id)}
+                        >
+                          <Clock className="h-4 w-4 mr-1" />
+                          Start
+                        </Button>
+                      </>
+                    )}
+                    {booking.status === 'in_progress' && (
+                      <Button
+                        size="sm"
+                        onClick={() => onComplete?.(booking.id)}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Complete
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      
+      {/* Booking Details Dialog */}
+      <BookingDetailsDialog
+        booking={booking}
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        queuePosition={queuePosition}
+      />
+    </>
   );
 };
 
