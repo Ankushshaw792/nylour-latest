@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,14 @@ export const SalonCancellationDialog = ({
   const [selectedReason, setSelectedReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedReason("");
+      setCustomReason("");
+    }
+  }, [isOpen]);
 
   const reasons = type === "reject" ? REJECTION_REASONS : NOSHOW_REASONS;
   const title = type === "reject" ? "Reject Booking" : "Mark as No-Show";

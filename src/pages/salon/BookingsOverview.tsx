@@ -381,7 +381,7 @@ const BookingsOverview = () => {
         {/* Cancellation/No-Show Reason Dialog */}
         <SalonCancellationDialog
           isOpen={cancellationDialog.isOpen}
-          onClose={() => setCancellationDialog({ ...cancellationDialog, isOpen: false })}
+          onClose={() => setCancellationDialog({ isOpen: false, bookingId: "", type: "reject" })}
           bookingId={cancellationDialog.bookingId}
           type={cancellationDialog.type}
           onConfirm={handleCancellationConfirm}
