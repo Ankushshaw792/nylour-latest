@@ -413,8 +413,10 @@ const QueueStatus = () => {
       }}
     >
       <div className="p-4 space-y-6">
-        {/* Arrival Countdown Timer - Show prominently if booking has deadline */}
-        {booking.arrival_deadline && booking.status === 'confirmed' && (
+        {/* Arrival Countdown Timer - ONLY show when at position 1 */}
+        {booking.arrival_deadline && 
+         booking.status === 'confirmed' && 
+         currentPosition === 1 && (
           <ArrivalCountdownTimer 
             arrivalDeadline={booking.arrival_deadline}
             onExpired={() => {

@@ -46,6 +46,51 @@ export type Database = {
           },
         ]
       }
+      booking_services: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          quantity: number
+          salon_service_id: string
+          unit_duration: number
+          unit_price: number
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          salon_service_id: string
+          unit_duration?: number
+          unit_price?: number
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          salon_service_id?: string
+          unit_duration?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_services_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_services_salon_service_id_fkey"
+            columns: ["salon_service_id"]
+            isOneToOne: false
+            referencedRelation: "salon_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           arrival_deadline: string | null

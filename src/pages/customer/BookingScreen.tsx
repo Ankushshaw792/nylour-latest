@@ -115,7 +115,7 @@ const BookingScreen = () => {
         .insert({
           customer_id: userProfile.id,
           salon_id: id,
-          service_id: items[0].id,
+          service_id: items[0].id, // Keep first service for backward compatibility
           booking_date: format(new Date(), 'yyyy-MM-dd'), // Local date, not UTC
           booking_time: new Date().toTimeString().split(' ')[0],
           duration: items.reduce((total, item) => total + (parseInt(item.duration) * item.quantity), 0),
@@ -128,6 +128,24 @@ const BookingScreen = () => {
 
       if (bookingError) throw bookingError;
       if (!bookingData) throw new Error('Failed to create booking');
+
+      // Insert all cart items into booking_services table
+      const bookingServicesData = items.map(item => ({
+        booking_id: bookingData.id,
+        salon_service_id: item.id,
+        quantity: item.quantity,
+        unit_price: item.price,
+        unit_duration: parseInt(item.duration) || 30
+      }));
+
+      const { error: servicesError } = await supabase
+        .from('booking_services')
+        .insert(bookingServicesData);
+
+      if (servicesError) {
+        console.error('Error saving booking services:', servicesError);
+        // Don't throw - booking is created, services insert is non-critical for flow
+      }
 
       toast.success('Booking details saved! Please complete payment.');
       navigate(`/payment/${bookingData.id}`);
