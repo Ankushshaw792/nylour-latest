@@ -118,7 +118,7 @@ export function LandingFooter() {
         </div>
         
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 Nylour. All rights reserved. Built for salon owners, by salon enthusiasts.</p>
+          <p>&copy; 2026-30 Nylour. All rights reserved. Built for salon owners, by salon enthusiasts.</p>
         </div>
       </div>
     </footer>
