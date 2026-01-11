@@ -8,11 +8,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SalonAuthSheet } from "@/components/auth/SalonAuthSheet";
 import { SalonRegistrationForm } from "@/components/salon/SalonRegistrationForm";
 import { useSalonExistence } from "@/hooks/useSalonExistence";
-
 export default function SalonRegister() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
-  const { hasSalon, loading: salonLoading } = useSalonExistence();
+  const {
+    user,
+    loading
+  } = useAuth();
+  const {
+    hasSalon,
+    loading: salonLoading
+  } = useSalonExistence();
   const [showAuth, setShowAuth] = useState(false);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
 
@@ -29,7 +34,6 @@ export default function SalonRegister() {
       setShowRegistrationForm(true);
     }
   }, [user, loading, hasSalon, salonLoading]);
-
   const handleAuthSuccess = () => {
     setShowAuth(false);
     setShowRegistrationForm(true);
@@ -37,134 +41,100 @@ export default function SalonRegister() {
 
   // Show loading state
   if (loading || salonLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // If user is authenticated and has no salon, show registration form
   if (showRegistrationForm) {
     return <SalonRegistrationForm />;
   }
-
-  const benefits = [
-    {
-      icon: Users,
-      title: "Smart Queue Management",
-      description: "Eliminate crowded waiting areas with real-time digital queue management"
-    },
-    {
-      icon: TrendingUp,
-      title: "Increase Revenue by 30%",
-      description: "Reduce no-shows and optimize scheduling to boost your earnings"
-    },
-    {
-      icon: Smartphone,
-      title: "Mobile-First Dashboard",
-      description: "Manage your salon anywhere with our intuitive mobile dashboard"
-    },
-    {
-      icon: Bell,
-      title: "Automated Notifications",
-      description: "Keep customers informed with automatic SMS and app notifications"
-    },
-    {
-      icon: BarChart3,
-      title: "Business Analytics",
-      description: "Track performance, revenue, and customer trends with detailed insights"
-    },
-    {
-      icon: Shield,
-      title: "Zero Setup Costs",
-      description: "Start for free with no hidden fees or expensive hardware required"
-    }
-  ];
-
-  const steps = [
-    {
-      number: "01",
-      title: "Register Your Salon",
-      description: "Fill in your salon details, services, and operating hours in just 5 minutes"
-    },
-    {
-      number: "02", 
-      title: "Set Up Services & Pricing",
-      description: "Add your services, set prices, and customize your booking preferences"
-    },
-    {
-      number: "03",
-      title: "Start Accepting Bookings",
-      description: "Go live instantly and start receiving bookings from nearby customers"
-    }
-  ];
-
-  const stats = [
-    {
-      stat: "500+",
-      description: "Salons Already Using Nylour",
-      subtext: "Join the growing community"
-    },
-    {
-      stat: "40%",
-      description: "Average Reduction in Wait Times",
-      subtext: "Happier customers, smoother operations"
-    },
-    {
-      stat: "₹50K+",
-      description: "Additional Monthly Revenue",
-      subtext: "Boost your earnings effortlessly"
-    }
-  ];
-
-  const testimonials = [
-    {
-      quote: "Nylour transformed how we manage customers. Our revenue increased by 35% in just 3 months!",
-      author: "Rajesh Kumar",
-      salon: "Elite Hair Studio, Mumbai",
-      rating: 5
-    },
-    {
-      quote: "No more crowded waiting areas. Customers love the convenience and we love the efficiency.",
-      author: "Priya Sharma", 
-      salon: "Glamour Salon, Delhi",
-      rating: 5
-    }
-  ];
-
-  const faqs = [
-    {
-      question: "How much does it cost to register my salon?",
-      answer: "Registration is completely FREE! We only charge a small commission (3-5%) on successful bookings through our platform. No setup fees, no monthly charges."
-    },
-    {
-      question: "How long does it take to set up my salon?",
-      answer: "You can complete the registration in under 10 minutes. Once approved (usually within 24 hours), you can start accepting bookings immediately."
-    },
-    {
-      question: "Do I need special hardware or equipment?",
-      answer: "No special hardware required! You just need a smartphone or tablet to manage bookings. Our platform works on any device with internet access."
-    },
-    {
-      question: "How will customers find my salon?",
-      answer: "Your salon will be listed in our app for customers searching in your area. We also provide marketing tools and help optimize your listing for maximum visibility."
-    },
-    {
-      question: "What about walk-in customers?",
-      answer: "You can easily add walk-in customers to your digital queue through the dashboard. This helps you manage both online bookings and walk-ins seamlessly."
-    },
-    {
-      question: "How and when do I get paid?",
-      answer: "Payments are processed automatically. You receive the service amount directly from customers, and we deduct our small commission only from successful bookings."
-    }
-  ];
-
-  return (
-    <div className="min-h-screen bg-background">
+  const benefits = [{
+    icon: Users,
+    title: "Smart Queue Management",
+    description: "Eliminate crowded waiting areas with real-time digital queue management"
+  }, {
+    icon: TrendingUp,
+    title: "Increase Revenue by 30%",
+    description: "Reduce no-shows and optimize scheduling to boost your earnings"
+  }, {
+    icon: Smartphone,
+    title: "Mobile-First Dashboard",
+    description: "Manage your salon anywhere with our intuitive mobile dashboard"
+  }, {
+    icon: Bell,
+    title: "Automated Notifications",
+    description: "Keep customers informed with automatic SMS and app notifications"
+  }, {
+    icon: BarChart3,
+    title: "Business Analytics",
+    description: "Track performance, revenue, and customer trends with detailed insights"
+  }, {
+    icon: Shield,
+    title: "Zero Setup Costs",
+    description: "Start for free with no hidden fees or expensive hardware required"
+  }];
+  const steps = [{
+    number: "01",
+    title: "Register Your Salon",
+    description: "Fill in your salon details, services, and operating hours in just 5 minutes"
+  }, {
+    number: "02",
+    title: "Set Up Services & Pricing",
+    description: "Add your services, set prices, and customize your booking preferences"
+  }, {
+    number: "03",
+    title: "Start Accepting Bookings",
+    description: "Go live instantly and start receiving bookings from nearby customers"
+  }];
+  const stats = [{
+    stat: "500+",
+    description: "Salons Already Using Nylour",
+    subtext: "Join the growing community"
+  }, {
+    stat: "40%",
+    description: "Average Reduction in Wait Times",
+    subtext: "Happier customers, smoother operations"
+  }, {
+    stat: "₹50K+",
+    description: "Additional Monthly Revenue",
+    subtext: "Boost your earnings effortlessly"
+  }];
+  const testimonials = [{
+    quote: "Nylour transformed how we manage customers. Our revenue increased by 35% in just 3 months!",
+    author: "Rajesh Kumar",
+    salon: "Elite Hair Studio, Mumbai",
+    rating: 5
+  }, {
+    quote: "No more crowded waiting areas. Customers love the convenience and we love the efficiency.",
+    author: "Priya Sharma",
+    salon: "Glamour Salon, Delhi",
+    rating: 5
+  }];
+  const faqs = [{
+    question: "How much does it cost to register my salon?",
+    answer: "Registration is completely FREE! We only charge a small commission (3-5%) on successful bookings through our platform. No setup fees, no monthly charges."
+  }, {
+    question: "How long does it take to set up my salon?",
+    answer: "You can complete the registration in under 10 minutes. Once approved (usually within 24 hours), you can start accepting bookings immediately."
+  }, {
+    question: "Do I need special hardware or equipment?",
+    answer: "No special hardware required! You just need a smartphone or tablet to manage bookings. Our platform works on any device with internet access."
+  }, {
+    question: "How will customers find my salon?",
+    answer: "Your salon will be listed in our app for customers searching in your area. We also provide marketing tools and help optimize your listing for maximum visibility."
+  }, {
+    question: "What about walk-in customers?",
+    answer: "You can easily add walk-in customers to your digital queue through the dashboard. This helps you manage both online bookings and walk-ins seamlessly."
+  }, {
+    question: "How and when do I get paid?",
+    answer: "Payments are processed automatically. You receive the service amount directly from customers, and we deduct our small commission only from successful bookings."
+  }];
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b">
         <div className="container mx-auto px-4">
@@ -173,11 +143,7 @@ export default function SalonRegister() {
               <h1 className="text-2xl font-bold gradient-text">Nylour</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                onClick={() => setShowAuth(true)}
-                className="text-muted-foreground hover:text-foreground"
-              >
+              <Button variant="ghost" onClick={() => setShowAuth(true)} className="text-muted-foreground hover:text-foreground">
                 Already have an account? Sign In
               </Button>
             </div>
@@ -200,20 +166,11 @@ export default function SalonRegister() {
                 Join 500+ salons using Nylour to reduce wait times, increase bookings, and boost revenue by 30%.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Button 
-                  size="xl"
-                  variant="secondary"
-                  className="text-lg px-8 py-4 bg-white text-primary hover:bg-white/90 font-semibold"
-                  onClick={() => setShowAuth(true)}
-                >
+                <Button size="xl" variant="secondary" className="text-lg px-8 py-4 bg-white text-primary hover:bg-white/90 font-semibold" onClick={() => setShowAuth(true)}>
                   Register Your Salon FREE
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-                <Button 
-                  size="xl"
-                  variant="outline"
-                  className="text-lg px-8 py-4 border-white text-white hover:bg-white hover:text-primary font-semibold"
-                >
+                <Button size="xl" variant="outline" className="text-lg px-8 py-4 text-white hover:text-primary font-semibold bg-primary border-primary">
                   <Play className="mr-2 h-5 w-5" />
                   Watch Demo
                 </Button>
@@ -245,8 +202,7 @@ export default function SalonRegister() {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {benefits.map((benefit, index) => (
-              <Card key={index} className="card-hover h-full">
+            {benefits.map((benefit, index) => <Card key={index} className="card-hover h-full">
                 <CardContent className="p-6 text-center">
                   <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-glow">
                     <benefit.icon className="h-8 w-8 text-white" />
@@ -254,8 +210,7 @@ export default function SalonRegister() {
                   <h3 className="text-xl font-semibold mb-3">{benefit.title}</h3>
                   <p className="text-muted-foreground">{benefit.description}</p>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
           </div>
         </div>
       </section>
@@ -273,11 +228,8 @@ export default function SalonRegister() {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {steps.map((step, index) => (
-              <div key={index} className="text-center relative">
-                {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-12 left-1/2 w-full h-0.5 bg-gradient-primary opacity-30 z-0" />
-                )}
+            {steps.map((step, index) => <div key={index} className="text-center relative">
+                {index < steps.length - 1 && <div className="hidden md:block absolute top-12 left-1/2 w-full h-0.5 bg-gradient-primary opacity-30 z-0" />}
                 <div className="relative z-10">
                   <div className="w-24 h-24 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-glow">
                     <span className="text-2xl font-bold text-white">{step.number}</span>
@@ -285,8 +237,7 @@ export default function SalonRegister() {
                   <h3 className="text-xl font-semibold mb-4">{step.title}</h3>
                   <p className="text-muted-foreground">{step.description}</p>
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </section>
@@ -304,26 +255,21 @@ export default function SalonRegister() {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8 mb-16">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
+            {stats.map((stat, index) => <div key={index} className="text-center">
                 <div className="text-4xl lg:text-5xl font-bold mb-2">
                   {stat.stat}
                 </div>
                 <p className="text-white/90 text-lg font-medium mb-1">{stat.description}</p>
                 <p className="text-white/60 text-sm">{stat.subtext}</p>
-              </div>
-            ))}
+              </div>)}
           </div>
 
           {/* Testimonials */}
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="bg-white/10 backdrop-blur-md border-white/20">
+            {testimonials.map((testimonial, index) => <Card key={index} className="bg-white/10 backdrop-blur-md border-white/20">
                 <CardContent className="p-6">
                   <div className="flex mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                    ))}
+                    {[...Array(testimonial.rating)].map((_, i) => <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />)}
                   </div>
                   <p className="text-white mb-4 italic">"{testimonial.quote}"</p>
                   <div>
@@ -331,8 +277,7 @@ export default function SalonRegister() {
                     <p className="text-white/70 text-sm">{testimonial.salon}</p>
                   </div>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
           </div>
         </div>
       </section>
@@ -351,20 +296,14 @@ export default function SalonRegister() {
 
           <div className="max-w-3xl mx-auto">
             <Accordion type="single" collapsible className="space-y-4">
-              {faqs.map((faq, index) => (
-                <AccordionItem 
-                  key={index} 
-                  value={`item-${index}`}
-                  className="bg-card border rounded-lg px-6"
-                >
+              {faqs.map((faq, index) => <AccordionItem key={index} value={`item-${index}`} className="bg-card border rounded-lg px-6">
                   <AccordionTrigger className="text-left hover:no-underline">
                     <span className="font-semibold">{faq.question}</span>
                   </AccordionTrigger>
                   <AccordionContent className="text-muted-foreground pt-2 pb-6">
                     {faq.answer}
                   </AccordionContent>
-                </AccordionItem>
-              ))}
+                </AccordionItem>)}
             </Accordion>
           </div>
         </div>
@@ -380,20 +319,11 @@ export default function SalonRegister() {
             Join hundreds of salon owners who are already growing their business with Nylour
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="xl"
-              variant="secondary"
-              className="text-lg px-8 py-4 bg-white text-primary hover:bg-white/90 font-semibold"
-              onClick={() => setShowAuth(true)}
-            >
+            <Button size="xl" variant="secondary" className="text-lg px-8 py-4 bg-white text-primary hover:bg-white/90 font-semibold" onClick={() => setShowAuth(true)}>
               Start Your Free Registration
               <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button 
-              size="xl"
-              variant="outline"
-              className="text-lg px-8 py-4 border-white text-white hover:bg-white hover:text-primary font-semibold"
-            >
+            <Button size="xl" variant="outline" className="text-lg px-8 py-4 border-white text-white hover:bg-white hover:text-primary font-semibold">
               Schedule a Demo Call
               <Phone className="ml-2 h-5 w-5" />
             </Button>
@@ -450,11 +380,6 @@ export default function SalonRegister() {
       </footer>
 
       {/* Authentication Sheet */}
-      <SalonAuthSheet 
-        open={showAuth}
-        onOpenChange={setShowAuth}
-        onAuthSuccess={handleAuthSuccess}
-      />
-    </div>
-  );
+      <SalonAuthSheet open={showAuth} onOpenChange={setShowAuth} onAuthSuccess={handleAuthSuccess} />
+    </div>;
 }
