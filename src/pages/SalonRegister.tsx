@@ -323,7 +323,7 @@ export default function SalonRegister() {
               Start Your Free Registration
               <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="xl" variant="outline" className="text-lg px-8 py-4 border-white text-white hover:bg-white hover:text-primary font-semibold">
+            <Button size="xl" variant="outline" className="text-lg px-8 py-4 border-white text-white hover:text-primary font-semibold bg-primary">
               Schedule a Demo Call
               <Phone className="ml-2 h-5 w-5" />
             </Button>
