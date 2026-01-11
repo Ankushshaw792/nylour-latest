@@ -17,7 +17,7 @@ interface QueueEntry {
   avatar_url: string | null;
   service_name: string;
   estimated_wait: number;
-  status: string;
+  party_size: number;
 }
 
 interface LiveQueueDialogProps {
@@ -36,80 +36,31 @@ export const LiveQueueDialog = ({
   const [queue, setQueue] = useState<QueueEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Helper to parse walk-in name from booking notes
-  const parseWalkInName = (notes: string | null) => {
-    if (!notes || !notes.includes("Walk-in:")) return null;
-    const walkInPart = notes.split("Walk-in:")[1];
-    return walkInPart?.split(" - ")[0]?.trim() || null;
-  };
-
   const fetchQueue = async () => {
     try {
       setLoading(true);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStart = today.toISOString();
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
-      const { data, error } = await supabase
-        .from("queue_entries")
-        .select(`
-          id,
-          position,
-          status,
-          customer_id,
-          booking_id,
-          customers (
-            first_name,
-            last_name,
-            avatar_url
-          ),
-          bookings (
-            notes,
-            salon_services (
-              services (
-                name
-              )
-            )
-          )
-        `)
-        .eq("salon_id", salonId)
-        .eq("status", "waiting")
-        .gte("check_in_time", todayStart)
-        .order("position", { ascending: true });
+      // Use the RPC function that safely returns queue display data
+      const { data, error } = await supabase.rpc('get_queue_display', {
+        p_salon_id: salonId,
+        p_date: today
+      });
 
       if (error) {
         console.error("Error fetching queue:", error);
         return;
       }
 
-      const processedQueue: QueueEntry[] = (data || []).map((entry: any, index: number) => {
-        // Parse name: prioritize customer first_name, then walk-in name from notes, then fallback
-        const walkInName = parseWalkInName(entry.bookings?.notes);
-        const isWalkIn = !entry.customer_id || entry.bookings?.notes?.includes("Walk-in:");
-        
-        let displayName: string;
-        if (entry.customers?.first_name) {
-          const firstName = entry.customers.first_name;
-          const lastInitial = entry.customers.last_name ? entry.customers.last_name.charAt(0) + "." : "";
-          displayName = `${firstName} ${lastInitial}`.trim();
-        } else if (walkInName) {
-          displayName = walkInName;
-        } else {
-          displayName = "Customer";
-        }
-        
-        const serviceName = entry.bookings?.salon_services?.services?.name || "Service";
-        
-        return {
-          id: entry.id,
-          position: entry.position || index + 1,
-          customer_name: displayName,
-          avatar_url: isWalkIn ? null : (entry.customers?.avatar_url || null),
-          service_name: serviceName,
-          estimated_wait: index * avgServiceTime,
-          status: entry.status,
-        };
-      });
+      const processedQueue: QueueEntry[] = (data || []).map((entry: any, index: number) => ({
+        id: entry.queue_entry_id,
+        position: entry.queue_position || index + 1,
+        customer_name: entry.display_name || "Customer",
+        avatar_url: entry.avatar_url || null,
+        service_name: entry.service_summary || "Service",
+        estimated_wait: index * avgServiceTime,
+        party_size: entry.party_size || 1,
+      }));
 
       setQueue(processedQueue);
     } catch (error) {
@@ -197,7 +148,14 @@ export const LiveQueueDialog = ({
 
                   {/* Customer Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{entry.customer_name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">{entry.customer_name}</p>
+                      {entry.party_size > 1 && (
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          +{entry.party_size - 1} {entry.party_size === 2 ? 'other' : 'others'}
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground truncate">
                       {entry.service_name}
                     </p>

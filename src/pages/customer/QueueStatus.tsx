@@ -146,100 +146,31 @@ const QueueStatus = () => {
 
         setQueueEntry(combinedData);
 
-        // Fetch all queue members for this salon (today only)
-        const { data: membersData, error: membersError } = await supabase
-          .from("queue_entries")
-          .select("*")
-          .eq("salon_id", activeQueueData.salon_id)
-          .eq("status", "waiting")
-          .gte("check_in_time", todayStart)
-          .order("position");
+        // Fetch all queue members using the RPC function (bypasses customers RLS)
+        const todayDate = new Date().toISOString().split('T')[0];
+        const { data: queueDisplayData, error: queueDisplayError } = await supabase.rpc('get_queue_display', {
+          p_salon_id: activeQueueData.salon_id,
+          p_date: todayDate
+        });
 
-        if (membersError) {
-          console.error("Error fetching queue members:", membersError);
+        if (queueDisplayError) {
+          console.error("Error fetching queue display:", queueDisplayError);
+          setQueueMembers([]);
         } else {
-          // Fetch customer names and avatars for queue members
-          if (membersData && membersData.length > 0) {
-            const customerIds = membersData.map(m => m.customer_id).filter(Boolean);
-            let customersData: any[] = [];
-            if (customerIds.length > 0) {
-              const { data } = await supabase
-                .from("customers")
-                .select("id, first_name, last_name, avatar_url")
-                .in("id", customerIds);
-              customersData = data || [];
-            }
-
-            // Fetch booking info for each queue member to get service names, durations, and notes
-            const bookingIds = membersData.map(m => m.booking_id).filter(Boolean);
-            let bookingsWithServices: any[] = [];
-            if (bookingIds.length > 0) {
-              const { data: bookingsData } = await supabase
-                .from("bookings")
-                .select("id, service_id, notes")
-                .in("id", bookingIds);
-              
-              if (bookingsData && bookingsData.length > 0) {
-                const salonServiceIds = bookingsData.map(b => b.service_id).filter(Boolean);
-                
-                // Get salon_services with their service_id reference
-                const { data: salonServicesData } = await supabase
-                  .from("salon_services")
-                  .select("id, service_id, duration")
-                  .in("id", salonServiceIds);
-                
-                // Get actual service names
-                const serviceIds = salonServicesData?.map(ss => ss.service_id).filter(Boolean) || [];
-                let servicesData: any[] = [];
-                if (serviceIds.length > 0) {
-                  const { data: fetchedServices } = await supabase
-                    .from("services")
-                    .select("id, name")
-                    .in("id", serviceIds);
-                  servicesData = fetchedServices || [];
-                }
-                
-                bookingsWithServices = bookingsData.map(b => {
-                  const salonService = salonServicesData?.find(ss => ss.id === b.service_id);
-                  const service = servicesData?.find(s => s.id === salonService?.service_id);
-                  return {
-                    ...b,
-                    service_name: service?.name || "Service",
-                    service_duration: salonService?.duration || 30,
-                    notes: b.notes
-                  };
-                });
-              }
-            }
-
-            // Helper to parse walk-in name from notes
-            const parseWalkInName = (notes: string | null) => {
-              if (!notes || !notes.includes("Walk-in:")) return null;
-              const walkInPart = notes.split("Walk-in:")[1];
-              return walkInPart?.split(" - ")[0]?.trim() || null;
-            };
-
-            // Combine queue members with customer and service data
-            const enrichedMembers = membersData.map(member => {
-              const memberBooking = bookingsWithServices.find(b => b.id === member.booking_id);
-              const customerData = customersData?.find(c => c.id === member.customer_id);
-              const isWalkIn = !member.customer_id || memberBooking?.notes?.includes("Walk-in:");
-              const walkInName = parseWalkInName(memberBooking?.notes);
-              
-              return {
-                ...member,
-                customer: customerData,
-                walkInName: walkInName,
-                isWalkIn: isWalkIn,
-                service_name: memberBooking?.service_name || "Service",
-                service_duration: memberBooking?.service_duration || 30
-              };
-            });
-
-            setQueueMembers(enrichedMembers);
-          } else {
-            setQueueMembers([]);
-          }
+          // Map RPC results to queue member format
+          const enrichedMembers = (queueDisplayData || []).map((entry: any) => ({
+            id: entry.queue_entry_id,
+            booking_id: entry.booking_id,
+            customer_id: entry.is_walk_in ? null : entry.queue_entry_id, // Placeholder for isCurrentUser check
+            position: entry.queue_position,
+            display_name: entry.display_name,
+            avatar_url: entry.avatar_url,
+            service_name: entry.service_summary || "Service",
+            service_duration: avgServiceTime,
+            isWalkIn: entry.is_walk_in,
+            party_size: entry.party_size || 1
+          }));
+          setQueueMembers(enrichedMembers);
         }
       } catch (error) {
         console.error("Error fetching queue data:", error);
@@ -484,28 +415,19 @@ const QueueStatus = () => {
             <h3 className="font-semibold mb-4">Live Queue</h3>
             <div className="space-y-3">
               {queueMembers.map((member) => {
-                const isCurrentUser = member.customer_id === currentCustomerId;
+                // Check if this is the current user by matching position (avatar_url will only exist for current user from RPC)
+                const isCurrentUser = member.position === currentPosition;
                 const currentUserPosition = queueEntry.position;
                 const isAhead = member.position < currentUserPosition;
-                const isBehind = member.position > currentUserPosition;
                 const isActive = member.position === 1;
                 
-                // Determine display name: current user = "You", online = customer name, walk-in = parsed name
-                let displayName: string;
-                if (isCurrentUser) {
-                  displayName = "You";
-                } else if (member.customer?.first_name) {
-                  displayName = `${member.customer.first_name} ${member.customer.last_name || ""}`.trim();
-                } else if (member.walkInName) {
-                  displayName = member.walkInName;
-                } else {
-                  displayName = "Customer";
-                }
+                // Use display_name from RPC, override with "You" for current user
+                const displayName = isCurrentUser ? "You" : (member.display_name || "Customer");
                 
-                // For walk-ins, don't show avatar (use position fallback)
-                const showAvatar = !member.isWalkIn && (isCurrentUser || member.customer?.avatar_url);
+                // For walk-ins, don't show avatar; for current user show their avatar
+                const showAvatar = !member.isWalkIn && (isCurrentUser || member.avatar_url);
                 
-                // Calculate estimated time for people ahead (cumulative time from position 1 to their position)
+                // Calculate estimated time for people ahead
                 const memberDuration = member.service_duration || avgServiceTime;
                 
                 return (
@@ -528,7 +450,7 @@ const QueueStatus = () => {
                             : ''
                       }`}>
                         {showAvatar && (
-                          <AvatarImage src={isCurrentUser ? (avatarUrl ?? undefined) : (member.customer?.avatar_url ?? undefined)} />
+                          <AvatarImage src={isCurrentUser ? (avatarUrl ?? undefined) : (member.avatar_url ?? undefined)} />
                         )}
                         <AvatarFallback className={`text-sm font-bold ${
                           isCurrentUser 
@@ -541,9 +463,16 @@ const QueueStatus = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className={`font-medium ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
-                          {displayName}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className={`font-medium ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
+                            {displayName}
+                          </p>
+                          {member.party_size > 1 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{member.party_size - 1} {member.party_size === 2 ? 'other' : 'others'}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {member.service_name}
                         </p>
