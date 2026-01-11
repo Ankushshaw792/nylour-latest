@@ -1,5 +1,5 @@
 import React, { ReactNode, useEffect, useRef, useState } from "react";
-import { User } from "lucide-react";
+import { User, Volume2, VolumeX, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SalonTutorial } from "@/components/onboarding/SalonTutorial";
@@ -7,6 +7,8 @@ import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useBookingAlertSound } from "@/hooks/useBookingAlertSound";
+import { unlockAudioContext } from "@/lib/notificationSound";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +31,7 @@ export const SalonDashboardLayout = ({
 }: SalonDashboardLayoutProps) => {
   const {
     salon,
+    bookings,
     updateSalonStatus,
     loading
   } = useSalonRealtimeData();
@@ -37,6 +40,39 @@ export const SalonDashboardLayout = ({
   const { toast } = useToast();
   const hasAutoOfflined = useRef(false);
   const [showOfflineWarning, setShowOfflineWarning] = useState(false);
+  
+  // Audio alert state
+  const [audioEnabled, setAudioEnabled] = useState(() => {
+    return localStorage.getItem('salon_audio_enabled') === 'true';
+  });
+  const [isMuted, setIsMuted] = useState(false);
+  
+  // Count pending bookings that need attention
+  const pendingBookingsCount = bookings.filter(
+    (b) => b.status === 'pending'
+  ).length;
+  
+  // Use the booking alert sound hook - plays continuously when pending bookings exist
+  useBookingAlertSound(pendingBookingsCount, {
+    enabled: audioEnabled,
+    muted: isMuted
+  });
+  
+  // Enable audio with user interaction
+  const handleEnableAudio = () => {
+    unlockAudioContext();
+    setAudioEnabled(true);
+    localStorage.setItem('salon_audio_enabled', 'true');
+    toast({
+      title: "Sound Alerts Enabled",
+      description: "You'll hear alerts when new bookings arrive.",
+    });
+  };
+  
+  // Toggle mute
+  const toggleMute = () => {
+    setIsMuted(prev => !prev);
+  };
 
   // Auto-offline when outside business hours
   useEffect(() => {
@@ -91,8 +127,29 @@ export const SalonDashboardLayout = ({
     navigate("/salon-dashboard/profile");
   };
   return <div className="min-h-screen bg-gray-50">
+      {/* Enable Sound Alerts Banner - Shows when audio not enabled and pending bookings exist */}
+      {!audioEnabled && pendingBookingsCount > 0 && (
+        <div className="fixed top-0 left-0 right-0 z-[70] bg-amber-500 text-white px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 animate-pulse" />
+            <span className="text-sm font-medium">
+              {pendingBookingsCount} new booking{pendingBookingsCount > 1 ? 's' : ''} waiting!
+            </span>
+          </div>
+          <Button 
+            onClick={handleEnableAudio}
+            size="sm"
+            variant="secondary"
+            className="bg-white text-amber-600 hover:bg-amber-50"
+          >
+            <Volume2 className="h-4 w-4 mr-1" />
+            Enable Alerts
+          </Button>
+        </div>
+      )}
+
       {/* Clean Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-[60] bg-white border-b border-gray-200">
+      <div className={`fixed left-0 right-0 z-[60] bg-white border-b border-gray-200 ${!audioEnabled && pendingBookingsCount > 0 ? 'top-10' : 'top-0'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             
@@ -111,6 +168,19 @@ export const SalonDashboardLayout = ({
 
             {/* Right Section - Actions */}
             <div className="flex items-center gap-[5px]">
+              
+              {/* Mute/Unmute Button - Only show when audio is enabled and there are pending bookings */}
+              {audioEnabled && pendingBookingsCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleMute}
+                  className={`h-9 w-9 rounded-full ${isMuted ? 'text-red-500' : 'text-amber-500'}`}
+                  title={isMuted ? "Unmute alerts" : "Mute alerts"}
+                >
+                  {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5 animate-pulse" />}
+                </Button>
+              )}
               
               {/* Online/Offline Toggle - Classic Slider Switch */}
               <button 
@@ -148,8 +218,8 @@ export const SalonDashboardLayout = ({
       {/* Salon Tutorial */}
       <SalonTutorial />
 
-      {/* Content with padding to account for fixed header */}
-      <div className="pt-20">
+      {/* Content with padding to account for fixed header + optional banner */}
+      <div className={!audioEnabled && pendingBookingsCount > 0 ? "pt-[6.5rem]" : "pt-20"}>
         {children}
       </div>
 
