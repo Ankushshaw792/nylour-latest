@@ -12,6 +12,7 @@ import { SalonStatusBadge } from "@/components/salon/SalonStatusBadge";
 import { SalonCard } from "@/components/salon/SalonCard";
 import { LocationSelector } from "@/components/location/LocationSelector";
 import { LocationPermissionDialog } from "@/components/location/LocationPermissionDialog";
+import { CustomerTutorial } from "@/components/onboarding/CustomerTutorial";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
@@ -216,17 +217,20 @@ const NearbySalons = () => {
   return (
     <CustomerLayout
       headerProps={{
-        leftContent: <LocationSelector compact />,
+        leftContent: <div data-tour="location-selector"><LocationSelector compact /></div>,
         showBackButton: false,
         showProfile: true,
         showNotifications: true,
         onProfileClick: handleProfileClick
       }}
     >
+      {/* Customer Tutorial */}
+      <CustomerTutorial />
+
       {/* Search & Filters Section */}
       <div className="bg-card border-b border-border p-4">
         {/* Search Bar */}
-        <div className="relative mb-4">
+        <div className="relative mb-4" data-tour="search-bar">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search for salon, service or more..."
@@ -238,7 +242,7 @@ const NearbySalons = () => {
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2" data-tour="filter-tabs">
           {filterTabs.map((tab) => (
             <Button
               key={tab}
@@ -293,14 +297,15 @@ const NearbySalons = () => {
               </Card>
             ))
           ) : (
-            filteredSalons.map((salon) => (
-              <SalonCard
-                key={salon.id}
-                salon={salon}
-                user={user}
-                onNavigate={(salonId) => navigate(`/salon/${salonId}`)}
-                onAuthRequired={() => setAuthSheetOpen(true)}
-              />
+            filteredSalons.map((salon, index) => (
+              <div key={salon.id} data-tour={index === 0 ? "salon-card" : undefined}>
+                <SalonCard
+                  salon={salon}
+                  user={user}
+                  onNavigate={(salonId) => navigate(`/salon/${salonId}`)}
+                  onAuthRequired={() => setAuthSheetOpen(true)}
+                />
+              </div>
             ))
           )}
         </div>

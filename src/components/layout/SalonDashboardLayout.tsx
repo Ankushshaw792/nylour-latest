@@ -2,6 +2,7 @@ import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { SalonTutorial } from "@/components/onboarding/SalonTutorial";
 import { useSalonRealtimeData } from "@/hooks/useSalonRealtimeData";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
 import { useNavigate } from "react-router-dom";
@@ -112,7 +113,12 @@ export const SalonDashboardLayout = ({
             <div className="flex items-center gap-[5px]">
               
               {/* Online/Offline Toggle - Classic Slider Switch */}
-              <button onClick={handleToggleOnline} disabled={loading} className={`relative flex items-center w-20 h-7 rounded-full transition-colors duration-300 disabled:opacity-50 ${salon?.is_active ? "bg-green-500" : "bg-red-500"}`}>
+              <button 
+                onClick={handleToggleOnline} 
+                disabled={loading} 
+                data-tour="online-toggle"
+                className={`relative flex items-center w-20 h-7 rounded-full transition-colors duration-300 disabled:opacity-50 ${salon?.is_active ? "bg-green-500" : "bg-red-500"}`}
+              >
                 <span className={`absolute text-white text-xs font-semibold transition-all duration-300 ${salon?.is_active ? "left-2" : "right-2"}`}>
                   {salon?.is_active ? "Online" : "Offline"}
                 </span>
@@ -120,16 +126,27 @@ export const SalonDashboardLayout = ({
               </button>
 
               {/* Notification Bell */}
-              <NotificationBell />
+              <div data-tour="notification-bell">
+                <NotificationBell />
+              </div>
 
               {/* Profile Icon */}
-              <Button variant="ghost" size="icon" onClick={handleProfileClick} className="h-9 w-9 rounded-full text-gray-700 hover:bg-gray-100">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleProfileClick} 
+                data-tour="profile-button"
+                className="h-9 w-9 rounded-full text-gray-700 hover:bg-gray-100"
+              >
                 <User className="h-5 w-5" />
               </Button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Salon Tutorial */}
+      <SalonTutorial />
 
       {/* Content with padding to account for fixed header */}
       <div className="pt-20">

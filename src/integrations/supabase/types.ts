@@ -143,6 +143,7 @@ export type Database = {
           email: string | null
           favorite_services: string[] | null
           first_name: string | null
+          has_completed_tutorial: boolean | null
           id: string
           last_name: string | null
           phone: string | null
@@ -158,6 +159,7 @@ export type Database = {
           email?: string | null
           favorite_services?: string[] | null
           first_name?: string | null
+          has_completed_tutorial?: boolean | null
           id?: string
           last_name?: string | null
           phone?: string | null
@@ -173,6 +175,7 @@ export type Database = {
           email?: string | null
           favorite_services?: string[] | null
           first_name?: string | null
+          has_completed_tutorial?: boolean | null
           id?: string
           last_name?: string | null
           phone?: string | null
@@ -502,6 +505,7 @@ export type Database = {
           created_at: string
           description: string | null
           email: string | null
+          has_completed_tutorial: boolean | null
           id: string
           image_url: string | null
           is_active: boolean | null
@@ -523,6 +527,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           email?: string | null
+          has_completed_tutorial?: boolean | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
@@ -544,6 +549,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           email?: string | null
+          has_completed_tutorial?: boolean | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
