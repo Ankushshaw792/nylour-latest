@@ -36,6 +36,13 @@ export const LiveQueueDialog = ({
   const [queue, setQueue] = useState<QueueEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Helper to parse walk-in name from booking notes
+  const parseWalkInName = (notes: string | null) => {
+    if (!notes || !notes.includes("Walk-in:")) return null;
+    const walkInPart = notes.split("Walk-in:")[1];
+    return walkInPart?.split(" - ")[0]?.trim() || null;
+  };
+
   const fetchQueue = async () => {
     try {
       setLoading(true);
@@ -51,12 +58,13 @@ export const LiveQueueDialog = ({
           status,
           customer_id,
           booking_id,
-        customers (
-          first_name,
-          last_name,
-          avatar_url
-        ),
+          customers (
+            first_name,
+            last_name,
+            avatar_url
+          ),
           bookings (
+            notes,
             salon_services (
               services (
                 name
@@ -75,15 +83,28 @@ export const LiveQueueDialog = ({
       }
 
       const processedQueue: QueueEntry[] = (data || []).map((entry: any, index: number) => {
-        const firstName = entry.customers?.first_name || "Customer";
-        const lastInitial = entry.customers?.last_name ? entry.customers.last_name.charAt(0) + "." : "";
+        // Parse name: prioritize customer first_name, then walk-in name from notes, then fallback
+        const walkInName = parseWalkInName(entry.bookings?.notes);
+        const isWalkIn = !entry.customer_id || entry.bookings?.notes?.includes("Walk-in:");
+        
+        let displayName: string;
+        if (entry.customers?.first_name) {
+          const firstName = entry.customers.first_name;
+          const lastInitial = entry.customers.last_name ? entry.customers.last_name.charAt(0) + "." : "";
+          displayName = `${firstName} ${lastInitial}`.trim();
+        } else if (walkInName) {
+          displayName = walkInName;
+        } else {
+          displayName = "Customer";
+        }
+        
         const serviceName = entry.bookings?.salon_services?.services?.name || "Service";
         
         return {
           id: entry.id,
           position: entry.position || index + 1,
-          customer_name: `${firstName} ${lastInitial}`.trim(),
-          avatar_url: entry.customers?.avatar_url || null,
+          customer_name: displayName,
+          avatar_url: isWalkIn ? null : (entry.customers?.avatar_url || null),
           service_name: serviceName,
           estimated_wait: index * avgServiceTime,
           status: entry.status,

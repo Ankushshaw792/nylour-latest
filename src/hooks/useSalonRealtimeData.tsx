@@ -117,7 +117,33 @@ export const useSalonRealtimeData = () => {
         console.error('Bookings fetch error:', bookingsError);
         setBookings([]);
       } else {
-        setBookings((bookingsData || []) as any);
+        // Fetch queue positions for each booking to add queue_position field
+        const bookingIds = (bookingsData || []).map((b: any) => b.id);
+        let queuePositionMap: Record<string, number> = {};
+        
+        if (bookingIds.length > 0) {
+          const { data: queueData } = await supabase
+            .from('queue_entries')
+            .select('booking_id, position')
+            .in('booking_id', bookingIds)
+            .in('status', ['waiting', 'called', 'in_service']);
+          
+          if (queueData) {
+            queueData.forEach((q: any) => {
+              if (q.booking_id) {
+                queuePositionMap[q.booking_id] = q.position;
+              }
+            });
+          }
+        }
+        
+        // Add queue_position to each booking
+        const enrichedBookings = (bookingsData || []).map((b: any) => ({
+          ...b,
+          queue_position: queuePositionMap[b.id] || null
+        }));
+        
+        setBookings(enrichedBookings as any);
       }
 
       // Fetch queue entries - simplified
