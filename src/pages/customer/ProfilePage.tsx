@@ -36,9 +36,11 @@ const ProfilePage = () => {
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate("/");
     } catch (error) {
       console.error("Sign out error:", error);
+    } finally {
+      // Always navigate to home after logout attempt
+      navigate("/");
     }
   };
 

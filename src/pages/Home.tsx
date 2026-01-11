@@ -11,10 +11,11 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function Home() {
   const navigate = useNavigate();
   const [showAuthSheet, setShowAuthSheet] = useState(false);
-  const {
-    user,
-    signOut
-  } = useAuth();
+  const { user, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+  };
   const customerFeatures = [{
     icon: Clock,
     title: "Real-time Queue Tracking",
@@ -100,7 +101,7 @@ export default function Home() {
                       <p className="text-sm font-medium">{user.email}</p>
                     </div>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={signOut} className="text-red-600 focus:text-red-600">
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
                       <LogOut className="h-4 w-4 mr-2" />
                       Logout
                     </DropdownMenuItem>
