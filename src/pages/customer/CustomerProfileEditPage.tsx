@@ -1,16 +1,23 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera, User, Mail, Phone, MapPin, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, User, Mail, Phone, MapPin, Loader2, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { 
+  isValidIndianPhone, 
+  getPhoneError, 
+  stripPhonePrefix,
+  PHONE_WARNING_MESSAGE 
+} from "@/lib/phoneValidation";
 
 const CustomerProfileEditPage = () => {
   const navigate = useNavigate();
@@ -27,6 +34,7 @@ const CustomerProfileEditPage = () => {
     phone: "",
     address: "",
   });
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -57,6 +65,16 @@ const CustomerProfileEditPage = () => {
 
     fetchProfile();
   }, [user]);
+
+  // Validate phone on change
+  useEffect(() => {
+    if (profile.phone) {
+      const error = getPhoneError(profile.phone);
+      setPhoneError(error);
+    } else {
+      setPhoneError(null);
+    }
+  }, [profile.phone]);
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -104,15 +122,25 @@ const CustomerProfileEditPage = () => {
 
   const handleSave = async () => {
     if (!user) return;
+    
+    // Validate phone before saving
+    if (profile.phone && !isValidIndianPhone(profile.phone)) {
+      toast.error("Please enter a valid 10-digit Indian mobile number");
+      return;
+    }
+    
     setSaving(true);
 
     try {
+      // Store only the 10-digit number
+      const cleanedPhone = profile.phone ? stripPhonePrefix(profile.phone) : null;
+      
       const { error } = await supabase
         .from("customers")
         .update({
           first_name: profile.first_name,
           last_name: profile.last_name,
-          phone: profile.phone,
+          phone: cleanedPhone,
           address: profile.address,
           updated_at: new Date().toISOString(),
         })
@@ -139,6 +167,8 @@ const CustomerProfileEditPage = () => {
     }
     return user?.email?.[0]?.toUpperCase() || "U";
   };
+
+  const showPhoneWarning = profile.phone && isValidIndianPhone(profile.phone);
 
   if (loading) {
     return (
@@ -245,11 +275,24 @@ const CustomerProfileEditPage = () => {
               </Label>
               <Input
                 id="phone"
-                placeholder="+91 XXXXX XXXXX"
+                placeholder="Enter 10-digit mobile number"
                 value={profile.phone}
                 onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                className={phoneError ? "border-destructive" : ""}
               />
+              {phoneError && (
+                <p className="text-xs text-destructive">{phoneError}</p>
+              )}
             </div>
+
+            {showPhoneWarning && (
+              <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
+                  {PHONE_WARNING_MESSAGE}
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="address" className="flex items-center gap-2">
@@ -271,7 +314,7 @@ const CustomerProfileEditPage = () => {
         <Button
           className="w-full"
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !!phoneError}
         >
           {saving ? "Saving..." : "Save Changes"}
         </Button>

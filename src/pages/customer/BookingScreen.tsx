@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Smartphone, Bell, Users, Edit, AlertCircle } from "lucide-react";
+import { ArrowLeft, Smartphone, Bell, Users, Edit, AlertCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,11 @@ import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { 
+  isValidIndianPhone, 
+  getPhoneError,
+  PHONE_WARNING_MESSAGE 
+} from "@/lib/phoneValidation";
 
 const BookingScreen = () => {
   const { id } = useParams();
@@ -27,6 +32,7 @@ const BookingScreen = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -57,6 +63,16 @@ const BookingScreen = () => {
     fetchUserProfile();
   }, [user]);
 
+  // Validate phone on change
+  useEffect(() => {
+    if (contactPhone) {
+      const error = getPhoneError(contactPhone);
+      setPhoneError(error);
+    } else {
+      setPhoneError(null);
+    }
+  }, [contactPhone]);
+
   if (loading || bookingCheckLoading || statusLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -66,6 +82,8 @@ const BookingScreen = () => {
   }
 
   const bookingFee = 10; // ₹10 booking fee
+  const isPhoneValid = contactPhone.trim() && isValidIndianPhone(contactPhone);
+  const showPhoneWarning = isPhoneValid;
 
   const handleBooking = async () => {
     if (!user || items.length === 0) return;
@@ -74,8 +92,16 @@ const BookingScreen = () => {
     
     try {
       // Validate contact details
-      if (!contactName.trim() || !contactPhone.trim()) {
-        throw new Error('Please fill in contact details');
+      if (!contactName.trim()) {
+        throw new Error('Please fill in your name');
+      }
+      
+      if (!contactPhone.trim()) {
+        throw new Error('Please fill in your phone number');
+      }
+      
+      if (!isValidIndianPhone(contactPhone)) {
+        throw new Error('Please enter a valid 10-digit Indian mobile number');
       }
 
       // Get the customer record for the current user
@@ -105,7 +131,7 @@ const BookingScreen = () => {
 
       toast.success('Booking details saved! Please complete payment.');
       navigate(`/payment/${bookingData.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Booking error:', error);
       toast.error(error.message || 'Failed to create booking. Please try again.');
     } finally {
@@ -124,7 +150,7 @@ const BookingScreen = () => {
       bottomButtonProps={{
         text: isProcessing ? "Processing..." : "Confirm Booking",
         onClick: handleBooking,
-        disabled: isProcessing || !contactName.trim() || !contactPhone.trim() || hasActiveBooking
+        disabled: isProcessing || !contactName.trim() || !isPhoneValid || hasActiveBooking
       }}
     >
       {/* Active Booking Warning */}
@@ -189,8 +215,12 @@ const BookingScreen = () => {
                     id="phone"
                     value={contactPhone}
                     onChange={(e) => setContactPhone(e.target.value)}
-                    placeholder="Enter mobile number"
+                    placeholder="Enter 10-digit mobile number"
+                    className={phoneError ? "border-destructive" : ""}
                   />
+                  {phoneError && (
+                    <p className="text-xs text-destructive mt-1">{phoneError}</p>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   You can book for someone else by editing these details
@@ -216,6 +246,16 @@ const BookingScreen = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Phone Warning Disclaimer */}
+        {showPhoneWarning && (
+          <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
+              {PHONE_WARNING_MESSAGE}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* 3. Booking Summary Section */}
         <Card>
