@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ArrowRight, MapPin, Calendar, Bell, Clock, Users, TrendingUp, Star, CheckCircle, MessageSquare, Smartphone, ChevronRight, LogIn, UserPlus, User, LogOut } from "lucide-react";
+import { LandingFooter } from "@/components/layout/LandingFooter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -77,11 +78,14 @@ export default function Home() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <div className="flex items-center">
+            <button 
+              onClick={() => navigate('/')}
+              className="flex items-center hover:opacity-80 transition-opacity"
+            >
               <h1 className="text-2xl font-bold text-white">
                 Nylour
               </h1>
-            </div>
+            </button>
             
             {/* Auth Section */}
             <div className="flex items-center">
@@ -310,26 +314,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t bg-card">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-6 md:mb-0">
-              <h3 className="text-2xl font-bold gradient-text">Nylour</h3>
-              <p className="text-muted-foreground mt-2">Skip the wait. Book instantly.</p>
-            </div>
-            <div className="flex space-x-6 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-              <span>|</span>
-              <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-              <span>|</span>
-              <a href="#" className="hover:text-foreground transition-colors">Contact Us</a>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-            <p>&copy; 2024 Nylour. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
 
       {/* Auth Sheet */}
       <AuthSheet open={showAuthSheet} onOpenChange={setShowAuthSheet} />
