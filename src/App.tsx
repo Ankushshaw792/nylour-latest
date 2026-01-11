@@ -12,6 +12,8 @@ import { CustomerProvider } from "@/contexts/CustomerContext";
 // Landing Page
 import Home from "./pages/Home";
 import SalonRegister from "./pages/SalonRegister";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // Customer App Pages
 import NearbySalons from "./pages/customer/NearbySalons";
@@ -61,6 +63,8 @@ const App = () => (
               {/* Landing Page */}
               <Route path="/" element={<Home />} />
               <Route path="/salon-register" element={<SalonRegister />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
               
               {/* Customer App Routes */}
               <Route path="/customer" element={<NearbySalons />} />

@@ -1,13 +1,18 @@
 import { Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 export function LandingFooter() {
   const navigate = useNavigate();
 
-  const handleComingSoon = (feature: string) => {
-    toast.info(`${feature} - Coming Soon!`);
+  const handleFeaturesClick = () => {
+    navigate('/');
+    setTimeout(() => {
+      const featuresSection = document.getElementById('features');
+      if (featuresSection) {
+        featuresSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   return (
@@ -53,53 +58,21 @@ export function LandingFooter() {
               </li>
               <li>
                 <button 
-                  onClick={() => handleComingSoon('Pricing')} 
-                  className="hover:text-foreground transition-colors"
-                >
-                  Pricing
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleComingSoon('Features')} 
+                  onClick={handleFeaturesClick} 
                   className="hover:text-foreground transition-colors"
                 >
                   Features
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleComingSoon('Success Stories')} 
-                  className="hover:text-foreground transition-colors"
-                >
-                  Success Stories
                 </button>
               </li>
             </ul>
           </div>
           
           <div>
-            <h4 className="font-semibold mb-4">Support</h4>
+            <h4 className="font-semibold mb-4">Legal</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <button 
-                  onClick={() => handleComingSoon('Help Center')} 
-                  className="hover:text-foreground transition-colors"
-                >
-                  Help Center
-                </button>
-              </li>
-              <li>
-                <a 
-                  href="mailto:ankushshaw007@gmail.com" 
-                  className="hover:text-foreground transition-colors"
-                >
-                  Contact Us
-                </a>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleComingSoon('Terms of Service')} 
+                  onClick={() => navigate('/terms')} 
                   className="hover:text-foreground transition-colors"
                 >
                   Terms of Service
@@ -107,7 +80,7 @@ export function LandingFooter() {
               </li>
               <li>
                 <button 
-                  onClick={() => handleComingSoon('Privacy Policy')} 
+                  onClick={() => navigate('/privacy')} 
                   className="hover:text-foreground transition-colors"
                 >
                   Privacy Policy
