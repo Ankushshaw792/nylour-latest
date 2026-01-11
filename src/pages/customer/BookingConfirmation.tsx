@@ -64,12 +64,11 @@ const BookingConfirmation = () => {
           .eq("id", bookingData.service_id)
           .maybeSingle();
 
-        // Fetch queue entry if exists
+        // Fetch queue entry if exists - use customer profile id and correct column names
         const { data: queueData } = await supabase
           .from("queue_entries")
-          .select("queue_number, estimated_wait_time")
-          .eq("customer_id", user.id)
-          .eq("salon_id", bookingData.salon_id)
+          .select("position, estimated_wait_time, booking_id")
+          .eq("booking_id", bookingId)
           .eq("status", "waiting")
           .maybeSingle();
 
@@ -77,7 +76,8 @@ const BookingConfirmation = () => {
         const combinedData = {
           ...bookingData,
           service_name: serviceData?.name || "Service",
-          queue_entry: queueData
+          queue_entry: queueData,
+          customer_profile_id: profileData?.id // Pass for QueueTimer
         };
 
         setBooking(combinedData);
@@ -174,11 +174,11 @@ const BookingConfirmation = () => {
           </CardContent>
         </Card>
 
-        {/* Queue Status with Real-Time Timer */}
-        {queueEntry && user && (
+        {/* Queue Status with Real-Time Timer - use internal customer ID */}
+        {queueEntry && booking.customer_profile_id && (
           <QueueTimer 
             salonId={booking.salon_id} 
-            customerId={user.id}
+            customerId={booking.customer_profile_id}
             className="mb-4"
           />
         )}

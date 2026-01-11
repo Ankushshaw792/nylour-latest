@@ -157,19 +157,24 @@ const QueueStatus = () => {
           console.error("Error fetching queue display:", queueDisplayError);
           setQueueMembers([]);
         } else {
-          // Map RPC results to queue member format
-          const enrichedMembers = (queueDisplayData || []).map((entry: any) => ({
-            id: entry.queue_entry_id,
-            booking_id: entry.booking_id,
-            customer_id: entry.is_walk_in ? null : entry.queue_entry_id, // Placeholder for isCurrentUser check
-            position: entry.queue_position,
-            display_name: entry.display_name,
-            avatar_url: entry.avatar_url,
-            service_name: entry.service_summary || "Service",
-            service_duration: avgServiceTime,
-            isWalkIn: entry.is_walk_in,
-            party_size: entry.party_size || 1
-          }));
+          // Map RPC results to queue member format and sort by position
+          const enrichedMembers = (queueDisplayData || [])
+            .sort((a: any, b: any) => a.queue_position - b.queue_position)
+            .map((entry: any) => ({
+              id: entry.queue_entry_id,
+              booking_id: entry.booking_id,
+              customer_id: entry.is_walk_in ? null : entry.queue_entry_id,
+              position: entry.queue_position,
+              display_name: entry.display_name,
+              avatar_url: entry.avatar_url,
+              service_name: entry.service_summary || "Service",
+              // Service duration will be computed later using salon's avg_service_time
+              service_duration: null,
+              isWalkIn: entry.is_walk_in,
+              party_size: entry.party_size || 1,
+              // Track if this is the current user by matching booking_id or avatar presence
+              isCurrentUser: entry.booking_id === activeQueueData.booking_id
+            }));
           setQueueMembers(enrichedMembers);
         }
       } catch (error) {
@@ -415,10 +420,8 @@ const QueueStatus = () => {
             <h3 className="font-semibold mb-4">Live Queue</h3>
             <div className="space-y-3">
               {queueMembers.map((member) => {
-                // Check if this is the current user by matching position (avatar_url will only exist for current user from RPC)
-                const isCurrentUser = member.position === currentPosition;
-                const currentUserPosition = queueEntry.position;
-                const isAhead = member.position < currentUserPosition;
+                // Use the pre-computed isCurrentUser flag from RPC mapping
+                const isCurrentUser = member.isCurrentUser === true;
                 const isActive = member.position === 1;
                 
                 // Use display_name from RPC, override with "You" for current user
@@ -427,8 +430,8 @@ const QueueStatus = () => {
                 // For walk-ins, don't show avatar; for current user show their avatar
                 const showAvatar = !member.isWalkIn && (isCurrentUser || member.avatar_url);
                 
-                // Calculate estimated time for people ahead
-                const memberDuration = member.service_duration || avgServiceTime;
+                // Calculate estimated time using salon's avg service time
+                const memberDuration = avgServiceTime;
                 
                 return (
                   <div
@@ -480,7 +483,7 @@ const QueueStatus = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Show time only for people ahead (not for current user or people behind) */}
-                      {isAhead && !isCurrentUser && (
+                      {member.position < currentPosition && !isCurrentUser && (
                         <span className="text-xs text-muted-foreground">
                           ~{memberDuration} min
                         </span>
