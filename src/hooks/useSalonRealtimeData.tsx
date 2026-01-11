@@ -252,6 +252,8 @@ export const useSalonRealtimeData = () => {
   }, [getAuthUserId, salon]);
 
   // Reject booking with reason
+  // NOTE: The database enforces allowed booking statuses via a check constraint.
+  // We represent "rejected" as status="cancelled" with a cancellation_reason.
   const rejectBooking = useCallback(async (bookingId: string, reason?: string) => {
     try {
       // Get booking details for notification
@@ -259,7 +261,7 @@ export const useSalonRealtimeData = () => {
         .from('bookings')
         .select('customer_id, salon_id')
         .eq('id', bookingId)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
         console.error('Error fetching booking:', fetchError);
@@ -269,9 +271,9 @@ export const useSalonRealtimeData = () => {
 
       const { error } = await supabase
         .from('bookings')
-        .update({ 
-          status: 'rejected',
-          cancellation_reason: cancellationReason
+        .update({
+          status: 'cancelled',
+          cancellation_reason: cancellationReason,
         })
         .eq('id', bookingId);
 
@@ -284,10 +286,10 @@ export const useSalonRealtimeData = () => {
           const salonName = salon?.name || 'The salon';
           const { error: notifError } = await supabase.from('notifications').insert({
             user_id: authUserId,
-            title: 'Booking Not Available',
+            title: 'Booking Rejected',
             message: `Sorry, ${salonName} couldn't accommodate your booking. Reason: ${cancellationReason}`,
             type: 'booking',
-            related_id: bookingId
+            related_id: bookingId,
           });
           if (notifError) {
             console.error('Error inserting notification:', notifError);
