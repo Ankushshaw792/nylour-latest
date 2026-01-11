@@ -33,19 +33,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+        // Handle sign out event explicitly
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
         setLoading(false);
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // THEN check for existing session and validate it
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error || !session) {
+        // Clear any stale local data if session is invalid
+        setUser(null);
+        setSession(null);
+      } else {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
       setLoading(false);
     });
 
@@ -133,14 +145,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
+      
+      // Always clear local state regardless of server response
+      setUser(null);
+      setSession(null);
+      
+      // Treat "session not found" or similar as successful logout
       if (error) {
-        toast.error(error.message);
+        // If session doesn't exist on server, user is already effectively logged out
+        if (error.message?.toLowerCase().includes('session') || 
+            error.message?.toLowerCase().includes('missing') ||
+            error.status === 403 || 
+            error.status === 401) {
+          toast.success("Signed out successfully");
+          return;
+        }
+        // For other errors, still show success since local state is cleared
+        console.warn("Sign out server warning:", error.message);
+        toast.success("Signed out successfully");
       } else {
         toast.success("Signed out successfully");
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An error occurred";
-      toast.error(errorMessage);
+      // Even on exception, ensure local state is cleared
+      setUser(null);
+      setSession(null);
+      
+      // Try to clear local storage as fallback
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // Ignore errors from local signout
+      }
+      
+      // Still show success since the user is effectively logged out locally
+      toast.success("Signed out successfully");
     }
   };
 
