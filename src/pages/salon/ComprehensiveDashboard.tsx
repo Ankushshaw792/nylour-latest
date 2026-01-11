@@ -85,7 +85,7 @@ const ComprehensiveDashboard = () => {
       description="Real-time customer queue"
     >
       <div className="p-4 space-y-4">
-        <div className="space-y-3">
+        <div className="space-y-3" data-tour="queue-section">
           {queue.length > 0 ? (
             queue.map((entry) => (
               <Card key={entry.id} className="card-hover">

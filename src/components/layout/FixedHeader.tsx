@@ -95,6 +95,7 @@ export const FixedHeader = ({
                 <Avatar 
                   className="h-8 w-8 cursor-pointer ring-2 ring-border hover:ring-primary transition-all"
                   onClick={handleProfileClick}
+                  data-tour="profile-button"
                 >
                   <AvatarImage src={avatarUrl || user?.user_metadata?.avatar_url} />
                   <AvatarFallback className="bg-primary text-primary-foreground font-medium text-sm">
