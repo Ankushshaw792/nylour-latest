@@ -11,6 +11,7 @@ import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { SalonStatusBadge } from "@/components/salon/SalonStatusBadge";
 import { SalonCard } from "@/components/salon/SalonCard";
 import { LocationSelector } from "@/components/location/LocationSelector";
+import { LocationPermissionDialog } from "@/components/location/LocationPermissionDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
@@ -45,9 +46,18 @@ const NearbySalons = () => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [salons, setSalons] = useState<SalonData[]>([]);
   const [loadingSalons, setLoadingSalons] = useState(true);
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { latitude: userLat, longitude: userLng, hasLocation } = useUserLocation();
+
+  // Show location dialog on mount if no location is set
+  useEffect(() => {
+    const dismissed = sessionStorage.getItem("location_dialog_dismissed");
+    if (!hasLocation && !dismissed) {
+      setShowLocationDialog(true);
+    }
+  }, [hasLocation]);
 
   const filterTabs = ["All", "Open Now", "Nearby", "Quick Service"];
 
@@ -307,6 +317,12 @@ const NearbySalons = () => {
       <AuthSheet 
         open={authSheetOpen} 
         onOpenChange={setAuthSheetOpen} 
+      />
+
+      {/* Location Permission Dialog */}
+      <LocationPermissionDialog
+        open={showLocationDialog}
+        onOpenChange={setShowLocationDialog}
       />
     </CustomerLayout>
   );
