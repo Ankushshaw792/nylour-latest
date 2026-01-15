@@ -135,16 +135,19 @@ export const SalonDashboardLayout = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             
-            {/* Left Section - Salon Name & Location */}
-            <div className="flex flex-col min-w-0">
-              <h1 className="font-semibold text-gray-900 truncate text-sm">
-                {salon?.name || "Loading..."}
-              </h1>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-success" />
-                <p className="text-gray-500 truncate text-xs">
-                  {salon?.city || salon?.address || "Location"}
-                </p>
+            {/* Left Section - Logo, Salon Name & Location */}
+            <div className="flex items-center gap-2 min-w-0">
+              <img src="/favicon.png" alt="Nylour" className="h-8 w-8 flex-shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <h1 className="font-semibold text-gray-900 truncate text-sm">
+                  {salon?.name || "Loading..."}
+                </h1>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-success" />
+                  <p className="text-gray-500 truncate text-xs">
+                    {salon?.city || salon?.address || "Location"}
+                  </p>
+                </div>
               </div>
             </div>
 

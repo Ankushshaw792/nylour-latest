@@ -142,8 +142,9 @@ export default function SalonRegister() {
           <div className="flex items-center justify-between h-16">
             <button 
               onClick={() => navigate('/')}
-              className="flex items-center hover:opacity-80 transition-opacity"
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
+              <img src="/favicon.png" alt="Nylour" className="h-8 w-8" />
               <h1 className="text-2xl font-bold gradient-text">Nylour</h1>
             </button>
             <div className="flex items-center space-x-4">
