@@ -59,6 +59,7 @@ const OrderHistoryPage = () => {
             )
           `)
           .eq('salon_id', salonData.id)
+          .eq('payment_status', 'completed')
           .order('booking_date', { ascending: false })
           .order('booking_time', { ascending: false })
           .limit(50);
