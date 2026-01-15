@@ -118,11 +118,49 @@ export default {
     				to: {
     					height: '0'
     				}
+    			},
+    			'scissor-cut': {
+    				'0%, 100%': {
+    					transform: 'rotate(0deg)'
+    				},
+    				'50%': {
+    					transform: 'rotate(15deg)'
+    				}
+    			},
+    			'scissor-cut-reverse': {
+    				'0%, 100%': {
+    					transform: 'rotate(0deg)'
+    				},
+    				'50%': {
+    					transform: 'rotate(-15deg)'
+    				}
+    			},
+    			'hair-fall': {
+    				'0%': {
+    					opacity: '1',
+    					transform: 'translateY(0) rotate(0deg)'
+    				},
+    				'100%': {
+    					opacity: '0',
+    					transform: 'translateY(20px) rotate(15deg)'
+    				}
+    			},
+    			'hair-sway': {
+    				'0%, 100%': {
+    					transform: 'rotate(0deg)'
+    				},
+    				'50%': {
+    					transform: 'rotate(2deg)'
+    				}
     			}
     		},
     		animation: {
     			'accordion-down': 'accordion-down 0.2s ease-out',
-    			'accordion-up': 'accordion-up 0.2s ease-out'
+    			'accordion-up': 'accordion-up 0.2s ease-out',
+    			'scissor-cut': 'scissor-cut 0.6s ease-in-out infinite',
+    			'scissor-cut-reverse': 'scissor-cut-reverse 0.6s ease-in-out infinite',
+    			'hair-fall': 'hair-fall 1.5s ease-in-out infinite',
+    			'hair-sway': 'hair-sway 2s ease-in-out infinite'
     		},
     		fontFamily: {
     			sans: [

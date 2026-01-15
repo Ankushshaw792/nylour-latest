@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, TrendingUp, Calendar, IndianRupee, XCircle, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -190,7 +191,7 @@ const SpendAnalysisPage = () => {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+            <SalonLoader size="md" text="Loading..." />
           </div>
         ) : (
           <>

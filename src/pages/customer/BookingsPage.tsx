@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, Star, Phone, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -198,7 +199,7 @@ const BookingsPage = () => {
   if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+        <SalonLoader size="lg" text="Loading bookings..." />
       </div>
     );
   }

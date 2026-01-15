@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Heart, Store, Clock, Scissors, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,7 +99,7 @@ const CustomerFavoritesPage = () => {
           <CardContent>
             {favoritesLoading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+                <SalonLoader size="sm" />
               </div>
             ) : favorites.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">

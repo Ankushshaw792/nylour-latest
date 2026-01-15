@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 import { useNavigate } from "react-router-dom";
 import { Clock, MapPin, Phone, RefreshCw, CheckCircle2, MessageSquare, Calendar, Users, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -237,7 +238,7 @@ const QueueStatus = () => {
   if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+        <SalonLoader size="lg" text="Loading queue..." />
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 import { useNavigate, useParams } from "react-router-dom";
 import { CheckCircle2, Clock, MapPin, Phone, Calendar, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -96,7 +97,7 @@ const BookingConfirmation = () => {
   if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+        <SalonLoader size="lg" text="Loading booking..." />
       </div>
     );
   }
