@@ -81,8 +81,9 @@ export default function Home() {
             {/* Logo */}
             <button 
               onClick={() => navigate('/')}
-              className="flex items-center hover:opacity-80 transition-opacity"
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
+              <img src="/favicon.png" alt="Nylour" className="h-8 w-8" />
               <h1 className="text-2xl font-bold text-white">
                 Nylour
               </h1>
