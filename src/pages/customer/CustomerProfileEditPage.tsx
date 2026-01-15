@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Camera, User, Mail, Phone, MapPin, Loader2, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -173,7 +174,7 @@ const CustomerProfileEditPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+        <SalonLoader size="lg" text="Loading profile..." />
       </div>
     );
   }

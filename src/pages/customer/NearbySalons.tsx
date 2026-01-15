@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 import { useNavigate } from "react-router-dom";
 import { Search, MapPin, Clock, Mic, SlidersHorizontal, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -264,7 +265,7 @@ const NearbySalons = () => {
           <div className="flex items-center gap-2">
             {loadingSalons ? (
               <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <SalonLoader size="sm" />
                 <span className="text-sm font-medium text-foreground">Loading salons...</span>
               </div>
             ) : (

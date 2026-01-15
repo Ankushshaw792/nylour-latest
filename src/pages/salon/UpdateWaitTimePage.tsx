@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 import { ArrowLeft, Timer, Save } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,7 +81,7 @@ const UpdateWaitTimePage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <SalonLoader size="lg" text="Loading..." />
       </div>
     );
   }

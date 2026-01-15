@@ -1,4 +1,5 @@
 import { ArrowRight, Store, Users, TrendingUp, Clock, DollarSign, Shield, CheckCircle, Smartphone, BarChart3, Calendar, Bell, Star, ChevronRight, Play, Phone } from "lucide-react";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 import { LandingFooter } from "@/components/layout/LandingFooter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,10 +44,7 @@ export default function SalonRegister() {
   // Show loading state
   if (loading || salonLoading) {
     return <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+        <SalonLoader size="lg" text="Loading..." />
       </div>;
   }
 
