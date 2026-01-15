@@ -119,49 +119,64 @@ export default {
     					height: '0'
     				}
     			},
-    			'scissor-cut': {
-    				'0%, 100%': {
-    					transform: 'rotate(0deg)'
-    				},
-    				'50%': {
-    					transform: 'rotate(15deg)'
-    				}
-    			},
-    			'scissor-cut-reverse': {
-    				'0%, 100%': {
-    					transform: 'rotate(0deg)'
-    				},
-    				'50%': {
-    					transform: 'rotate(-15deg)'
-    				}
-    			},
-    			'hair-fall': {
-    				'0%': {
-    					opacity: '1',
-    					transform: 'translateY(0) rotate(0deg)'
-    				},
-    				'100%': {
-    					opacity: '0',
-    					transform: 'translateY(20px) rotate(15deg)'
-    				}
-    			},
-    			'hair-sway': {
-    				'0%, 100%': {
-    					transform: 'rotate(0deg)'
-    				},
-    				'50%': {
-    					transform: 'rotate(2deg)'
-    				}
-    			}
-    		},
-    		animation: {
-    			'accordion-down': 'accordion-down 0.2s ease-out',
-    			'accordion-up': 'accordion-up 0.2s ease-out',
-    			'scissor-cut': 'scissor-cut 0.6s ease-in-out infinite',
-    			'scissor-cut-reverse': 'scissor-cut-reverse 0.6s ease-in-out infinite',
-    			'hair-fall': 'hair-fall 1.5s ease-in-out infinite',
-    			'hair-sway': 'hair-sway 2s ease-in-out infinite'
-    		},
+			'scissor-cut': {
+				'0%, 100%': {
+					transform: 'rotate(0deg)'
+				},
+				'25%': {
+					transform: 'rotate(-12deg)'
+				},
+				'50%': {
+					transform: 'rotate(0deg)'
+				},
+				'75%': {
+					transform: 'rotate(-12deg)'
+				}
+			},
+			'scissor-cut-reverse': {
+				'0%, 100%': {
+					transform: 'rotate(0deg)'
+				},
+				'25%': {
+					transform: 'rotate(12deg)'
+				},
+				'50%': {
+					transform: 'rotate(0deg)'
+				},
+				'75%': {
+					transform: 'rotate(12deg)'
+				}
+			},
+			'hair-fall': {
+				'0%': {
+					opacity: '0',
+					transform: 'translateY(0) rotate(0deg)'
+				},
+				'15%': {
+					opacity: '0.8'
+				},
+				'100%': {
+					opacity: '0',
+					transform: 'translateY(25px) rotate(20deg)'
+				}
+			},
+			'hair-sway': {
+				'0%, 100%': {
+					transform: 'rotate(0deg) translateX(0)'
+				},
+				'50%': {
+					transform: 'rotate(0.5deg) translateX(1px)'
+				}
+			}
+		},
+		animation: {
+			'accordion-down': 'accordion-down 0.2s ease-out',
+			'accordion-up': 'accordion-up 0.2s ease-out',
+			'scissor-cut': 'scissor-cut 1s ease-in-out infinite',
+			'scissor-cut-reverse': 'scissor-cut-reverse 1s ease-in-out infinite',
+			'hair-fall': 'hair-fall 1.8s ease-out infinite',
+			'hair-sway': 'hair-sway 3s ease-in-out infinite'
+		},
     		fontFamily: {
     			sans: [
     				'Work Sans',
