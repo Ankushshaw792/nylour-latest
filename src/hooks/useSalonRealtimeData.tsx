@@ -111,6 +111,7 @@ export const useSalonRealtimeData = () => {
         `)
         .eq('salon_id', salonData.id)
         .eq('booking_date', today)
+        .eq('payment_status', 'completed')
         .order('created_at', { ascending: true });
 
       if (bookingsError) {
@@ -624,7 +625,8 @@ export const useSalonRealtimeData = () => {
           status: 'confirmed' as BookingStatus,
           total_price: servicePrice,
           notes: `Walk-in: ${customerData.name} - ${customerData.phone}`,
-          duration: serviceDuration
+          duration: serviceDuration,
+          payment_status: 'completed' // Walk-ins are treated as paid
         });
 
       if (bookingError) throw bookingError;
