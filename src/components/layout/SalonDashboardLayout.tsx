@@ -1,5 +1,5 @@
 import React, { ReactNode, useEffect, useRef, useState } from "react";
-import { User, Volume2, VolumeX, Bell } from "lucide-react";
+import { User, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SalonTutorial } from "@/components/onboarding/SalonTutorial";
@@ -41,10 +41,7 @@ export const SalonDashboardLayout = ({
   const hasAutoOfflined = useRef(false);
   const [showOfflineWarning, setShowOfflineWarning] = useState(false);
   
-  // Audio alert state
-  const [audioEnabled, setAudioEnabled] = useState(() => {
-    return localStorage.getItem('salon_audio_enabled') === 'true';
-  });
+  // Audio alert state - mute toggle only, audio always enabled
   const [isMuted, setIsMuted] = useState(false);
   
   // Count pending bookings that need attention
@@ -52,22 +49,28 @@ export const SalonDashboardLayout = ({
     (b) => b.status === 'pending'
   ).length;
   
-  // Use the booking alert sound hook - plays continuously when pending bookings exist
-  useBookingAlertSound(pendingBookingsCount, {
-    enabled: audioEnabled,
-    muted: isMuted
-  });
+  // Auto-unlock audio context on first user interaction
+  useEffect(() => {
+    const unlockOnInteraction = () => {
+      unlockAudioContext();
+      document.removeEventListener('click', unlockOnInteraction);
+      document.removeEventListener('touchstart', unlockOnInteraction);
+      document.removeEventListener('keydown', unlockOnInteraction);
+    };
+    
+    document.addEventListener('click', unlockOnInteraction);
+    document.addEventListener('touchstart', unlockOnInteraction);
+    document.addEventListener('keydown', unlockOnInteraction);
+    
+    return () => {
+      document.removeEventListener('click', unlockOnInteraction);
+      document.removeEventListener('touchstart', unlockOnInteraction);
+      document.removeEventListener('keydown', unlockOnInteraction);
+    };
+  }, []);
   
-  // Enable audio with user interaction
-  const handleEnableAudio = () => {
-    unlockAudioContext();
-    setAudioEnabled(true);
-    localStorage.setItem('salon_audio_enabled', 'true');
-    toast({
-      title: "Sound Alerts Enabled",
-      description: "You'll hear alerts when new bookings arrive.",
-    });
-  };
+  // Use the booking alert sound hook - plays continuously when pending bookings exist
+  useBookingAlertSound(pendingBookingsCount, { muted: isMuted });
   
   // Toggle mute
   const toggleMute = () => {
@@ -127,29 +130,8 @@ export const SalonDashboardLayout = ({
     navigate("/salon-dashboard/profile");
   };
   return <div className="min-h-screen bg-gray-50">
-      {/* Enable Sound Alerts Banner - Shows when audio not enabled and pending bookings exist */}
-      {!audioEnabled && pendingBookingsCount > 0 && (
-        <div className="fixed top-0 left-0 right-0 z-[70] bg-amber-500 text-white px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bell className="h-4 w-4 animate-pulse" />
-            <span className="text-sm font-medium">
-              {pendingBookingsCount} new booking{pendingBookingsCount > 1 ? 's' : ''} waiting!
-            </span>
-          </div>
-          <Button 
-            onClick={handleEnableAudio}
-            size="sm"
-            variant="secondary"
-            className="bg-white text-amber-600 hover:bg-amber-50"
-          >
-            <Volume2 className="h-4 w-4 mr-1" />
-            Enable Alerts
-          </Button>
-        </div>
-      )}
-
       {/* Clean Fixed Header */}
-      <div className={`fixed left-0 right-0 z-[60] bg-white border-b border-gray-200 ${!audioEnabled && pendingBookingsCount > 0 ? 'top-10' : 'top-0'}`}>
+      <div className="fixed top-0 left-0 right-0 z-[60] bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             
@@ -169,8 +151,8 @@ export const SalonDashboardLayout = ({
             {/* Right Section - Actions */}
             <div className="flex items-center gap-[5px]">
               
-              {/* Mute/Unmute Button - Only show when audio is enabled and there are pending bookings */}
-              {audioEnabled && pendingBookingsCount > 0 && (
+              {/* Mute/Unmute Button - Only show when there are pending bookings */}
+              {pendingBookingsCount > 0 && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -218,8 +200,8 @@ export const SalonDashboardLayout = ({
       {/* Salon Tutorial */}
       <SalonTutorial />
 
-      {/* Content with padding to account for fixed header + optional banner */}
-      <div className={!audioEnabled && pendingBookingsCount > 0 ? "pt-[6.5rem]" : "pt-20"}>
+      {/* Content with padding to account for fixed header */}
+      <div className="pt-20">
         {children}
       </div>
 
