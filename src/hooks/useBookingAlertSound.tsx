@@ -2,7 +2,6 @@ import { useEffect, useRef, useCallback } from 'react';
 import { startBookingAlertLoop, stopBookingAlertLoop } from '@/lib/notificationSound';
 
 interface UseBookingAlertSoundOptions {
-  enabled?: boolean;
   muted?: boolean;
 }
 
@@ -10,12 +9,12 @@ export const useBookingAlertSound = (
   pendingBookingsCount: number,
   options: UseBookingAlertSoundOptions = {}
 ) => {
-  const { enabled = true, muted = false } = options;
+  const { muted = false } = options;
   const wasPlayingRef = useRef(false);
 
   useEffect(() => {
-    // Don't do anything if disabled or muted
-    if (!enabled || muted) {
+    // Don't play if muted
+    if (muted) {
       stopBookingAlertLoop();
       wasPlayingRef.current = false;
       return;
@@ -36,7 +35,7 @@ export const useBookingAlertSound = (
       stopBookingAlertLoop();
       wasPlayingRef.current = false;
     };
-  }, [pendingBookingsCount, enabled, muted]);
+  }, [pendingBookingsCount, muted]);
 
   // Provide manual control functions
   const stop = useCallback(() => {
@@ -45,11 +44,11 @@ export const useBookingAlertSound = (
   }, []);
 
   const restart = useCallback(() => {
-    if (pendingBookingsCount > 0 && enabled && !muted) {
+    if (pendingBookingsCount > 0 && !muted) {
       startBookingAlertLoop();
       wasPlayingRef.current = true;
     }
-  }, [pendingBookingsCount, enabled, muted]);
+  }, [pendingBookingsCount, muted]);
 
   return { stop, restart, isPlaying: wasPlayingRef.current };
 };
