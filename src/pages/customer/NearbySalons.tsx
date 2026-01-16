@@ -13,6 +13,7 @@ import { SalonStatusBadge } from "@/components/salon/SalonStatusBadge";
 import { SalonCard } from "@/components/salon/SalonCard";
 import { LocationSelector } from "@/components/location/LocationSelector";
 import { LocationPermissionDialog } from "@/components/location/LocationPermissionDialog";
+import { NoSalonsInArea } from "@/components/location/NoSalonsInArea";
 import { CustomerTutorial } from "@/components/onboarding/CustomerTutorial";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserLocation } from "@/hooks/useUserLocation";
@@ -20,6 +21,7 @@ import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateDistance, formatDistance } from "@/lib/locationUtils";
+import { MAX_BOOKING_DISTANCE_KM, NEARBY_FILTER_DISTANCE_KM } from "@/lib/locationConfig";
 import { cn } from "@/lib/utils";
 
 interface SalonData {
@@ -40,6 +42,7 @@ interface SalonData {
 interface SalonWithDistance extends SalonData {
   distance: number | null;
   distanceText: string;
+  isWithinRange: boolean;
 }
 
 const NearbySalons = () => {
@@ -176,15 +179,19 @@ const NearbySalons = () => {
     return salons.map(salon => {
       let distance: number | null = null;
       let distanceText = "Distance unknown";
+      let isWithinRange = false;
 
       if (hasLocation && userLat && userLng && salon.latitude && salon.longitude) {
         distance = calculateDistance(userLat, userLng, salon.latitude, salon.longitude);
         distanceText = formatDistance(distance);
+        isWithinRange = distance <= MAX_BOOKING_DISTANCE_KM;
       } else if (!hasLocation) {
         distanceText = "Enable location";
+        // If no location set, we can't determine range - allow viewing but not booking
+        isWithinRange = false;
       }
 
-      return { ...salon, distance, distanceText };
+      return { ...salon, distance, distanceText, isWithinRange };
     }).sort((a, b) => {
       // Sort by distance if available
       if (a.distance !== null && b.distance !== null) {
@@ -197,23 +204,34 @@ const NearbySalons = () => {
   }, [salons, userLat, userLng, hasLocation]);
 
   // Filter salons based on search and active filter
+  // When user has location enabled, only show salons within booking range by default
   const filteredSalons = salonsWithDistance.filter(salon => {
     const matchesSearch = salon.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          salon.primaryService.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (!matchesSearch) return false;
+
+    // If user has location, only show salons within MAX_BOOKING_DISTANCE_KM
+    if (hasLocation && salon.distance !== null) {
+      if (salon.distance > MAX_BOOKING_DISTANCE_KM) return false;
+    }
     
     switch (activeFilter) {
       case "Open Now":
         return true;
       case "Nearby": 
-        return salon.distance !== null && salon.distance <= 1.0;
+        return salon.distance !== null && salon.distance <= NEARBY_FILTER_DISTANCE_KM;
       case "Quick Service":
         return salon.queueCount <= 3;
       default:
         return true;
     }
   });
+
+  // Check if there are any salons within range (for showing "no salons" message)
+  const hasSalonsInRange = hasLocation 
+    ? salonsWithDistance.some(s => s.distance !== null && s.distance <= MAX_BOOKING_DISTANCE_KM)
+    : salons.length > 0;
 
   return (
     <CustomerLayout
@@ -312,10 +330,16 @@ const NearbySalons = () => {
         </div>
 
         {!loadingSalons && filteredSalons.length === 0 && (
-          <div className="text-center py-12">
-            <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No salons found matching your search</p>
-          </div>
+          hasLocation && !hasSalonsInRange ? (
+            <NoSalonsInArea onChangeLocation={() => setShowLocationDialog(true)} />
+          ) : (
+            <div className="text-center py-12">
+              <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                {searchQuery ? "No salons found matching your search" : "No salons available"}
+              </p>
+            </div>
+          )
         )}
       </div>
 

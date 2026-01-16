@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { SalonLoader } from "@/components/ui/SalonLoader";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Smartphone, Bell, Users, Edit, AlertCircle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Smartphone, Bell, Users, Edit, AlertCircle, AlertTriangle, MapPinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,10 +13,13 @@ import { BookingSummaryCard } from "@/components/bookings/BookingSummaryCard";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useActiveBooking } from "@/hooks/useActiveBooking";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
+import { useUserLocation } from "@/hooks/useUserLocation";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { calculateDistance } from "@/lib/locationUtils";
+import { MAX_BOOKING_DISTANCE_KM } from "@/lib/locationConfig";
 import { 
   isValidIndianPhone, 
   getPhoneError,
@@ -30,12 +33,43 @@ const BookingScreen = () => {
   const { items, totalPrice } = useCart();
   const { hasActiveBooking, activeBooking, isLoading: bookingCheckLoading } = useActiveBooking(user?.id || null);
   const { isOpen, isLoading: statusLoading, nextOpenInfo } = useSalonOpenStatus(id);
+  const { latitude: userLat, longitude: userLng, hasLocation } = useUserLocation();
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [salonLocation, setSalonLocation] = useState<{ latitude: number | null; longitude: number | null }>({ latitude: null, longitude: null });
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [distanceCheckLoading, setDistanceCheckLoading] = useState(true);
+
+  // Check distance to salon
+  const isOutOfRange = (() => {
+    if (!hasLocation || !userLat || !userLng || !salonLocation.latitude || !salonLocation.longitude) {
+      return false; // Can't determine, allow booking but will validate on server
+    }
+    const distance = calculateDistance(userLat, userLng, salonLocation.latitude, salonLocation.longitude);
+    return distance > MAX_BOOKING_DISTANCE_KM;
+  })();
+
+  // Fetch salon location for distance check
+  useEffect(() => {
+    const fetchSalonLocation = async () => {
+      if (!id) return;
+      setDistanceCheckLoading(true);
+      const { data } = await supabase
+        .from('salons')
+        .select('latitude, longitude')
+        .eq('id', id)
+        .maybeSingle();
+      
+      if (data) {
+        setSalonLocation({ latitude: data.latitude, longitude: data.longitude });
+      }
+      setDistanceCheckLoading(false);
+    };
+    fetchSalonLocation();
+  }, [id]);
 
   // Redirect if salon is closed
   useEffect(() => {
@@ -44,6 +78,14 @@ const BookingScreen = () => {
       navigate(`/salon/${id}`);
     }
   }, [isOpen, statusLoading, nextOpenInfo, navigate, id]);
+
+  // Redirect if salon is out of range
+  useEffect(() => {
+    if (!distanceCheckLoading && isOutOfRange) {
+      toast.error(`This salon is too far from your location. Booking is only available within ${MAX_BOOKING_DISTANCE_KM} km.`);
+      navigate(`/salon/${id}`);
+    }
+  }, [distanceCheckLoading, isOutOfRange, navigate, id]);
 
   // Fetch user profile to get mobile number
   useEffect(() => {
@@ -74,7 +116,7 @@ const BookingScreen = () => {
     }
   }, [contactPhone]);
 
-  if (loading || bookingCheckLoading || statusLoading) {
+  if (loading || bookingCheckLoading || statusLoading || distanceCheckLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <SalonLoader size="lg" text="Loading..." />

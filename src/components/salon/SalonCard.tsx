@@ -1,4 +1,4 @@
-import { MapPin, Clock } from "lucide-react";
+import { MapPin, Clock, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { SalonStatusBadge } from "@/components/salon/SalonStatusBadge";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
 import { cn } from "@/lib/utils";
+import { MAX_BOOKING_DISTANCE_KM } from "@/lib/locationConfig";
 
 interface SalonData {
   id: string;
@@ -17,6 +18,8 @@ interface SalonData {
   primaryService: string;
   servicePrice: string;
   distanceText: string;
+  distance?: number | null;
+  isWithinRange?: boolean;
 }
 
 interface SalonCardProps {
@@ -28,6 +31,12 @@ interface SalonCardProps {
 
 export const SalonCard = ({ salon, user, onNavigate, onAuthRequired }: SalonCardProps) => {
   const { isOpen, isLoading, nextOpenInfo } = useSalonOpenStatus(salon.id);
+  
+  // Check if salon is within booking range
+  const isOutOfRange = salon.distance !== null && 
+                       salon.distance !== undefined && 
+                       salon.distance > MAX_BOOKING_DISTANCE_KM;
+  const canBook = !isLoading && isOpen && !isOutOfRange;
 
   const handleClick = () => {
     if (user) {
@@ -39,7 +48,7 @@ export const SalonCard = ({ salon, user, onNavigate, onAuthRequired }: SalonCard
 
   const handleBookClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isOpen) return; // Don't allow booking if closed
+    if (!canBook) return; // Don't allow booking if closed or out of range
     if (user) {
       onNavigate(salon.id);
     } else {
@@ -105,9 +114,23 @@ export const SalonCard = ({ salon, user, onNavigate, onAuthRequired }: SalonCard
                 <Clock className="h-4 w-4 text-primary" />
                 <span className="text-primary font-medium">{salon.waitTime}</span>
               </div>
-              <span className="text-muted-foreground text-sm">{salon.distanceText}</span>
+              <span className={cn(
+                "text-sm",
+                isOutOfRange ? "text-destructive font-medium" : "text-muted-foreground"
+              )}>
+                {salon.distanceText}
+                {isOutOfRange && " (too far)"}
+              </span>
             </div>
           </div>
+
+          {/* Out of range warning */}
+          {isOutOfRange && (
+            <div className="flex items-center gap-2 text-destructive text-xs mb-3 p-2 bg-destructive/10 rounded-md">
+              <AlertTriangle className="h-3 w-3" />
+              <span>Outside {MAX_BOOKING_DISTANCE_KM} km booking range</span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <div>
@@ -118,12 +141,12 @@ export const SalonCard = ({ salon, user, onNavigate, onAuthRequired }: SalonCard
               size="sm"
               className={cn(
                 "bg-primary hover:bg-primary/90 text-primary-foreground",
-                !isLoading && !isOpen && "opacity-50 cursor-not-allowed"
+                !canBook && "opacity-50 cursor-not-allowed"
               )}
               onClick={handleBookClick}
-              disabled={!isLoading && !isOpen}
+              disabled={!canBook}
             >
-              {!isLoading && !isOpen ? "Closed" : "Book Now"}
+              {!isLoading && !isOpen ? "Closed" : isOutOfRange ? "Too Far" : "Book Now"}
             </Button>
           </div>
         </div>

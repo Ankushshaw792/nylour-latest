@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle, ExternalLink, ChevronRight } from "lucide-react";
+import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle, ExternalLink, ChevronRight, MapPinOff } from "lucide-react";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import SalonGalleryCarousel from "@/components/salon/SalonGalleryCarousel";
 import { LiveQueueDialog } from "@/components/queue/LiveQueueDialog";
+import { calculateDistance, formatDistance } from "@/lib/locationUtils";
+import { MAX_BOOKING_DISTANCE_KM, SALON_TOO_FAR_MESSAGE } from "@/lib/locationConfig";
 import haircutImage from "@/assets/haircut-service.jpg";
 import beardTrimImage from "@/assets/beard-trim-service.jpg";
 import hairWashImage from "@/assets/hair-wash-service.jpg";
@@ -59,11 +61,27 @@ const SalonDetails = () => {
   const { addItem, removeItem, updateQuantity, items, totalPrice, totalItems } = useCart();
   const { isOpen, isLoading: statusLoading, nextOpenInfo, closingTime } = useSalonOpenStatus(id);
   const { hasActiveBooking, activeBooking, isLoading: bookingCheckLoading } = useActiveBooking(user?.id || null);
-  const { latitude: userLat, longitude: userLng } = useUserLocation();
+  const { latitude: userLat, longitude: userLng, hasLocation } = useUserLocation();
   const [salon, setSalon] = useState<SalonDetails | null>(null);
   const [loadingSalon, setLoadingSalon] = useState(true);
   const [showQueueDialog, setShowQueueDialog] = useState(false);
   const [avgServiceTime, setAvgServiceTime] = useState(30);
+
+  // Calculate distance to salon
+  const { distance, distanceText, isOutOfRange } = useMemo(() => {
+    if (!salon || !hasLocation || !userLat || !userLng || !salon.latitude || !salon.longitude) {
+      return { distance: null, distanceText: "Distance unknown", isOutOfRange: false };
+    }
+    const dist = calculateDistance(userLat, userLng, salon.latitude, salon.longitude);
+    return {
+      distance: dist,
+      distanceText: formatDistance(dist),
+      isOutOfRange: dist > MAX_BOOKING_DISTANCE_KM
+    };
+  }, [salon, userLat, userLng, hasLocation]);
+
+  // Can user book this salon?
+  const canBook = isOpen && !hasActiveBooking && !isOutOfRange;
 
   const getMapsUrl = () => {
     if (!salon) return '';
@@ -270,10 +288,10 @@ const SalonDetails = () => {
           </div>
         )
       }}
-      bottomButtonProps={totalItems > 0 && isOpen && !hasActiveBooking ? {
+      bottomButtonProps={totalItems > 0 && canBook ? {
         text: "Book Now",
         onClick: () => navigate(`/book/${salon?.id}`),
-        disabled: totalItems === 0 || !isOpen || hasActiveBooking,
+        disabled: totalItems === 0 || !canBook,
         price: totalPrice,
         itemCount: totalItems
       } : undefined}
@@ -286,6 +304,16 @@ const SalonDetails = () => {
       />
 
       <div className="p-4 space-y-6">
+        {/* Distance Out of Range Warning */}
+        {isOutOfRange && (
+          <Alert variant="destructive">
+            <MapPinOff className="h-4 w-4" />
+            <AlertDescription>
+              {SALON_TOO_FAR_MESSAGE}. This salon is {distanceText} away, but booking is only available within {MAX_BOOKING_DISTANCE_KM} km.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Active Booking Warning */}
         {hasActiveBooking && (
           <Alert variant="destructive">
@@ -406,7 +434,7 @@ const SalonDetails = () => {
                             size="sm"
                             className="bg-primary text-primary-foreground hover:bg-primary/90"
                             onClick={() => handleAddService(service)}
-                            disabled={hasActiveBooking}
+                            disabled={hasActiveBooking || isOutOfRange}
                           >
                             <Plus className="h-4 w-4 mr-1" />
                             Add
