@@ -331,7 +331,7 @@ const NearbySalons = () => {
 
         {!loadingSalons && filteredSalons.length === 0 && (
           hasLocation && !hasSalonsInRange ? (
-            <NoSalonsInArea onChangeLocation={() => setShowLocationDialog(true)} />
+            <NoSalonsInArea />
           ) : (
             <div className="text-center py-12">
               <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
