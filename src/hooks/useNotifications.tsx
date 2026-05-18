@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -15,7 +15,19 @@ export interface Notification {
   created_at: string;
 }
 
-export const useNotifications = () => {
+interface NotificationsContextType {
+  notifications: Notification[];
+  loading: boolean;
+  unreadCount: number;
+  markAsRead: (notificationId: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  deleteNotification: (notificationId: string) => Promise<void>;
+  refetch: () => Promise<void>;
+}
+
+const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
+
+export const NotificationsProvider = ({ children }: { children: ReactNode }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -30,7 +42,7 @@ export const useNotifications = () => {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(100);
 
       if (error) throw error;
       
@@ -85,28 +97,35 @@ export const useNotifications = () => {
 
   const deleteNotification = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId);
-
-      if (error) throw error;
-
+      // Optimistic delete: immediately remove from local state
       const deletedNotification = notifications.find(n => n.id === notificationId);
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
       
       if (deletedNotification && !deletedNotification.is_read) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
+
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error deleting notification:', error);
       toast.error('Failed to delete notification');
+      // Revert optimistic delete on failure
+      fetchNotifications();
     }
   };
 
   useEffect(() => {
     if (user) {
       fetchNotifications();
+    } else {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoading(true);
     }
   }, [user]);
 
@@ -153,6 +172,18 @@ export const useNotifications = () => {
           );
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notifications'
+        },
+        (payload) => {
+          const oldNotificationId = payload.old.id;
+          setNotifications(prev => prev.filter(n => n.id !== oldNotificationId));
+        }
+      )
       .subscribe();
 
     return () => {
@@ -160,13 +191,25 @@ export const useNotifications = () => {
     };
   }, [user]);
 
-  return {
-    notifications,
-    loading,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    refetch: fetchNotifications
-  };
+  return (
+    <NotificationsContext.Provider value={{
+      notifications,
+      loading,
+      unreadCount,
+      markAsRead,
+      markAllAsRead,
+      deleteNotification,
+      refetch: fetchNotifications
+    }}>
+      {children}
+    </NotificationsContext.Provider>
+  );
+};
+
+export const useNotifications = () => {
+  const context = useContext(NotificationsContext);
+  if (context === undefined) {
+    throw new Error("useNotifications must be used within a NotificationsProvider");
+  }
+  return context;
 };

@@ -1,4 +1,3 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationItem } from "./NotificationItem";
@@ -37,13 +36,13 @@ export const NotificationsList = ({ onClose }: NotificationsListProps) => {
       </div>
 
       {/* Notifications List */}
-      <ScrollArea className="max-h-80">
+      <div className="max-h-[450px] overflow-y-auto divide-y scrollbar-thin">
         {notifications.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <p>No notifications yet</p>
           </div>
         ) : (
-          <div className="divide-y">
+          <div>
             {notifications.map((notification) => (
               <NotificationItem 
                 key={notification.id} 
@@ -53,7 +52,7 @@ export const NotificationsList = ({ onClose }: NotificationsListProps) => {
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 };

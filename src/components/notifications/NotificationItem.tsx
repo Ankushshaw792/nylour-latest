@@ -68,10 +68,10 @@ export const NotificationItem = ({ notification, onClose }: NotificationItemProp
             <Button
               variant="ghost"
               size="sm"
-              className="opacity-0 group-hover:opacity-100 transition-opacity -mr-2 -mt-1 h-6 w-6 p-0"
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all -mr-2 -mt-1 h-8 w-8 p-0 flex items-center justify-center rounded-full"
               onClick={handleDelete}
             >
-              <X className="h-3 w-3" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
           

@@ -84,10 +84,17 @@ export const useSalonRealtimeData = () => {
         .eq('owner_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (salonError) throw salonError;
-      if (!salonData) throw new Error('No salon found for this owner');
+      if (salonError) {
+        console.error('Salon fetch error:', salonError);
+        throw salonError;
+      }
+      if (!salonData) {
+        console.warn('No salon found for owner:', user.id);
+        setLoading(false);
+        return;
+      }
       setSalon(salonData);
 
       // Fetch bookings for today with joins (prevents N+1 queries and ensures correct customer details)
@@ -111,11 +118,11 @@ export const useSalonRealtimeData = () => {
         `)
         .eq('salon_id', salonData.id)
         .eq('booking_date', today)
-        .eq('payment_status', 'completed')
+        .in('status', ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'])
         .order('created_at', { ascending: true });
 
       if (bookingsError) {
-        console.error('Bookings fetch error:', bookingsError);
+        console.error('Bookings fetch error:', JSON.stringify(bookingsError));
         setBookings([]);
       } else {
         // Fetch queue positions for each booking to add queue_position field
