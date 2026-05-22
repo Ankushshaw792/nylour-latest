@@ -22,10 +22,10 @@ export function LandingFooter() {
           <div>
             <button 
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-3 mb-4 hover:opacity-80 transition-opacity"
             >
-              <img src="/favicon.png" alt="Nylour" className="h-8 w-8" />
-              <span className="text-2xl font-bold gradient-text">Nylour</span>
+              <img src="/favicon.png" alt="Nylour" className="h-10 w-10 object-contain" />
+              <span className="text-3xl font-extrabold gradient-text tracking-tight">Nylour</span>
             </button>
             <p className="text-muted-foreground mb-4">
               Empowering salons with smart technology to grow their business.

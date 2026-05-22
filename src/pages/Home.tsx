@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useNavigate } from "react-router-dom";
 import { AuthSheet } from "@/components/auth/AuthSheet";
 import { useAuth } from "@/contexts/AuthContext";
+import { PullToRefresh } from "@/components/ui/PullToRefresh";
 export default function Home() {
   const navigate = useNavigate();
   const [showAuthSheet, setShowAuthSheet] = useState(false);
@@ -73,18 +74,19 @@ export default function Home() {
     stat: "60%",
     description: "Reduced wait time"
   }];
-  return <div className="min-h-screen bg-background">
+  return (
+    <PullToRefresh>
+      <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            {/* Logo */}
             <button 
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-3.5 hover:opacity-80 transition-opacity"
             >
-              <img src="/favicon.png" alt="Nylour" className="h-8 w-8" />
-              <h1 className="text-2xl font-bold text-white">
+              <img src="/favicon.png" alt="Nylour" className="h-12 w-12 md:h-14 md:w-14 object-contain" />
+              <h1 className="text-3xl font-extrabold text-white tracking-tight">
                 Nylour
               </h1>
             </button>
@@ -320,5 +322,7 @@ export default function Home() {
 
       {/* Auth Sheet */}
       <AuthSheet open={showAuthSheet} onOpenChange={setShowAuthSheet} />
-    </div>;
+    </div>
+    </PullToRefresh>
+  );
 }

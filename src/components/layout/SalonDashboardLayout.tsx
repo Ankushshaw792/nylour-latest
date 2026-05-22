@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useBookingAlertSound } from "@/hooks/useBookingAlertSound";
 import { unlockAudioContext } from "@/lib/notificationSound";
+import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -204,7 +205,9 @@ export const SalonDashboardLayout = ({
 
       {/* Content with padding to account for fixed header */}
       <div className="pt-20">
-        {children}
+        <PullToRefresh>
+          {children}
+        </PullToRefresh>
       </div>
 
       {/* Offline Warning Dialog */}

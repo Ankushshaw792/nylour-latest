@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { FixedHeader } from "./FixedHeader";
 import { MobileNav } from "./MobileNav";
 import { FixedBottomButton } from "./FixedBottomButton";
+import { PullToRefresh } from "@/components/ui/PullToRefresh";
 
 interface CustomerLayoutProps {
   children: ReactNode;
@@ -78,7 +79,9 @@ export const CustomerLayout = ({
 
       {/* Main Content */}
       <main className={getContentClasses()}>
-        {children}
+        <PullToRefresh>
+          {children}
+        </PullToRefresh>
       </main>
 
       {/* Fixed Bottom Button (for booking flow) */}
