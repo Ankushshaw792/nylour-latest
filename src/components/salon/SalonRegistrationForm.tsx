@@ -21,6 +21,9 @@ export interface SalonFormData {
   email: string;
   phone: string;
   address: string;
+  city: string;
+  latitude: number | null;
+  longitude: number | null;
   
   // Business Hours
   businessHours: Array<{
@@ -68,6 +71,9 @@ const initialFormData: SalonFormData = {
   email: "",
   phone: "",
   address: "",
+  city: "",
+  latitude: null,
+  longitude: null,
   businessHours: [
     { day_of_week: 1, open_time: "09:00", close_time: "18:00", is_closed: false },
     { day_of_week: 2, open_time: "09:00", close_time: "18:00", is_closed: false },
@@ -124,7 +130,7 @@ export const SalonRegistrationForm = () => {
   const validateCurrentStep = (): boolean => {
     switch (currentStep) {
       case 0: // Basic Info
-        return !!(formData.name.trim() && formData.phone.trim() && formData.address.trim());
+        return !!(formData.name.trim() && formData.phone.trim() && formData.address.trim() && formData.latitude !== null && formData.longitude !== null);
       case 1: // Business Hours
         return formData.businessHours.some(hour => !hour.is_closed);
       case 2: // Services
@@ -168,6 +174,9 @@ export const SalonRegistrationForm = () => {
           email: formData.email || user.email,
           phone: formData.phone,
           address: formData.address,
+          city: formData.city,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
           image_url: formData.imageUrl,
           max_queue_size: formData.maxQueueSize,
           avg_service_time: formData.currentWaitTime,

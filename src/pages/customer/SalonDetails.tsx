@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle, ExternalLink, ChevronRight, MapPinOff } from "lucide-react";
+import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle, ExternalLink, ChevronRight, MapPinOff, Navigation } from "lucide-react";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -375,8 +375,20 @@ const SalonDetails = () => {
 
         {/* Salon Details Section */}
         <Card>
-          <CardContent className="p-4">
-            <h2 className="text-2xl font-bold mb-3">{salon.name}</h2>
+          <CardContent className="p-4 space-y-4">
+            <h2 className="text-2xl font-bold mb-1">{salon.name}</h2>
+            
+            {/* Distance display */}
+            {distanceText && distance !== null && (
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-1.5 rounded-lg w-fit">
+                <span>📍</span>
+                <span>{distanceText} away</span>
+                {isOutOfRange && (
+                  <span className="text-rose-500 font-bold">(Outside range)</span>
+                )}
+              </div>
+            )}
+
             <div className="space-y-3">
               <a 
                 href={getMapsUrl()}
@@ -398,6 +410,17 @@ const SalonDetails = () => {
                 </span>
               </div>
             </div>
+
+            {/* Direct Turn-by-Turn Navigation Button */}
+            <Button
+              asChild
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center gap-2 py-3 rounded-xl shadow-md cursor-pointer h-12"
+            >
+              <a href={getMapsUrl()} target="_blank" rel="noopener noreferrer">
+                <Navigation className="h-5 w-5 fill-current" />
+                Navigate to Salon (Turn-by-Turn GPS)
+              </a>
+            </Button>
           </CardContent>
         </Card>
 

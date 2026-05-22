@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SalonFormData } from "../SalonRegistrationForm";
+import { SalonLocationPicker } from "../SalonLocationPicker";
 
 interface BasicSalonInfoProps {
   formData: SalonFormData;
@@ -70,13 +71,52 @@ export const BasicSalonInfo = ({ formData, updateFormData }: BasicSalonInfoProps
         />
       </div>
 
+      <div className="space-y-3">
+        <Label>Geographic Coordinates *</Label>
+        <SalonLocationPicker
+          address={formData.address}
+          city={formData.city}
+          latitude={formData.latitude}
+          longitude={formData.longitude}
+          onChange={(data) => updateFormData({
+            address: data.address,
+            city: data.city,
+            latitude: data.latitude,
+            longitude: data.longitude
+          })}
+        />
+      </div>
+
+      {formData.latitude !== null && formData.longitude !== null && (
+        <div className="overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm">
+          <div className="p-3 border-b bg-muted/30">
+            <h4 className="font-medium text-sm flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              Location Preview
+            </h4>
+          </div>
+          <div className="relative aspect-video w-full">
+            <iframe
+              title="Salon Location Map"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${formData.longitude - 0.005}%2C${formData.latitude - 0.005}%2C${formData.longitude + 0.005}%2C${formData.latitude + 0.005}&layer=mapnik&marker=${formData.latitude}%2C${formData.longitude}`}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="bg-muted/50 p-4 rounded-lg">
         <h4 className="font-medium mb-2">Important Notes:</h4>
         <ul className="text-sm text-muted-foreground space-y-1">
           <li>• Fields marked with * are required</li>
           <li>• Your salon name will be displayed to customers</li>
           <li>• Provide accurate contact information for customer inquiries</li>
-          <li>• Complete address helps customers find your location</li>
+          <li>• Complete address and accurate GPS pin helps customers find your location</li>
         </ul>
       </div>
     </div>

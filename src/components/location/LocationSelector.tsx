@@ -23,6 +23,8 @@ export function LocationSelector({ compact = false }: LocationSelectorProps) {
   const { 
     area, 
     address, 
+    latitude,
+    longitude,
     loading, 
     error, 
     permissionDenied, 
@@ -178,9 +180,38 @@ export function LocationSelector({ compact = false }: LocationSelectorProps) {
           )}
 
           {hasLocation && (
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm font-medium text-foreground">{area}</p>
-              <p className="text-xs text-muted-foreground">{address}</p>
+            <div className="space-y-3">
+              <div className="p-4 bg-muted/50 rounded-lg border">
+                <p className="text-sm font-medium text-foreground">{area || "Your Location"}</p>
+                <p className="text-xs text-muted-foreground">{address}</p>
+                {latitude !== null && longitude !== null && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    GPS Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                  </p>
+                )}
+              </div>
+              {latitude !== null && longitude !== null && (
+                <div className="overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm">
+                  <div className="p-2.5 border-b bg-muted/30">
+                    <p className="font-semibold text-xs flex items-center gap-1.5 text-muted-foreground">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      Your Active Location Map
+                    </p>
+                  </div>
+                  <div className="relative h-[160px] w-full">
+                    <iframe
+                      title="User Active Location Map"
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.003}%2C${latitude - 0.003}%2C${longitude + 0.003}%2C${latitude + 0.003}&layer=mapnik&marker=${latitude}%2C${longitude}`}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

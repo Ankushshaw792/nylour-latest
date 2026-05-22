@@ -72,6 +72,19 @@ export const SalonCard = ({ salon, user, onNavigate, onAuthRequired }: SalonCard
             alt={`${salon.name} salon exterior view - ${salon.address}`}
             className="w-full h-full object-cover"
           />
+          {salon.distance !== null && salon.distance !== undefined && (
+            <Badge 
+              variant="secondary" 
+              className={cn(
+                "absolute top-3 left-3 backdrop-blur-sm font-semibold shadow-sm text-xs py-1 px-2.5 flex items-center gap-1 border-0 transition-transform hover:scale-105",
+                isOutOfRange 
+                  ? "bg-rose-500/90 hover:bg-rose-500/90 text-white" 
+                  : "bg-emerald-500/90 hover:bg-emerald-500/90 text-white"
+              )}
+            >
+              <span>📍</span> {salon.distanceText} {isOutOfRange ? "away (too far)" : "away"}
+            </Badge>
+          )}
           <div className="absolute top-3 right-3">
             <FavoriteButton salonId={salon.id} size="sm" />
           </div>
@@ -115,8 +128,12 @@ export const SalonCard = ({ salon, user, onNavigate, onAuthRequired }: SalonCard
                 <span className="text-primary font-medium">{salon.waitTime}</span>
               </div>
               <span className={cn(
-                "text-sm",
-                isOutOfRange ? "text-destructive font-medium" : "text-muted-foreground"
+                "text-sm font-medium flex items-center gap-1",
+                isOutOfRange 
+                  ? "text-rose-600 dark:text-rose-400" 
+                  : salon.distance !== null && salon.distance !== undefined
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-muted-foreground"
               )}>
                 {salon.distanceText}
                 {isOutOfRange && " (too far)"}
@@ -126,7 +143,7 @@ export const SalonCard = ({ salon, user, onNavigate, onAuthRequired }: SalonCard
 
           {/* Out of range warning */}
           {isOutOfRange && (
-            <div className="flex items-center gap-2 text-destructive text-xs mb-3 p-2 bg-destructive/10 rounded-md">
+            <div className="flex items-center gap-2 text-rose-600 bg-rose-50 dark:bg-rose-950/20 text-xs mb-3 p-2 bg-destructive/10 rounded-md">
               <AlertTriangle className="h-3 w-3" />
               <span>Outside {MAX_BOOKING_DISTANCE_KM} km booking range</span>
             </div>
