@@ -1,6 +1,6 @@
 {
   "name": "Nylour",
-  "short_name": "A salon Booking App",
+  "short_name": "Nylour",
   "description": "Premium salon booking platform for instant queue check-in and salon discovery.",
   "start_url": "/",
   "display": "standalone",
