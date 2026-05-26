@@ -83,9 +83,9 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <button 
               onClick={() => navigate('/')}
-              className="flex items-center gap-3.5 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
             >
-              <img src="/favicon.png" alt="Nylour" className="h-12 w-12 md:h-14 md:w-14 object-contain" />
+              <img src="/favicon.png" alt="Nylour" className="h-8 w-8 md:h-12 md:w-12 object-contain" />
               <h1 className="text-3xl font-extrabold text-white tracking-tight">
                 Nylour
               </h1>
