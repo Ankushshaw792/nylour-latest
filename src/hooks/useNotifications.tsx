@@ -37,6 +37,15 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
     if (!user) return;
 
     try {
+      // 1. Automatically purge notifications older than 5 minutes to keep database clean & fast
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id)
+        .lt('created_at', fiveMinutesAgo);
+
+      // 2. Fetch the remaining fresh notifications
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
