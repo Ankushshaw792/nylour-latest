@@ -758,9 +758,25 @@ export const useSalonRealtimeData = () => {
     };
   }, [salon?.id, fetchSalonData]);
 
-  // Initial data fetch
+  // Initial data fetch and robust auto-refresh polling fallback
   useEffect(() => {
     fetchSalonData();
+
+    // Poll database every 5 seconds to ensure dashboard updates even if websockets/realtime fail
+    const intervalId = setInterval(() => {
+      fetchSalonData();
+    }, 5000);
+
+    // Fetch immediately when the user returns or focuses the window/tab
+    const handleFocus = () => {
+      fetchSalonData();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [fetchSalonData]);
 
   // Add walk-in customer to first position (when online customer is waiting to arrive)
