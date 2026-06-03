@@ -119,6 +119,7 @@ export const useSalonRealtimeData = () => {
         .eq('salon_id', salonData.id)
         .eq('booking_date', today)
         .in('status', ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'])
+        .or('payment_status.eq.completed,customer_id.is.null')
         .order('created_at', { ascending: true });
 
       if (bookingsError) {
@@ -718,7 +719,7 @@ export const useSalonRealtimeData = () => {
     if (!salon?.id) return;
 
     const bookingsChannel = supabase
-      .channel('salon-bookings')
+      .channel(`salon-bookings-${salon.id}`)
       .on(
         'postgres_changes',
         {
@@ -735,7 +736,7 @@ export const useSalonRealtimeData = () => {
       .subscribe();
 
     const queueChannel = supabase
-      .channel('salon-queue')
+      .channel(`salon-queue-${salon.id}`)
       .on(
         'postgres_changes',
         {

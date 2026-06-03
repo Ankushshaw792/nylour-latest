@@ -18,6 +18,8 @@ const ComprehensiveDashboard = () => {
     loading,
     salon,
     queue,
+    startService,
+    completeService,
   } = useSalonRealtimeData();
 
   if (authLoading || loading) {
@@ -43,38 +45,20 @@ const ComprehensiveDashboard = () => {
     );
   }
 
-  const handleStartService = async (entryId: string) => {
-    try {
-      const { error } = await supabase
-        .from('queue_entries')
-        .update({ 
-          status: 'in_progress',
-          started_at: new Date().toISOString()
-        })
-        .eq('id', entryId);
-
-      if (error) throw error;
-      toast.success('Service started');
-    } catch (error) {
-      toast.error('Failed to start service');
+  const handleStartService = async (bookingId: string | null) => {
+    if (!bookingId) {
+      toast.error('No booking associated with this entry');
+      return;
     }
+    await startService(bookingId);
   };
 
-  const handleCompleteService = async (entryId: string) => {
-    try {
-      const { error } = await supabase
-        .from('queue_entries')
-        .update({ 
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', entryId);
-
-      if (error) throw error;
-      toast.success('Service completed');
-    } catch (error) {
-      toast.error('Failed to complete service');
+  const handleCompleteService = async (bookingId: string | null) => {
+    if (!bookingId) {
+      toast.error('No booking associated with this entry');
+      return;
     }
+    await completeService(bookingId);
   };
 
   return (
@@ -110,10 +94,10 @@ const ComprehensiveDashboard = () => {
                             {entry.customers?.first_name || 'Unknown'} {entry.customers?.last_name || 'Customer'}
                           </h3>
                           <Badge 
-                            variant={entry.status === 'in_progress' ? 'default' : 'secondary'}
-                            className={entry.status === 'in_progress' ? 'bg-success text-success-foreground' : ''}
+                            variant={entry.status === 'in_service' ? 'default' : 'secondary'}
+                            className={entry.status === 'in_service' ? 'bg-success text-success-foreground' : ''}
                           >
-                            {entry.status === 'in_progress' ? 'In Progress' : 'Waiting'}
+                            {entry.status === 'in_service' ? 'In Progress' : 'Waiting'}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">{entry.services?.name || 'Service'}</p>
@@ -136,17 +120,17 @@ const ComprehensiveDashboard = () => {
                       <Button 
                         variant="default" 
                         size="sm"
-                        onClick={() => handleStartService(entry.id)}
+                        onClick={() => handleStartService(entry.booking_id)}
                       >
                         Start Service
                       </Button>
                     )}
                     
-                    {entry.status === 'in_progress' && (
+                    {entry.status === 'in_service' && (
                       <Button 
                         variant="default" 
                         size="sm"
-                        onClick={() => handleCompleteService(entry.id)}
+                        onClick={() => handleCompleteService(entry.booking_id)}
                       >
                         Complete
                       </Button>

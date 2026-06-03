@@ -95,7 +95,7 @@ BEGIN
   IF NEW.status = 'confirmed' AND (OLD.status IS NULL OR OLD.status != 'confirmed') THEN
     IF NEW.customer_id IS NOT NULL AND NEW.arrival_deadline IS NULL THEN NEW.arrival_deadline := NOW() + INTERVAL '10 minutes'; END IF;
     IF NOT EXISTS (SELECT 1 FROM public.queue_entries WHERE booking_id = NEW.id) THEN
-      SELECT COALESCE(MAX(position), 0) + 1 INTO next_position FROM public.queue_entries WHERE salon_id = NEW.salon_id AND status IN ('waiting', 'called', 'in_service');
+      SELECT COALESCE(MAX(position), 0) + 1 INTO next_position FROM public.queue_entries WHERE salon_id = NEW.salon_id AND status IN ('waiting', 'called', 'in_service') AND check_in_time::date = CURRENT_DATE;
       INSERT INTO public.queue_entries (booking_id, salon_id, customer_id, position, status, estimated_wait_time, check_in_time)
       VALUES (NEW.id, NEW.salon_id, NEW.customer_id, next_position, 'waiting', next_position * COALESCE((SELECT avg_service_time FROM public.salons WHERE id = NEW.salon_id), 20), now());
     END IF;
@@ -115,7 +115,7 @@ BEGIN
       UPDATE public.bookings SET arrival_deadline = NOW() + INTERVAL '10 minutes' WHERE id = NEW.id;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM public.queue_entries WHERE booking_id = NEW.id) THEN
-      SELECT COALESCE(MAX(position), 0) + 1 INTO next_position FROM public.queue_entries WHERE salon_id = NEW.salon_id AND status IN ('waiting', 'called', 'in_service');
+      SELECT COALESCE(MAX(position), 0) + 1 INTO next_position FROM public.queue_entries WHERE salon_id = NEW.salon_id AND status IN ('waiting', 'called', 'in_service') AND check_in_time::date = CURRENT_DATE;
       INSERT INTO public.queue_entries (booking_id, salon_id, customer_id, position, status, estimated_wait_time, check_in_time)
       VALUES (NEW.id, NEW.salon_id, NEW.customer_id, next_position, 'waiting', next_position * COALESCE((SELECT avg_service_time FROM public.salons WHERE id = NEW.salon_id), 20), now());
     END IF;
@@ -144,7 +144,13 @@ CREATE TRIGGER enforce_single_active_booking BEFORE INSERT ON public.bookings FO
 CREATE OR REPLACE FUNCTION public.recalculate_queue_positions()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  WITH ranked_entries AS (SELECT id, ROW_NUMBER() OVER (ORDER BY check_in_time ASC) as new_position FROM public.queue_entries WHERE salon_id = COALESCE(NEW.salon_id, OLD.salon_id) AND status IN ('waiting', 'called', 'in_service'))
+  WITH ranked_entries AS (
+    SELECT id, ROW_NUMBER() OVER (ORDER BY check_in_time ASC) as new_position 
+    FROM public.queue_entries 
+    WHERE salon_id = COALESCE(NEW.salon_id, OLD.salon_id) 
+      AND status IN ('waiting', 'called', 'in_service')
+      AND check_in_time::date = COALESCE(COALESCE(NEW.check_in_time, OLD.check_in_time)::date, CURRENT_DATE)
+  )
   UPDATE public.queue_entries qe SET position = re.new_position, estimated_wait_time = (re.new_position - 1) * COALESCE((SELECT avg_service_time FROM public.salons WHERE id = qe.salon_id), 30), updated_at = NOW() FROM ranked_entries re WHERE qe.id = re.id;
   RETURN COALESCE(NEW, OLD);
 END;
@@ -214,7 +220,7 @@ RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 DECLARE new_booking_id uuid; service_price decimal;
 BEGIN
   SELECT price INTO service_price FROM public.salon_services WHERE id = p_service_id;
-  UPDATE public.queue_entries SET position = position + 1 WHERE salon_id = p_salon_id AND status IN ('waiting', 'called', 'in_service');
+  UPDATE public.queue_entries SET position = position + 1 WHERE salon_id = p_salon_id AND status IN ('waiting', 'called', 'in_service') AND check_in_time::date = CURRENT_DATE;
   INSERT INTO public.bookings (salon_id, service_id, customer_id, booking_date, booking_time, status, total_price, notes)
   VALUES (p_salon_id, p_service_id, NULL, CURRENT_DATE, NOW()::TIME, 'confirmed', COALESCE(service_price, 0), 'Walk-in: ' || p_customer_name || COALESCE(' | Phone: ' || p_phone, ''))
   RETURNING id INTO new_booking_id;
