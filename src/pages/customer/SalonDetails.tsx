@@ -41,6 +41,7 @@ interface SalonDetails {
   id: string;
   name: string;
   address: string;
+  city?: string | null;
   phone: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -116,6 +117,7 @@ const SalonDetails = () => {
             id,
             name,
             address,
+            city,
             phone,
             latitude,
             longitude,
@@ -199,6 +201,7 @@ const SalonDetails = () => {
           id: salonData.id,
           name: salonData.name,
           address: salonData.address,
+          city: salonData.city,
           phone: salonData.phone,
           latitude: salonData.latitude,
           longitude: salonData.longitude,
@@ -297,10 +300,11 @@ const SalonDetails = () => {
       } : undefined}
     >
       {/* Gallery Carousel */}
-      <SalonGalleryCarousel
+       <SalonGalleryCarousel
         images={salon.galleryImages}
         fallbackImage={salon.image_url}
         salonName={salon.name}
+        salonCity={salon.city}
       />
 
       <div className="p-4 space-y-6">
