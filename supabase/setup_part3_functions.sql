@@ -131,7 +131,14 @@ CREATE OR REPLACE FUNCTION public.prevent_multiple_active_bookings()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 BEGIN
   IF NEW.customer_id IS NOT NULL THEN
-    IF EXISTS (SELECT 1 FROM public.bookings WHERE customer_id = NEW.customer_id AND status IN ('pending', 'confirmed', 'in_progress') AND booking_date >= CURRENT_DATE AND id != COALESCE(NEW.id, '00000000-0000-0000-0000-000000000000'::uuid)) THEN
+    IF EXISTS (
+      SELECT 1 FROM public.bookings 
+      WHERE customer_id = NEW.customer_id 
+        AND status IN ('pending', 'confirmed', 'in_progress') 
+        AND payment_status = 'completed'
+        AND booking_date >= CURRENT_DATE 
+        AND id != COALESCE(NEW.id, '00000000-0000-0000-0000-000000000000'::uuid)
+    ) THEN
       RAISE EXCEPTION 'You already have an active booking.';
     END IF;
   END IF;
@@ -168,7 +175,15 @@ CREATE TRIGGER set_queue_expiration_trigger BEFORE INSERT ON public.queue_entrie
 -- RPC Functions
 CREATE OR REPLACE FUNCTION public.check_active_booking(p_customer_id uuid)
 RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
-BEGIN RETURN EXISTS (SELECT 1 FROM public.bookings WHERE customer_id = p_customer_id AND status IN ('pending', 'confirmed', 'in_progress') AND booking_date >= CURRENT_DATE); END;
+BEGIN 
+  RETURN EXISTS (
+    SELECT 1 FROM public.bookings 
+    WHERE customer_id = p_customer_id 
+      AND status IN ('pending', 'confirmed', 'in_progress') 
+      AND payment_status = 'completed'
+      AND booking_date >= CURRENT_DATE
+  ); 
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.apply_cancellation_fee(p_booking_id uuid, p_customer_id uuid, p_reason text DEFAULT NULL)

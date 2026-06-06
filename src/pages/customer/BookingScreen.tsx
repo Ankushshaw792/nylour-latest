@@ -152,6 +152,13 @@ const BookingScreen = () => {
         throw new Error('Customer profile not found. Please try again.');
       }
 
+      // Delete any previous unpaid/pending bookings for this customer to clean up database
+      await supabase
+        .from('bookings')
+        .delete()
+        .eq('customer_id', userProfile.id)
+        .eq('payment_status', 'pending');
+
       // Create booking record with pending status - use local date to avoid timezone issues
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')

@@ -69,6 +69,7 @@ export const useActiveBooking = (userId: string | null) => {
             `)
             .eq('customer_id', customerId)
             .in('status', ['pending', 'confirmed', 'in_progress'])
+            .eq('payment_status', 'completed')
             .gte('booking_date', new Date().toISOString().split('T')[0])
             .order('created_at', { ascending: false })
             .limit(1)

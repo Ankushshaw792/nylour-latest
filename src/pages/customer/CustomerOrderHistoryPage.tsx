@@ -59,6 +59,7 @@ const CustomerOrderHistoryPage = () => {
             service_id
           `)
           .eq("customer_id", customer.id)
+          .eq("payment_status", "completed")
           .order("booking_date", { ascending: false });
 
         if (error) throw error;

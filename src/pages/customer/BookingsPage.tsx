@@ -63,11 +63,14 @@ const BookingsPage = () => {
               name,
               address,
               phone,
-              avg_service_time
+              avg_service_time,
+              latitude,
+              longitude
             )
           `)
           .eq("customer_id", customer.id)
           .in("status", ["pending", "confirmed", "in_progress"])
+          .eq("payment_status", "completed")
           .gte("booking_date", today)
           .order("booking_date", { ascending: true });
 
@@ -216,6 +219,17 @@ const BookingsPage = () => {
     }
   };
 
+  const handleLocation = (salon: any) => {
+    if (salon?.latitude && salon?.longitude) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${salon.latitude},${salon.longitude}`, '_blank');
+    } else if (salon?.name && salon?.address) {
+      const query = encodeURIComponent(`${salon.name}, ${salon.address}`);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    } else {
+      toast.error("Location details not available");
+    }
+  };
+
   const handleCardClick = (booking: any) => {
     setSelectedBooking(booking);
     setSummaryDialogOpen(true);
@@ -357,16 +371,15 @@ const BookingsPage = () => {
                         <Phone className="h-4 w-4" />
                         Call
                       </Button>
-                      {queueEntry && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1 gap-2"
-                          onClick={() => navigate("/queue-status")}
-                        >
-                          View Queue
-                        </Button>
-                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 gap-2"
+                        onClick={() => handleLocation(salon)}
+                      >
+                        <MapPin className="h-4 w-4 text-primary" />
+                        Location
+                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 

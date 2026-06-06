@@ -145,6 +145,17 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
     }
   };
 
+  const handleLocation = () => {
+    if (booking?.salons?.latitude && booking?.salons?.longitude) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${booking.salons.latitude},${booking.salons.longitude}`, '_blank');
+    } else if (booking?.salons?.name && booking?.salons?.address) {
+      const query = encodeURIComponent(`${booking.salons.name}, ${booking.salons.address}`);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    } else {
+      toast.error("Location details not available");
+    }
+  };
+
   const handleOpenCancelDialog = () => {
     setCancelDialogOpen(true);
   };
@@ -316,18 +327,14 @@ export const BookingSummaryDialog = ({ booking, isOpen, onClose }: BookingSummar
               </Button>
               
               <div className="flex gap-2">
-                {queueEntry && (
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 gap-2"
-                    onClick={() => {
-                      onClose();
-                      navigate("/queue-status");
-                    }}
-                  >
-                    View Queue
-                  </Button>
-                )}
+                <Button 
+                  variant="outline" 
+                  className="flex-1 gap-2"
+                  onClick={handleLocation}
+                >
+                  <MapPin className="h-4 w-4 text-primary" />
+                  Location
+                </Button>
                 <Button 
                   variant="outline" 
                   className="flex-1 gap-2"
