@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Carousel,
   CarouselContent,
@@ -133,46 +134,38 @@ const SalonGalleryCarousel = ({ images, fallbackImage, salonName, salonCity }: S
   return (
     <>
       <div className="relative h-64 overflow-hidden">
-        {/* Click anywhere on the header carousel to open expanded gallery */}
-        <div className="w-full h-full cursor-pointer" onClick={() => setShowGallery(true)}>
-          <Carousel setApi={setApi} className="w-full h-full">
-            <CarouselContent className="h-64 -ml-0">
-              {displayImages.map((image, index) => (
-                <CarouselItem key={image.id} className="h-64 pl-0">
-                  <div className="relative h-full w-full">
-                    <img
-                      src={image.image_url}
-                      alt={image.caption || `${salonName} - Image ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
-                    
-                    {image.caption && (
-                      <div className="absolute bottom-12 left-4 right-4">
-                        <p className="text-white text-sm font-medium drop-shadow-lg">
-                          {image.caption}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
+        {/* Carousel slides are fully swipeable and do not open the gallery modal on track click */}
+        <Carousel setApi={setApi} className="w-full h-full">
+          <CarouselContent className="h-64 -ml-0">
+            {displayImages.map((image, index) => (
+              <CarouselItem key={image.id} className="h-64 pl-0">
+                <div className="relative h-full w-full">
+                  <img
+                    src={image.image_url}
+                    alt={image.caption || `${salonName} - Image ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+                  
+                  {image.caption && (
+                    <div className="absolute bottom-12 left-4 right-4">
+                      <p className="text-white text-sm font-medium drop-shadow-lg">
+                        {image.caption}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
 
-            {showNavigation && (
-              <>
-                <CarouselPrevious 
-                  className="left-2 bg-white/80 hover:bg-white border-0" 
-                  onClick={(e) => e.stopPropagation()} 
-                />
-                <CarouselNext 
-                  className="right-2 bg-white/80 hover:bg-white border-0" 
-                  onClick={(e) => e.stopPropagation()} 
-                />
-              </>
-            )}
-          </Carousel>
-        </div>
+          {showNavigation && (
+            <>
+              <CarouselPrevious className="left-2 bg-white/80 hover:bg-white border-0" />
+              <CarouselNext className="right-2 bg-white/80 hover:bg-white border-0" />
+            </>
+          )}
+        </Carousel>
 
         {/* Floating view gallery badge pill */}
         <button
@@ -189,10 +182,7 @@ const SalonGalleryCarousel = ({ images, fallbackImage, salonName, salonCity }: S
             {displayImages.map((_, index) => (
               <button
                 key={index}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  api?.scrollTo(index);
-                }}
+                onClick={() => api?.scrollTo(index)}
                 className={`w-2 h-2 rounded-full transition-all ${
                   index === current 
                     ? "bg-white w-4" 
@@ -205,11 +195,11 @@ const SalonGalleryCarousel = ({ images, fallbackImage, salonName, salonCity }: S
         )}
       </div>
 
-      {/* Expanded full screen image gallery overlay */}
-      {showGallery && (
-        <div className="fixed inset-0 bg-background z-50 flex flex-col animate-in fade-in duration-200">
+      {/* Expanded full screen image gallery overlay using React Portal */}
+      {showGallery && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 bg-background z-[100] flex flex-col animate-in fade-in duration-200">
           {/* Header */}
-          <div className="flex items-center gap-3 p-4 border-b border-border/40">
+          <div className="flex items-center gap-3 p-4 border-b border-border/40 bg-background">
             <button
               onClick={() => setShowGallery(false)}
               className="p-1.5 hover:bg-muted rounded-full transition-colors"
@@ -264,7 +254,7 @@ const SalonGalleryCarousel = ({ images, fallbackImage, salonName, salonCity }: S
           </div>
 
           {/* Scrollable grid stack list of images */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background">
             {activeTab === 'venue' ? (
               venueImages.map((image, idx) => (
                 <div
@@ -305,13 +295,14 @@ const SalonGalleryCarousel = ({ images, fallbackImage, salonName, salonCity }: S
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Lightbox Modal (Single Image View Overlay) */}
-      {lightboxOpen && currentLightboxImage && (
+      {/* Lightbox Modal (Single Image View Overlay) using React Portal */}
+      {lightboxOpen && currentLightboxImage && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-black/95 z-[60] flex flex-col justify-between select-none animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/95 z-[110] flex flex-col justify-between select-none animate-in fade-in duration-200"
           onClick={() => setLightboxOpen(false)}
         >
           {/* Close button and info */}
@@ -365,7 +356,8 @@ const SalonGalleryCarousel = ({ images, fallbackImage, salonName, salonCity }: S
               <p className="text-xs text-white/60 italic">No description</p>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
