@@ -113,7 +113,7 @@ const SalonDetails = () => {
     let isMobileShareTriggered = false;
 
     // 1. Trigger native sharing first (synchronous call to preserve user gesture context)
-    if (navigator.share) {
+    if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         navigator.share(shareData).catch((err) => {
           // Ignore abort errors (user cancelled the share sheet)
@@ -127,21 +127,57 @@ const SalonDetails = () => {
       }
     }
 
-    // 2. Instantly copy link to clipboard & show a toast notification for immediate feedback
-    navigator.clipboard.writeText(shareUrl)
-      .then(() => {
+    // Helper function to handle clipboard copy with fallback
+    const copyUrlToClipboard = (): Promise<boolean> => {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(shareUrl)
+          .then(() => true)
+          .catch((err) => {
+            console.error('navigator.clipboard failed, trying fallback:', err);
+            return tryFallbackCopy();
+          });
+      } else {
+        return Promise.resolve(tryFallbackCopy());
+      }
+    };
+
+    const tryFallbackCopy = (): boolean => {
+      const textArea = document.createElement("textarea");
+      textArea.value = shareUrl;
+      // Prevent scrolling and place offscreen
+      textArea.style.position = "fixed";
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+        return successful;
+      } catch (err) {
+        document.body.removeChild(textArea);
+        console.error("Fallback copy failed:", err);
+        return false;
+      }
+    };
+
+    // 2. Instantly copy link & show a toast notification for immediate feedback
+    copyUrlToClipboard().then((success) => {
+      if (success) {
         if (isMobileShareTriggered) {
           toast.success("Link copied! Opening share options...", { id: "share-toast" });
         } else {
           toast.success("Salon link copied to clipboard!", { id: "share-toast" });
         }
-      })
-      .catch((copyErr) => {
-        console.error('Failed to copy to clipboard:', copyErr);
+      } else {
         if (!isMobileShareTriggered) {
           toast.error("Failed to copy link");
         }
-      });
+      }
+    });
   };
 
   // Fetch salon details from database
