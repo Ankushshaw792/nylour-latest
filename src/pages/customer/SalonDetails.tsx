@@ -102,6 +102,36 @@ const SalonDetails = () => {
     }
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: salon?.name || "Nylour Salon",
+      text: `Check out ${salon?.name || "this salon"} on Nylour!`,
+      url: window.location.href,
+    };
+    
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Salon link copied to clipboard!");
+      }
+    } catch (err) {
+      // Don't show toast if user cancelled sharing (AbortError)
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+      // Fallback in case Web Share API fails or gets rejected for other reasons
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Salon link copied to clipboard!");
+      } catch (copyErr) {
+        console.error('Failed to copy link:', copyErr);
+        toast.error("Failed to copy link");
+      }
+    }
+  };
+
   // Fetch salon details from database
   useEffect(() => {
     const fetchSalonDetails = async () => {
@@ -280,6 +310,7 @@ const SalonDetails = () => {
               variant="ghost"
               size="mobile-icon"
               className="text-foreground hover:bg-muted"
+              onClick={handleShare}
             >
               <Share className="h-5 w-5" />
             </Button>
