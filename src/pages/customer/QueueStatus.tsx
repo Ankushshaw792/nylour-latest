@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { SalonLoader } from "@/components/ui/SalonLoader";
 import { useNavigate } from "react-router-dom";
-import { Clock, MapPin, Phone, RefreshCw, CheckCircle2, MessageSquare, Calendar, Users, AlertTriangle } from "lucide-react";
+import { Clock, MapPin, Phone, RefreshCw, CheckCircle2, MessageSquare, Calendar, Users, AlertTriangle, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -481,6 +481,34 @@ const QueueStatus = () => {
                 
                 // Calculate estimated time using salon's avg service time
                 const memberDuration = avgServiceTime;
+
+                if (member.isWalkIn) {
+                  return (
+                    <div
+                      key={member.id}
+                      className={`flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-muted-foreground/10 flex items-center justify-center text-muted-foreground">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            Walk-in / Offline
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {member.position < currentPosition && (
+                          <span className="text-xs text-muted-foreground">
+                            ~{memberDuration} min
+                          </span>
+                        )}
+                        <div className="w-3 h-3 rounded-full bg-muted-foreground/40" />
+                      </div>
+                    </div>
+                  );
+                }
                 
                 return (
                   <div

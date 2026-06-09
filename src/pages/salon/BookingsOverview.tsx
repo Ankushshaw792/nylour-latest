@@ -36,15 +36,11 @@ const BookingsOverview = () => {
   const { user, loading: authLoading } = useRequireAuth();
   const { bookings, loading, acceptBooking, rejectBooking, startService, completeService, markNoShow, sendReminder, sendCustomReminder, addWalkInCustomer, addWalkInCustomerFirst, salon } = useSalonRealtimeData();
   
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isAddFirstDialogOpen, setIsAddFirstDialogOpen] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [selectedBookingForMessage, setSelectedBookingForMessage] = useState<{ customerId: string; bookingId: string } | null>(null);
   const [customMessage, setCustomMessage] = useState("");
-  const [walkInName, setWalkInName] = useState("");
-  const [walkInPhone, setWalkInPhone] = useState("");
-  const [walkInService, setWalkInService] = useState("");
-  const [availableServices, setAvailableServices] = useState<Array<{ id: string; salonServiceId: string; name: string; price: number }>>([]);
+  const [isAddingWalkIn, setIsAddingWalkIn] = useState(false);
+  const [isAddingWalkInFirst, setIsAddingWalkInFirst] = useState(false);
   
   // Cancellation dialog state
   const [cancellationDialog, setCancellationDialog] = useState<{
@@ -52,30 +48,6 @@ const BookingsOverview = () => {
     bookingId: string;
     type: "reject" | "noshow";
   }>({ isOpen: false, bookingId: "", type: "reject" });
-
-  // Fetch available services for manual booking - MUST be before any returns
-  useEffect(() => {
-    if (!salon?.id) return;
-    
-    const fetchServices = async () => {
-      // Fetch salon_services with service names and prices
-      const { data: salonServices } = await supabase
-        .from('salon_services')
-        .select('id, service_id, price, services(id, name)')
-        .eq('salon_id', salon.id)
-        .eq('is_active', true);
-      
-      if (salonServices && salonServices.length > 0) {
-        setAvailableServices(salonServices.map(s => ({
-          id: s.service_id,  // services.id for dropdown value
-          salonServiceId: s.id,  // salon_services.id for booking
-          name: s.services?.name || 'Unknown Service',
-          price: s.price
-        })));
-      }
-    };
-    fetchServices();
-  }, [salon?.id]);
 
   // Early return AFTER all hooks
   if (authLoading || loading) {
@@ -90,34 +62,34 @@ const BookingsOverview = () => {
     );
   }
 
-  const handleAddWalkIn = async () => {
-    if (!walkInName || !walkInPhone || !walkInService) return;
-    
-    await addWalkInCustomer({
-      name: walkInName,
-      phone: walkInPhone,
-      service_id: walkInService
-    });
-    
-    setIsAddDialogOpen(false);
-    setWalkInName("");
-    setWalkInPhone("");
-    setWalkInService("");
+  const handleInstantAddWalkIn = async () => {
+    setIsAddingWalkIn(true);
+    try {
+      await addWalkInCustomer({
+        name: "Walk-in",
+        phone: "",
+        service_id: null as any
+      });
+    } catch (err) {
+      console.error("Error adding walk-in customer:", err);
+    } finally {
+      setIsAddingWalkIn(false);
+    }
   };
 
-  const handleAddWalkInFirst = async () => {
-    if (!walkInName || !walkInPhone || !walkInService) return;
-    
-    await addWalkInCustomerFirst({
-      name: walkInName,
-      phone: walkInPhone,
-      service_id: walkInService
-    });
-    
-    setIsAddFirstDialogOpen(false);
-    setWalkInName("");
-    setWalkInPhone("");
-    setWalkInService("");
+  const handleInstantAddWalkInFirst = async () => {
+    setIsAddingWalkInFirst(true);
+    try {
+      await addWalkInCustomerFirst({
+        name: "Walk-in",
+        phone: "",
+        service_id: null as any
+      });
+    } catch (err) {
+      console.error("Error adding walk-in to first position:", err);
+    } finally {
+      setIsAddingWalkInFirst(false);
+    }
   };
 
   // Check if there's an online customer with arrival deadline at position 1
@@ -169,61 +141,15 @@ const BookingsOverview = () => {
     >
       <div className="p-4">
         {/* Add Walk-in Button */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full mb-4" variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Walk-in Customer
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Walk-in Customer</DialogTitle>
-              <DialogDescription>
-                Add a customer who walked in without prior booking
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Customer Name</Label>
-                <Input
-                  id="name"
-                  value={walkInName}
-                  onChange={(e) => setWalkInName(e.target.value)}
-                  placeholder="Enter name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={walkInPhone}
-                  onChange={(e) => setWalkInPhone(e.target.value)}
-                  placeholder="Enter phone number"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="service">Service</Label>
-                <Select value={walkInService} onValueChange={setWalkInService}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableServices.map(service => (
-                      <SelectItem key={service.id} value={service.id}>
-                        {service.name} - ₹{service.price}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={handleAddWalkIn} className="w-full">
-                Add to Queue
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          className="w-full mb-4" 
+          variant="outline"
+          disabled={isAddingWalkIn}
+          onClick={handleInstantAddWalkIn}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {isAddingWalkIn ? "Adding Walk-in..." : "Add Walk-in Customer"}
+        </Button>
 
         {/* Custom Message Dialog */}
         <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
@@ -288,61 +214,15 @@ const BookingsOverview = () => {
           <TabsContent value="queue" className="space-y-4">
             {/* Add Walk-in First Button - Only show when online customer is waiting */}
             {hasOnlineCustomerWaiting && (
-              <Dialog open={isAddFirstDialogOpen} onOpenChange={setIsAddFirstDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="w-full mb-2" variant="default">
-                    <Timer className="h-4 w-4 mr-2" />
-                    Add Walk-in to First Position
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Walk-in to First Position</DialogTitle>
-                    <DialogDescription>
-                      This walk-in customer will be served before online customers waiting to arrive
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="first-name">Customer Name</Label>
-                      <Input
-                        id="first-name"
-                        value={walkInName}
-                        onChange={(e) => setWalkInName(e.target.value)}
-                        placeholder="Enter name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="first-phone">Phone Number</Label>
-                      <Input
-                        id="first-phone"
-                        type="tel"
-                        value={walkInPhone}
-                        onChange={(e) => setWalkInPhone(e.target.value)}
-                        placeholder="Enter phone number"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="first-service">Service</Label>
-                      <Select value={walkInService} onValueChange={setWalkInService}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select service" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableServices.map(service => (
-                            <SelectItem key={service.id} value={service.id}>
-                              {service.name} - ₹{service.price}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button onClick={handleAddWalkInFirst} className="w-full">
-                      Add to First Position
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button 
+                className="w-full mb-2" 
+                variant="default"
+                disabled={isAddingWalkInFirst}
+                onClick={handleInstantAddWalkInFirst}
+              >
+                <Timer className="h-4 w-4 mr-2" />
+                {isAddingWalkInFirst ? "Adding..." : "Add Walk-in to First Position"}
+              </Button>
             )}
             
             {queueBookings.length > 0 ? (
