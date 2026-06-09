@@ -102,34 +102,46 @@ const SalonDetails = () => {
     }
   };
 
-  const handleShare = async () => {
+  const handleShare = () => {
+    const shareUrl = window.location.href;
     const shareData = {
       title: salon?.name || "Nylour Salon",
       text: `Check out ${salon?.name || "this salon"} on Nylour!`,
-      url: window.location.href,
+      url: shareUrl,
     };
-    
-    try {
-      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        toast.success("Salon link copied to clipboard!");
-      }
-    } catch (err) {
-      // Don't show toast if user cancelled sharing (AbortError)
-      if (err instanceof Error && err.name === 'AbortError') {
-        return;
-      }
-      // Fallback in case Web Share API fails or gets rejected for other reasons
+
+    let isMobileShareTriggered = false;
+
+    // 1. Trigger native sharing first (synchronous call to preserve user gesture context)
+    if (navigator.share) {
       try {
-        await navigator.clipboard.writeText(window.location.href);
-        toast.success("Salon link copied to clipboard!");
-      } catch (copyErr) {
-        console.error('Failed to copy link:', copyErr);
-        toast.error("Failed to copy link");
+        navigator.share(shareData).catch((err) => {
+          // Ignore abort errors (user cancelled the share sheet)
+          if (err instanceof Error && err.name !== 'AbortError') {
+            console.error('Web Share API error:', err);
+          }
+        });
+        isMobileShareTriggered = true;
+      } catch (err) {
+        console.error('Error initiating native share:', err);
       }
     }
+
+    // 2. Instantly copy link to clipboard & show a toast notification for immediate feedback
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        if (isMobileShareTriggered) {
+          toast.success("Link copied! Opening share options...", { id: "share-toast" });
+        } else {
+          toast.success("Salon link copied to clipboard!", { id: "share-toast" });
+        }
+      })
+      .catch((copyErr) => {
+        console.error('Failed to copy to clipboard:', copyErr);
+        if (!isMobileShareTriggered) {
+          toast.error("Failed to copy link");
+        }
+      });
   };
 
   // Fetch salon details from database
