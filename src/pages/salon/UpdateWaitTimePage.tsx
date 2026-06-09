@@ -19,6 +19,8 @@ const UpdateWaitTimePage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [waitTime, setWaitTime] = useState(30);
+  const [hours, setHours] = useState(0);
+  const [minutes, setMinutes] = useState(30);
   const [salonId, setSalonId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,7 +36,10 @@ const UpdateWaitTimePage = () => {
 
         if (salonData) {
           setSalonId(salonData.id);
-          setWaitTime(salonData.avg_service_time ?? 30);
+          const timeVal = salonData.avg_service_time ?? 30;
+          setWaitTime(timeVal);
+          setHours(Math.floor(timeVal / 60));
+          setMinutes(timeVal % 60);
         }
       } catch (error) {
         console.error('Error fetching wait time:', error);
@@ -46,11 +51,27 @@ const UpdateWaitTimePage = () => {
     fetchWaitTime();
   }, [user]);
 
+  const formatWaitTimeDisplay = (totalMinutes: number) => {
+    if (totalMinutes === 0) return "0 minutes";
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    
+    if (h === 0) {
+      return `${m} minutes`;
+    }
+    
+    const hourText = h === 1 ? "hour" : "hours";
+    if (m === 0) {
+      return `${h} ${hourText}`;
+    }
+    return `${h} ${hourText} ${m} minutes`;
+  };
+
   const handleSave = async (time?: number) => {
     if (!salonId) return;
     setSaving(true);
 
-    const timeToSave = time ?? waitTime;
+    const timeToSave = time !== undefined ? time : (hours * 60 + minutes);
 
     try {
       const { error } = await supabase
@@ -60,11 +81,13 @@ const UpdateWaitTimePage = () => {
 
       if (error) throw error;
 
-      if (time) setWaitTime(time);
+      setWaitTime(timeToSave);
+      setHours(Math.floor(timeToSave / 60));
+      setMinutes(timeToSave % 60);
 
       toast({
         title: "Wait time updated",
-        description: `Current wait time set to ${timeToSave} minutes`,
+        description: `Current wait time set to ${formatWaitTimeDisplay(timeToSave)}`,
       });
     } catch (error) {
       console.error('Error saving wait time:', error);
@@ -112,26 +135,55 @@ const UpdateWaitTimePage = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center p-6 rounded-lg bg-primary/5 border border-primary/20">
-              <span className="text-4xl font-bold text-primary">{waitTime}</span>
-              <span className="text-lg text-muted-foreground ml-2">minutes</span>
+              <span className="text-3xl font-bold text-primary">{formatWaitTimeDisplay(waitTime)}</span>
             </div>
 
-            <div>
-              <Label htmlFor="waitTime">Custom Time (minutes)</Label>
-              <div className="flex gap-2 mt-1.5">
-                <Input
-                  id="waitTime"
-                  type="number"
-                  value={waitTime}
-                  onChange={(e) => setWaitTime(Number(e.target.value))}
-                  min={0}
-                  max={180}
-                />
-                <Button onClick={() => handleSave()} disabled={saving}>
-                  <Save className="h-4 w-4" />
-                </Button>
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="hours">Hours</Label>
+                <select
+                  id="hours"
+                  value={hours}
+                  onChange={(e) => {
+                    const h = Number(e.target.value);
+                    setHours(h);
+                    setWaitTime(h * 60 + minutes);
+                  }}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
+                    <option key={h} value={h}>
+                      {h} {h === 1 ? "hour" : "hours"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="minutes">Minutes</Label>
+                <select
+                  id="minutes"
+                  value={minutes}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    setMinutes(m);
+                    setWaitTime(hours * 60 + m);
+                  }}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                    <option key={m} value={m}>
+                      {m} minutes
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
+
+            <Button onClick={() => handleSave()} disabled={saving} className="w-full mt-4 gap-2" size="lg">
+              <Save className="h-4 w-4" />
+              Save Wait Time
+            </Button>
           </CardContent>
         </Card>
 
