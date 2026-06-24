@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calendar, Clock, Settings, MapPin, User, Scissors, Image } from "lucide-react";
+import { Calendar, Clock, Settings, MapPin, User, Scissors, Image, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const customerNavItems = [
@@ -13,7 +13,7 @@ const salonNavItems = [
   { icon: Calendar, label: "Bookings", path: "/salon-dashboard" },
   { icon: Scissors, label: "Services", path: "/salon-dashboard/services" },
   { icon: Image, label: "Gallery", path: "/salon-dashboard/gallery" },
-  { icon: Settings, label: "Profile", path: "/salon-dashboard/profile" },
+  { icon: Users, label: "Staff", path: "/salon-dashboard/staff" },
 ];
 
 export const MobileNav = () => {

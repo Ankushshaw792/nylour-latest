@@ -47,6 +47,7 @@ import UpdateWaitTimePage from "./pages/salon/UpdateWaitTimePage";
 import CustomerNotificationPage from "./pages/salon/CustomerNotificationPage";
 import OrderHistoryPage from "./pages/salon/OrderHistoryPage";
 import HelpCentrePage from "./pages/salon/HelpCentrePage";
+import StaffManagement from "./pages/salon/StaffManagement";
 
 import NotFound from "./pages/NotFound";
 
@@ -98,6 +99,7 @@ const App = () => (
             <Route path="/salon-dashboard/notifications" element={<MobileLayout><CustomerNotificationPage /></MobileLayout>} />
             <Route path="/salon-dashboard/order-history" element={<MobileLayout><OrderHistoryPage /></MobileLayout>} />
             <Route path="/salon-dashboard/help" element={<MobileLayout><HelpCentrePage /></MobileLayout>} />
+            <Route path="/salon-dashboard/staff" element={<MobileLayout><StaffManagement /></MobileLayout>} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>

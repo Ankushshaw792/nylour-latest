@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { SalonLoader } from "@/components/ui/SalonLoader";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Smartphone, Bell, Users, Edit, AlertCircle, AlertTriangle, MapPinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +30,8 @@ import {
 const BookingScreen = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const staffId = searchParams.get("staffId");
   const { user, loading } = useRequireAuth();
   const { items, totalPrice } = useCart();
   const { hasActiveBooking, activeBooking, isLoading: bookingCheckLoading } = useActiveBooking(user?.id || null);
@@ -42,6 +45,24 @@ const BookingScreen = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [distanceCheckLoading, setDistanceCheckLoading] = useState(true);
+  const [selectedStaff, setSelectedStaff] = useState<any>(null);
+
+  // Fetch stylist details if staffId is provided
+  useEffect(() => {
+    const fetchStaffDetails = async () => {
+      if (staffId && staffId !== 'any') {
+        const { data } = await supabase
+          .from('salon_staff')
+          .select('*')
+          .eq('id', staffId)
+          .maybeSingle();
+        if (data) {
+          setSelectedStaff(data);
+        }
+      }
+    };
+    fetchStaffDetails();
+  }, [staffId]);
 
   // Check distance to salon
   const isOutOfRange = (() => {
@@ -166,6 +187,7 @@ const BookingScreen = () => {
           customer_id: userProfile.id,
           salon_id: id,
           service_id: items[0].id, // Keep first service for backward compatibility
+          staff_id: staffId && staffId !== 'any' ? staffId : null,
           booking_date: format(new Date(), 'yyyy-MM-dd'), // Local date, not UTC
           booking_time: new Date().toTimeString().split(' ')[0],
           duration: items.reduce((total, item) => total + (parseInt(item.duration) * item.quantity), 0),
@@ -249,6 +271,32 @@ const BookingScreen = () => {
             bookingFee={bookingFee}
           />
         )}
+
+        {/* Stylist Details Section */}
+        <Card className="bg-card">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="w-10 h-10 border border-border">
+                {selectedStaff?.avatar_url ? (
+                  <AvatarImage src={selectedStaff.avatar_url} />
+                ) : (
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    <Users className="h-5 w-5" />
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <div>
+                <p className="text-xs text-muted-foreground">Selected Stylist</p>
+                <p className="font-semibold text-foreground text-sm">
+                  {selectedStaff?.name || "Any Stylist (First Available)"}
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full text-green-600 bg-green-50 border border-green-100 dark:bg-green-950/20 dark:border-green-900">
+              Assigned
+            </span>
+          </CardContent>
+        </Card>
 
         {/* Contact Details Section */}
         <Card>

@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import SalonGalleryCarousel from "@/components/salon/SalonGalleryCarousel";
 import { LiveQueueDialog } from "@/components/queue/LiveQueueDialog";
+import { SelectStylistDialog } from "@/components/queue/SelectStylistDialog";
 import { calculateDistance, formatDistance } from "@/lib/locationUtils";
 import { MAX_BOOKING_DISTANCE_KM, SALON_TOO_FAR_MESSAGE } from "@/lib/locationConfig";
 import haircutImage from "@/assets/haircut-service.jpg";
@@ -66,6 +67,7 @@ const SalonDetails = () => {
   const [salon, setSalon] = useState<SalonDetails | null>(null);
   const [loadingSalon, setLoadingSalon] = useState(true);
   const [showQueueDialog, setShowQueueDialog] = useState(false);
+  const [isSelectStylistOpen, setIsSelectStylistOpen] = useState(false);
   const [avgServiceTime, setAvgServiceTime] = useState(30);
 
   // Calculate distance to salon
@@ -372,7 +374,7 @@ const SalonDetails = () => {
       }}
       bottomButtonProps={totalItems > 0 && canBook ? {
         text: "Book Now",
-        onClick: () => navigate(`/book/${salon?.id}`),
+        onClick: () => setIsSelectStylistOpen(true),
         disabled: totalItems === 0 || !canBook,
         price: totalPrice,
         itemCount: totalItems
@@ -454,6 +456,15 @@ const SalonDetails = () => {
           isOpen={showQueueDialog}
           onClose={() => setShowQueueDialog(false)}
           avgServiceTime={avgServiceTime}
+        />
+
+        {/* Select Stylist Dialog */}
+        <SelectStylistDialog
+          isOpen={isSelectStylistOpen}
+          onClose={() => setIsSelectStylistOpen(false)}
+          salonId={salon.id}
+          avgServiceTime={avgServiceTime}
+          onSelect={(staffId) => navigate(`/book/${salon.id}?staffId=${staffId}`)}
         />
 
         {/* Salon Details Section */}
