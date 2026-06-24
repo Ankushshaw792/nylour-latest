@@ -822,6 +822,30 @@ export const useSalonRealtimeData = () => {
     }
   }, [salon]);
 
+  // Move queue entry up or down
+  const moveQueueEntry = useCallback(async (bookingId: string, direction: 'up' | 'down') => {
+    try {
+      const { error } = await supabase.rpc('move_queue_entry', {
+        p_booking_id: bookingId,
+        p_direction: direction
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Queue entry moved ${direction}`,
+      });
+    } catch (error: any) {
+      console.error('Error moving queue entry:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to move queue entry",
+        variant: "destructive",
+      });
+    }
+  }, []);
+
   return {
     loading,
     salon,
@@ -835,6 +859,7 @@ export const useSalonRealtimeData = () => {
     markNoShow,
     addWalkInCustomer,
     addWalkInCustomerFirst,
+    moveQueueEntry,
     sendReminder,
     sendCustomReminder,
     notifyNextCustomer,

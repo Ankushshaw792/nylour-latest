@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus, UserX, MessageSquare, Timer } from "lucide-react";
+import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus, UserX, MessageSquare, Timer, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ import { BookingDetailsDialog } from "@/components/bookings/BookingDetailsDialog
 
 const BookingsOverview = () => {
   const { user, loading: authLoading } = useRequireAuth();
-  const { bookings, loading, acceptBooking, rejectBooking, startService, completeService, markNoShow, sendReminder, sendCustomReminder, addWalkInCustomer, addWalkInCustomerFirst, salon } = useSalonRealtimeData();
+  const { bookings, loading, acceptBooking, rejectBooking, startService, completeService, markNoShow, sendReminder, sendCustomReminder, addWalkInCustomer, addWalkInCustomerFirst, moveQueueEntry, salon } = useSalonRealtimeData();
   
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [selectedBookingForMessage, setSelectedBookingForMessage] = useState<{ customerId: string; bookingId: string } | null>(null);
@@ -131,7 +131,15 @@ const BookingsOverview = () => {
 
   // Filter bookings by new tab structure
   const todayBookings = bookings.filter(b => b.status === 'pending');
-  const queueBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress');
+  
+  // Sort bookings in queue by their queue_position to match database order
+  const queueBookings = bookings
+    .filter(b => b.status === 'confirmed' || b.status === 'in_progress')
+    .sort((a, b) => (a.queue_position || 999) - (b.queue_position || 999));
+
+  // Extract confirmed bookings to identify queue boundaries for moving up/down
+  const confirmedBookings = queueBookings.filter(b => b.status === 'confirmed');
+
   const completedBookings = bookings.filter(b => b.status === 'completed' || b.status === 'rejected' || b.status === 'cancelled');
 
   return (
@@ -226,18 +234,27 @@ const BookingsOverview = () => {
             )}
             
             {queueBookings.length > 0 ? (
-              queueBookings.map((booking) => (
-                <BookingCard
-                  key={booking.id}
-                  booking={booking}
-                  onStart={startService}
-                  onComplete={completeService}
-                  onNoShow={openNoShowDialog}
-                  onSendReminder={sendReminder}
-                  onSendMessage={openMessageDialog}
-                  showActions="queue"
-                />
-              ))
+              queueBookings.map((booking) => {
+                const isConfirmed = booking.status === 'confirmed';
+                const isFirstInQueue = isConfirmed && confirmedBookings.length > 0 && booking.id === confirmedBookings[0].id;
+                const isLastInQueue = isConfirmed && confirmedBookings.length > 0 && booking.id === confirmedBookings[confirmedBookings.length - 1].id;
+
+                return (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    onStart={startService}
+                    onComplete={completeService}
+                    onNoShow={openNoShowDialog}
+                    onSendReminder={sendReminder}
+                    onSendMessage={openMessageDialog}
+                    onMoveQueueEntry={moveQueueEntry}
+                    isFirstInQueue={isFirstInQueue}
+                    isLastInQueue={isLastInQueue}
+                    showActions="queue"
+                  />
+                );
+              })
             ) : (
               <EmptyState message="No bookings in queue" />
             )}
@@ -282,10 +299,13 @@ interface BookingCardProps {
   onNoShow?: (id: string) => void;
   onSendReminder?: (customerId: string, bookingId: string) => void;
   onSendMessage?: (customerId: string, bookingId: string) => void;
+  onMoveQueueEntry?: (bookingId: string, direction: 'up' | 'down') => void;
+  isFirstInQueue?: boolean;
+  isLastInQueue?: boolean;
   showActions: 'accept-reject' | 'queue' | 'none';
 }
 
-const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoShow, onSendReminder, onSendMessage, showActions }: BookingCardProps) => {
+const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoShow, onSendReminder, onSendMessage, onMoveQueueEntry, isFirstInQueue, isLastInQueue, showActions }: BookingCardProps) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   
   // Determine if this is a walk-in booking
@@ -459,6 +479,30 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
                     </Button>
                     {booking.status === 'confirmed' && (
                       <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onMoveQueueEntry?.(booking.id, 'up');
+                          }}
+                          disabled={isFirstInQueue}
+                          title="Move Up in Queue"
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onMoveQueueEntry?.(booking.id, 'down');
+                          }}
+                          disabled={isLastInQueue}
+                          title="Move Down in Queue"
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="destructive"
