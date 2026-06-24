@@ -686,6 +686,13 @@ export type Database = {
         Args: { p_message?: string; p_salon_id: string }
         Returns: undefined
       }
+      reorder_queue_entry: {
+        Args: {
+          p_booking_id: string
+          p_new_time: string
+        }
+        Returns: undefined
+      }
       salon_owner_has_customer: {
         Args: { p_customer_id: string }
         Returns: boolean

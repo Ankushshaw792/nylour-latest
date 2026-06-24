@@ -419,8 +419,17 @@ const QueueStatus = () => {
               <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Clock className="h-10 w-10 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Position #{currentPosition}</h2>
-              <p className="text-muted-foreground">in the queue</p>
+              {queueEntry.status === 'in_service' ? (
+                <>
+                  <h2 className="text-2xl font-bold mb-2">Currently in Service</h2>
+                  <p className="text-muted-foreground">You are in the chair</p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold mb-2">Position #{currentPosition}</h2>
+                  <p className="text-muted-foreground">in the queue</p>
+                </>
+              )}
             </div>
 
             {/* Progress Bar */}
@@ -485,20 +494,35 @@ const QueueStatus = () => {
                 
                 // Calculate estimated time using member's specific estimated_wait
                 const memberDuration = member.estimated_wait ?? avgServiceTime;
-
-                if (member.isWalkIn) {
+                 if (member.isWalkIn) {
                   return (
                     <div
                       key={member.id}
-                      className={`flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border`}
+                      className={`flex items-center justify-between p-3 rounded-lg ${
+                        member.queue_status === 'in_service'
+                          ? 'bg-green-50/50 border border-green-200'
+                          : isActive 
+                            ? 'bg-amber-50 border border-amber-200' 
+                            : 'bg-muted/30 border border-border'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-muted-foreground/10 flex items-center justify-center text-muted-foreground">
-                          <User className="h-4 w-4" />
+                        {/* Circle badge showing queue position */}
+                        <div className={`w-8 h-8 rounded-full font-bold text-sm flex items-center justify-center ${
+                          member.queue_status === 'in_service'
+                            ? 'bg-green-500 text-white ring-2 ring-green-500'
+                            : isActive 
+                              ? 'bg-amber-500 text-white ring-2 ring-amber-500' 
+                              : 'bg-muted-foreground/20 text-foreground'
+                        }`}>
+                          {member.position}
                         </div>
                         <div>
                           <p className="font-medium text-foreground">
                             Walk-in / Offline
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {member.service_name}
                           </p>
                         </div>
                       </div>
@@ -514,7 +538,13 @@ const QueueStatus = () => {
                             </span>
                           )
                         )}
-                        <div className={`w-3 h-3 rounded-full ${member.queue_status === 'in_service' ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
+                        <div className={`w-3 h-3 rounded-full ${
+                          member.queue_status === 'in_service'
+                            ? 'bg-green-500'
+                            : isActive 
+                              ? 'bg-amber-500' 
+                              : 'bg-muted-foreground/40'
+                        }`} />
                       </div>
                     </div>
                   );

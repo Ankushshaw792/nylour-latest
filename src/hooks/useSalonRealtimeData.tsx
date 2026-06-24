@@ -126,30 +126,34 @@ export const useSalonRealtimeData = () => {
         console.error('Bookings fetch error:', JSON.stringify(bookingsError));
         setBookings([]);
       } else {
-        // Fetch queue positions for each booking to add queue_position field
+        // Fetch queue positions and check-in times for each booking
         const bookingIds = (bookingsData || []).map((b: any) => b.id);
-        let queuePositionMap: Record<string, number> = {};
+        let queuePositionMap: Record<string, { position: number; check_in_time: string }> = {};
         
         if (bookingIds.length > 0) {
           const { data: queueData } = await supabase
             .from('queue_entries')
-            .select('booking_id, position')
+            .select('booking_id, position, check_in_time')
             .in('booking_id', bookingIds)
             .in('status', ['waiting', 'called', 'in_service']);
           
           if (queueData) {
             queueData.forEach((q: any) => {
               if (q.booking_id) {
-                queuePositionMap[q.booking_id] = q.position;
+                queuePositionMap[q.booking_id] = {
+                  position: q.position,
+                  check_in_time: q.check_in_time
+                };
               }
             });
           }
         }
         
-        // Add queue_position to each booking
+        // Add queue_position and queue_check_in_time to each booking
         const enrichedBookings = (bookingsData || []).map((b: any) => ({
           ...b,
-          queue_position: queuePositionMap[b.id] || null
+          queue_position: queuePositionMap[b.id]?.position ?? null,
+          queue_check_in_time: queuePositionMap[b.id]?.check_in_time ?? null
         }));
         
         setBookings(enrichedBookings as any);
@@ -822,25 +826,25 @@ export const useSalonRealtimeData = () => {
     }
   }, [salon]);
 
-  // Move queue entry up or down
-  const moveQueueEntry = useCallback(async (bookingId: string, direction: 'up' | 'down') => {
+  // Reorder queue entry to a new check-in time
+  const reorderQueueEntry = useCallback(async (bookingId: string, newTime: string) => {
     try {
-      const { error } = await supabase.rpc('move_queue_entry', {
+      const { error } = await supabase.rpc('reorder_queue_entry', {
         p_booking_id: bookingId,
-        p_direction: direction
+        p_new_time: newTime
       });
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: `Queue entry moved ${direction}`,
+        description: "Queue reordered",
       });
     } catch (error: any) {
-      console.error('Error moving queue entry:', error);
+      console.error('Error reordering queue entry:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to move queue entry",
+        description: error.message || "Failed to reorder queue",
         variant: "destructive",
       });
     }
@@ -859,7 +863,7 @@ export const useSalonRealtimeData = () => {
     markNoShow,
     addWalkInCustomer,
     addWalkInCustomerFirst,
-    moveQueueEntry,
+    reorderQueueEntry,
     sendReminder,
     sendCustomReminder,
     notifyNextCustomer,

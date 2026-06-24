@@ -124,40 +124,43 @@ export const LiveQueueDialog = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {queue.map((entry, index) => {
-                const isInService = entry.queue_status === 'in_service';
-                return (
-                  <div
-                    key={entry.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border ${
-                      isInService
-                        ? "bg-green-50/50 border-green-200"
-                        : index === 0
-                          ? "bg-primary/10 border-primary/30"
-                          : "bg-muted/30 border-border"
-                    }`}
-                  >
-                    {/* Customer Avatar */}
-                    <Avatar className={`w-8 h-8 ${
-                      isInService 
-                        ? "ring-2 ring-green-500" 
-                        : index === 0 
-                          ? "ring-2 ring-primary" 
-                          : ""
-                    }`}>
-                      <AvatarImage src={entry.avatar_url ?? undefined} />
-                      <AvatarFallback
-                        className={`font-bold text-sm ${
-                          isInService
-                            ? "bg-green-500 text-white"
-                            : index === 0
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {entry.position}
-                      </AvatarFallback>
-                    </Avatar>
+              {(() => {
+                const firstWaitingIndex = queue.findIndex(entry => entry.queue_status !== 'in_service');
+                return queue.map((entry, index) => {
+                  const isInService = entry.queue_status === 'in_service';
+                  const isFirstWaiting = index === firstWaitingIndex;
+                  return (
+                    <div
+                      key={entry.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${
+                        isInService
+                          ? "bg-green-50/50 border-green-200"
+                          : isFirstWaiting
+                            ? "bg-primary/10 border-primary/30"
+                            : "bg-muted/30 border-border"
+                      }`}
+                    >
+                      {/* Customer Avatar */}
+                      <Avatar className={`w-8 h-8 ${
+                        isInService 
+                          ? "ring-2 ring-green-500" 
+                          : isFirstWaiting 
+                            ? "ring-2 ring-primary" 
+                            : ""
+                      }`}>
+                        <AvatarImage src={entry.avatar_url ?? undefined} />
+                        <AvatarFallback
+                          className={`font-bold text-sm ${
+                            isInService
+                              ? "bg-green-500 text-white"
+                              : isFirstWaiting
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {entry.position}
+                        </AvatarFallback>
+                      </Avatar>
 
                     {/* Customer Info */}
                     <div className="flex-1 min-w-0">
@@ -188,8 +191,9 @@ export const LiveQueueDialog = ({
                     </div>
                   </div>
                 );
-              })}
-            </div>
+              });
+            })()}
+          </div>
           )}
         </div>
       </DialogContent>

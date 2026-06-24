@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus, UserX, MessageSquare, Timer, ArrowUp, ArrowDown } from "lucide-react";
+import { Calendar, Clock, User, Check, X, Phone, Bell, CheckCircle, Plus, UserX, MessageSquare, Timer, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,13 +34,17 @@ import { BookingDetailsDialog } from "@/components/bookings/BookingDetailsDialog
 
 const BookingsOverview = () => {
   const { user, loading: authLoading } = useRequireAuth();
-  const { bookings, loading, acceptBooking, rejectBooking, startService, completeService, markNoShow, sendReminder, sendCustomReminder, addWalkInCustomer, addWalkInCustomerFirst, moveQueueEntry, salon } = useSalonRealtimeData();
+  const { bookings, loading, acceptBooking, rejectBooking, startService, completeService, markNoShow, sendReminder, sendCustomReminder, addWalkInCustomer, addWalkInCustomerFirst, reorderQueueEntry, salon } = useSalonRealtimeData();
   
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [selectedBookingForMessage, setSelectedBookingForMessage] = useState<{ customerId: string; bookingId: string } | null>(null);
   const [customMessage, setCustomMessage] = useState("");
   const [isAddingWalkIn, setIsAddingWalkIn] = useState(false);
   const [isAddingWalkInFirst, setIsAddingWalkInFirst] = useState(false);
+  
+  // Drag and drop states for queue reordering
+  const [draggedBookingId, setDraggedBookingId] = useState<string | null>(null);
+  const [draggedOverBookingId, setDraggedOverBookingId] = useState<string | null>(null);
   
   // Cancellation dialog state
   const [cancellationDialog, setCancellationDialog] = useState<{
@@ -140,6 +144,60 @@ const BookingsOverview = () => {
   // Extract confirmed bookings to identify queue boundaries for moving up/down
   const confirmedBookings = queueBookings.filter(b => b.status === 'confirmed');
 
+  // Drag and Drop event handlers
+  const handleDragStart = (bookingId: string) => {
+    setDraggedBookingId(bookingId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, bookingId: string) => {
+    e.preventDefault();
+    if (draggedBookingId !== bookingId) {
+      setDraggedOverBookingId(bookingId);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedBookingId(null);
+    setDraggedOverBookingId(null);
+  };
+
+  const handleDrop = async (targetBookingId: string) => {
+    if (!draggedBookingId || draggedBookingId === targetBookingId) return;
+
+    const draggedIdx = confirmedBookings.findIndex(b => b.id === draggedBookingId);
+    const targetIdx = confirmedBookings.findIndex(b => b.id === targetBookingId);
+
+    if (draggedIdx === -1 || targetIdx === -1) return;
+
+    // Rearrange the list temporarily to determine new neighbors and times
+    const updatedList = [...confirmedBookings];
+    const [draggedItem] = updatedList.splice(draggedIdx, 1);
+    updatedList.splice(targetIdx, 0, draggedItem);
+
+    let newTime: Date;
+    if (targetIdx === 0) {
+      // Moved to the very top of the waiting queue
+      const baseTime = updatedList[1]?.queue_check_in_time ? new Date(updatedList[1].queue_check_in_time) : new Date();
+      baseTime.setSeconds(baseTime.getSeconds() - 1);
+      newTime = baseTime;
+    } else if (targetIdx === updatedList.length - 1) {
+      // Moved to the very bottom of the waiting queue
+      const baseTime = updatedList[updatedList.length - 2]?.queue_check_in_time ? new Date(updatedList[updatedList.length - 2].queue_check_in_time) : new Date();
+      baseTime.setSeconds(baseTime.getSeconds() + 1);
+      newTime = baseTime;
+    } else {
+      // Moved in between two entries
+      const prevTimeStr = updatedList[targetIdx - 1]?.queue_check_in_time;
+      const nextTimeStr = updatedList[targetIdx + 1]?.queue_check_in_time;
+      const prevTime = prevTimeStr ? new Date(prevTimeStr).getTime() : new Date().getTime();
+      const nextTime = nextTimeStr ? new Date(nextTimeStr).getTime() : new Date().getTime();
+      newTime = new Date(prevTime + (nextTime - prevTime) / 2);
+    }
+
+    await reorderQueueEntry(draggedBookingId, newTime.toISOString());
+    handleDragEnd();
+  };
+
   const completedBookings = bookings.filter(b => b.status === 'completed' || b.status === 'rejected' || b.status === 'cancelled');
 
   return (
@@ -235,10 +293,6 @@ const BookingsOverview = () => {
             
             {queueBookings.length > 0 ? (
               queueBookings.map((booking) => {
-                const isConfirmed = booking.status === 'confirmed';
-                const isFirstInQueue = isConfirmed && confirmedBookings.length > 0 && booking.id === confirmedBookings[0].id;
-                const isLastInQueue = isConfirmed && confirmedBookings.length > 0 && booking.id === confirmedBookings[confirmedBookings.length - 1].id;
-
                 return (
                   <BookingCard
                     key={booking.id}
@@ -248,9 +302,12 @@ const BookingsOverview = () => {
                     onNoShow={openNoShowDialog}
                     onSendReminder={sendReminder}
                     onSendMessage={openMessageDialog}
-                    onMoveQueueEntry={moveQueueEntry}
-                    isFirstInQueue={isFirstInQueue}
-                    isLastInQueue={isLastInQueue}
+                    onDragStart={() => handleDragStart(booking.id)}
+                    onDragOver={(e) => handleDragOver(e, booking.id)}
+                    onDragEnd={handleDragEnd}
+                    onDrop={() => handleDrop(booking.id)}
+                    isDragged={draggedBookingId === booking.id}
+                    isDraggedOver={draggedOverBookingId === booking.id}
                     showActions="queue"
                   />
                 );
@@ -299,13 +356,16 @@ interface BookingCardProps {
   onNoShow?: (id: string) => void;
   onSendReminder?: (customerId: string, bookingId: string) => void;
   onSendMessage?: (customerId: string, bookingId: string) => void;
-  onMoveQueueEntry?: (bookingId: string, direction: 'up' | 'down') => void;
-  isFirstInQueue?: boolean;
-  isLastInQueue?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragEnd?: () => void;
+  onDrop?: (e: React.DragEvent) => void;
+  isDragged?: boolean;
+  isDraggedOver?: boolean;
   showActions: 'accept-reject' | 'queue' | 'none';
 }
 
-const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoShow, onSendReminder, onSendMessage, onMoveQueueEntry, isFirstInQueue, isLastInQueue, showActions }: BookingCardProps) => {
+const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoShow, onSendReminder, onSendMessage, onDragStart, onDragOver, onDragEnd, onDrop, isDragged, isDraggedOver, showActions }: BookingCardProps) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   
   // Determine if this is a walk-in booking
@@ -341,11 +401,30 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
   return (
     <>
       <Card 
-        className={`card-hover cursor-pointer ${isWalkIn ? 'border-l-4 border-l-amber-500' : 'border-l-4 border-l-primary'}`}
+        className={`card-hover cursor-pointer ${isWalkIn ? 'border-l-4 border-l-amber-500' : 'border-l-4 border-l-primary'} ${
+          isDragged ? 'opacity-40 select-none' : ''
+        } ${
+          isDraggedOver ? 'ring-2 ring-primary ring-dashed bg-primary/5' : ''
+        }`}
+        draggable={showActions === 'queue' && booking.status === 'confirmed'}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragEnd={onDragEnd}
+        onDrop={onDrop}
         onClick={() => setIsDetailsOpen(true)}
       >
         <CardContent className="p-4">
           <div className="flex items-start gap-4">
+            {/* Drag Handle Grip */}
+            {showActions === 'queue' && booking.status === 'confirmed' && (
+              <div 
+                className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground py-3"
+                title="Drag to reorder"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVertical className="h-5 w-5" />
+              </div>
+            )}
             {/* Customer Avatar */}
             <Avatar className="w-12 h-12">
               <AvatarImage
@@ -479,30 +558,6 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
                     </Button>
                     {booking.status === 'confirmed' && (
                       <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onMoveQueueEntry?.(booking.id, 'up');
-                          }}
-                          disabled={isFirstInQueue}
-                          title="Move Up in Queue"
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onMoveQueueEntry?.(booking.id, 'down');
-                          }}
-                          disabled={isLastInQueue}
-                          title="Move Down in Queue"
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </Button>
                         <Button
                           size="sm"
                           variant="destructive"
