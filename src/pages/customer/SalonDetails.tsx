@@ -245,7 +245,7 @@ const SalonDetails = () => {
           .from('queue_entries')
           .select('id')
           .eq('salon_id', id)
-          .eq('status', 'waiting')
+          .in('status', ['waiting', 'called', 'in_service'])
           .gte('check_in_time', todayStart);
 
         const queueCount = queueData?.length || 0;

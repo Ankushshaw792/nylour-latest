@@ -60,12 +60,12 @@ const QueueStatus = () => {
       setCurrentCustomerId(customer.id);
 
       // Step 2: Find user's active queue entry (use server-side date via status only, no client date filter)
-      // Query by status 'waiting' to find active entries
+      // Query by status 'waiting', 'called', or 'in_service' to find active entries
       const { data: queueDataArray, error: queueError } = await supabase
         .from("queue_entries")
         .select("*")
         .eq("customer_id", customer.id)
-        .in("status", ["waiting", "called"])
+        .in("status", ["waiting", "called", "in_service"])
         .order("check_in_time", { ascending: false })
         .limit(1);
 
@@ -175,6 +175,8 @@ const QueueStatus = () => {
             service_duration: null,
             isWalkIn: entry.is_walk_in,
             party_size: entry.party_size || 1,
+            queue_status: entry.queue_status,
+            estimated_wait: entry.estimated_wait_time,
             // Track if this is the current user by matching booking_id
             isCurrentUser: entry.booking_id === activeQueueData.booking_id
           }));
@@ -433,7 +435,9 @@ const QueueStatus = () => {
             {/* Estimated Time */}
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-1">Estimated wait time</p>
-              <p className="text-3xl font-bold text-primary">{estimatedWaitMinutes} min</p>
+              <p className="text-3xl font-bold text-primary">
+                {queueEntry.status === 'in_service' ? "In Service" : `${queueEntry.estimated_wait_time ?? 0} min`}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -479,8 +483,8 @@ const QueueStatus = () => {
                 // For walk-ins, don't show avatar; for current user show their avatar
                 const showAvatar = !member.isWalkIn && (isCurrentUser || member.avatar_url);
                 
-                // Calculate estimated time using salon's avg service time
-                const memberDuration = avgServiceTime;
+                // Calculate estimated time using member's specific estimated_wait
+                const memberDuration = member.estimated_wait ?? avgServiceTime;
 
                 if (member.isWalkIn) {
                   return (
@@ -499,12 +503,18 @@ const QueueStatus = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {member.position < currentPosition && (
-                          <span className="text-xs text-muted-foreground">
-                            ~{memberDuration} min
+                        {member.queue_status === 'in_service' ? (
+                          <span className="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded border border-green-100">
+                            In Service
                           </span>
+                        ) : (
+                          member.position < currentPosition && (
+                            <span className="text-xs text-muted-foreground">
+                              ~{memberDuration} min
+                            </span>
+                          )
                         )}
-                        <div className="w-3 h-3 rounded-full bg-muted-foreground/40" />
+                        <div className={`w-3 h-3 rounded-full ${member.queue_status === 'in_service' ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
                       </div>
                     </div>
                   );
@@ -516,18 +526,22 @@ const QueueStatus = () => {
                     className={`flex items-center justify-between p-3 rounded-lg ${
                       isCurrentUser 
                         ? 'bg-primary/10 border border-primary/20' 
-                        : isActive 
-                          ? 'bg-amber-50 border border-amber-200' 
-                          : 'bg-muted/30 border border-border'
+                        : member.queue_status === 'in_service'
+                          ? 'bg-green-50/50 border border-green-200'
+                          : isActive 
+                            ? 'bg-amber-50 border border-amber-200' 
+                            : 'bg-muted/30 border border-border'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className={`w-8 h-8 ${
                         isCurrentUser 
                           ? 'ring-2 ring-primary' 
-                          : isActive 
-                            ? 'ring-2 ring-amber-500' 
-                            : ''
+                          : member.queue_status === 'in_service'
+                            ? 'ring-2 ring-green-500'
+                            : isActive 
+                              ? 'ring-2 ring-amber-500' 
+                              : ''
                       }`}>
                         {showAvatar && (
                           <AvatarImage src={isCurrentUser ? (avatarUrl ?? undefined) : (member.avatar_url ?? undefined)} />
@@ -535,9 +549,11 @@ const QueueStatus = () => {
                         <AvatarFallback className={`text-sm font-bold ${
                           isCurrentUser 
                             ? 'bg-primary text-primary-foreground' 
-                            : isActive 
-                              ? 'bg-amber-500 text-white' 
-                              : 'bg-muted-foreground/20 text-foreground'
+                            : member.queue_status === 'in_service'
+                              ? 'bg-green-500 text-white'
+                              : isActive 
+                                ? 'bg-amber-500 text-white' 
+                                : 'bg-muted-foreground/20 text-foreground'
                         }`}>
                           {member.position}
                         </AvatarFallback>
@@ -559,19 +575,26 @@ const QueueStatus = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Show time only for people ahead (not for current user or people behind) */}
-                      {member.position < currentPosition && !isCurrentUser && (
-                        <span className="text-xs text-muted-foreground">
-                          ~{memberDuration} min
+                      {member.queue_status === 'in_service' ? (
+                        <span className="text-xs text-green-600 font-semibold bg-green-50 px-1.5 py-0.5 rounded border border-green-100">
+                          In Service
                         </span>
+                      ) : (
+                        member.position < currentPosition && !isCurrentUser && (
+                          <span className="text-xs text-muted-foreground">
+                            ~{memberDuration} min
+                          </span>
+                        )
                       )}
                       <div 
                         className={`w-3 h-3 rounded-full ${
-                          isActive 
-                            ? 'bg-amber-500' 
-                            : isCurrentUser
-                              ? 'bg-primary'
-                              : 'bg-muted-foreground/40'
+                          member.queue_status === 'in_service'
+                            ? 'bg-green-500'
+                            : isActive 
+                              ? 'bg-amber-500' 
+                              : isCurrentUser
+                                ? 'bg-primary'
+                                : 'bg-muted-foreground/40'
                         }`}
                       />
                     </div>

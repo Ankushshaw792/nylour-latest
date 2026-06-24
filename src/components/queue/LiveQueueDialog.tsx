@@ -18,6 +18,7 @@ interface QueueEntry {
   service_name: string;
   estimated_wait: number;
   party_size: number;
+  queue_status: string;
 }
 
 interface LiveQueueDialogProps {
@@ -57,8 +58,9 @@ export const LiveQueueDialog = ({
         customer_name: entry.display_name || "Customer",
         avatar_url: entry.avatar_url || null,
         service_name: entry.service_summary || "Service",
-        estimated_wait: index * avgServiceTime,
+        estimated_wait: entry.estimated_wait_time ?? (index * avgServiceTime),
         party_size: entry.party_size || 1,
+        queue_status: entry.queue_status || 'waiting',
       }));
 
       setQueue(processedQueue);
@@ -104,7 +106,7 @@ export const LiveQueueDialog = ({
             <Users className="h-5 w-5 text-primary" />
             Live Queue
             <Badge variant="secondary" className="ml-2">
-              {queue.length} waiting
+              {queue.length} {queue.length === 1 ? 'customer' : 'customers'}
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -122,53 +124,71 @@ export const LiveQueueDialog = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {queue.map((entry, index) => (
-                <div
-                  key={entry.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border ${
-                    index === 0
-                      ? "bg-primary/10 border-primary/30"
-                      : "bg-muted/30 border-border"
-                  }`}
-                >
-                  {/* Customer Avatar */}
-                  <Avatar className={`w-8 h-8 ${index === 0 ? "ring-2 ring-primary" : ""}`}>
-                    <AvatarImage src={entry.avatar_url ?? undefined} />
-                    <AvatarFallback
-                      className={`font-bold text-sm ${
-                        index === 0
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {entry.position}
-                    </AvatarFallback>
-                  </Avatar>
+              {queue.map((entry, index) => {
+                const isInService = entry.queue_status === 'in_service';
+                return (
+                  <div
+                    key={entry.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border ${
+                      isInService
+                        ? "bg-green-50/50 border-green-200"
+                        : index === 0
+                          ? "bg-primary/10 border-primary/30"
+                          : "bg-muted/30 border-border"
+                    }`}
+                  >
+                    {/* Customer Avatar */}
+                    <Avatar className={`w-8 h-8 ${
+                      isInService 
+                        ? "ring-2 ring-green-500" 
+                        : index === 0 
+                          ? "ring-2 ring-primary" 
+                          : ""
+                    }`}>
+                      <AvatarImage src={entry.avatar_url ?? undefined} />
+                      <AvatarFallback
+                        className={`font-bold text-sm ${
+                          isInService
+                            ? "bg-green-500 text-white"
+                            : index === 0
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {entry.position}
+                      </AvatarFallback>
+                    </Avatar>
 
-                  {/* Customer Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium truncate">{entry.customer_name}</p>
-                      {entry.party_size > 1 && (
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          +{entry.party_size - 1} {entry.party_size === 2 ? 'other' : 'others'}
-                        </Badge>
-                      )}
+                    {/* Customer Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate">{entry.customer_name}</p>
+                        {entry.party_size > 1 && (
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            +{entry.party_size - 1} {entry.party_size === 2 ? 'other' : 'others'}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {entry.service_name}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {entry.service_name}
-                    </p>
-                  </div>
 
-                  {/* Wait Time */}
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>
-                      {index === 0 ? "Now" : `~${entry.estimated_wait} min`}
-                    </span>
+                    {/* Wait Time / Status */}
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
+                      <Clock className="h-4 w-4" />
+                      <span>
+                        {isInService 
+                          ? "In Service" 
+                          : entry.estimated_wait === 0 
+                            ? "Now" 
+                            : `~${entry.estimated_wait} min`
+                        }
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
