@@ -308,6 +308,7 @@ const BookingsOverview = () => {
                     onDrop={() => handleDrop(booking.id)}
                     isDragged={draggedBookingId === booking.id}
                     isDraggedOver={draggedOverBookingId === booking.id}
+                    draggedBookingId={draggedBookingId}
                     showActions="queue"
                   />
                 );
@@ -362,11 +363,13 @@ interface BookingCardProps {
   onDrop?: (e: React.DragEvent) => void;
   isDragged?: boolean;
   isDraggedOver?: boolean;
+  draggedBookingId?: string | null;
   showActions: 'accept-reject' | 'queue' | 'none';
 }
 
-const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoShow, onSendReminder, onSendMessage, onDragStart, onDragOver, onDragEnd, onDrop, isDragged, isDraggedOver, showActions }: BookingCardProps) => {
+const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoShow, onSendReminder, onSendMessage, onDragStart, onDragOver, onDragEnd, onDrop, isDragged, isDraggedOver, draggedBookingId, showActions }: BookingCardProps) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isDraggable, setIsDraggable] = useState(false);
   
   // Determine if this is a walk-in booking
   const isWalkIn = !booking.customer_id || booking.notes?.includes('Walk-in:');
@@ -406,7 +409,7 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
         } ${
           isDraggedOver ? 'ring-2 ring-primary ring-dashed bg-primary/5' : ''
         }`}
-        draggable={showActions === 'queue' && booking.status === 'confirmed'}
+        draggable={showActions === 'queue' && booking.status === 'confirmed' && isDraggable}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
@@ -414,12 +417,14 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
         onClick={() => setIsDetailsOpen(true)}
       >
         <CardContent className="p-4">
-          <div className="flex items-start gap-4">
+          <div className={`flex items-start gap-4 ${draggedBookingId ? 'pointer-events-none' : ''}`}>
             {/* Drag Handle Grip */}
             {showActions === 'queue' && booking.status === 'confirmed' && (
               <div 
-                className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground py-3"
+                className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground py-3 px-1 pointer-events-auto"
                 title="Drag to reorder"
+                onMouseEnter={() => setIsDraggable(true)}
+                onMouseLeave={() => setIsDraggable(false)}
                 onClick={(e) => e.stopPropagation()}
               >
                 <GripVertical className="h-5 w-5" />

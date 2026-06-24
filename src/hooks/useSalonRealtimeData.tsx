@@ -829,10 +829,24 @@ export const useSalonRealtimeData = () => {
   // Reorder queue entry to a new check-in time
   const reorderQueueEntry = useCallback(async (bookingId: string, newTime: string) => {
     try {
-      const { error } = await supabase.rpc('reorder_queue_entry', {
-        p_booking_id: bookingId,
-        p_new_time: newTime
-      });
+      // 1. Fetch the current queue entry for this booking to get its status and ID
+      const { data: qeData, error: fetchError } = await supabase
+        .from('queue_entries')
+        .select('id, status')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+      if (!qeData) throw new Error("Queue entry not found");
+
+      // 2. Direct table update, setting status to itself to force trigger recalculation
+      const { error } = await supabase
+        .from('queue_entries')
+        .update({ 
+          check_in_time: newTime,
+          status: qeData.status
+        })
+        .eq('id', qeData.id);
 
       if (error) throw error;
 
