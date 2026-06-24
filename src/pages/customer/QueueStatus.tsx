@@ -355,6 +355,10 @@ const QueueStatus = () => {
   const peopleAhead = queueMembers.filter(m => m.position < currentPosition).length;
   const estimatedWaitMinutes = peopleAhead * avgServiceTime;
 
+  // Find the first waiting customer to show countdown timer correctly
+  const firstWaitingEntry = queueMembers.find(m => m.queue_status !== 'in_service');
+  const isFirstWaiting = firstWaitingEntry && firstWaitingEntry.booking_id === queueEntry.booking_id;
+
   // Extract booking and salon data with null checks
   const booking = queueEntry.bookings;
   if (!booking || !booking.salons) {
@@ -403,7 +407,7 @@ const QueueStatus = () => {
         {/* Arrival Countdown Timer - ONLY show when at position 1 */}
         {booking.arrival_deadline && 
          booking.status === 'confirmed' && 
-         currentPosition === 1 && (
+         isFirstWaiting && (
           <ArrivalCountdownTimer 
             arrivalDeadline={booking.arrival_deadline}
             onExpired={() => {
@@ -481,10 +485,11 @@ const QueueStatus = () => {
           <CardContent className="p-4">
             <h3 className="font-semibold mb-4">Live Queue</h3>
             <div className="space-y-3">
-              {queueMembers.map((member) => {
+              {queueMembers.map((member, index) => {
                 // Use the pre-computed isCurrentUser flag from RPC mapping
                 const isCurrentUser = member.isCurrentUser === true;
-                const isActive = member.position === 1;
+                const firstWaitingIndex = queueMembers.findIndex(m => m.queue_status !== 'in_service');
+                const isActive = index === firstWaitingIndex;
                 
                 // Use display_name from RPC, override with "You" for current user
                 const displayName = isCurrentUser ? "You" : (member.display_name || "Customer");

@@ -6,6 +6,8 @@ interface QueueTimerData {
   queuePosition: number;
   actualWaitTime: number;
   timeRemaining: number;
+  status: string;
+  hasInService: boolean;
 }
 
 /**
@@ -18,7 +20,9 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
     estimatedWaitMinutes: 0,
     queuePosition: 0,
     actualWaitTime: 0,
-    timeRemaining: 0
+    timeRemaining: 0,
+    status: 'waiting',
+    hasInService: false
   });
   const [isLoading, setIsLoading] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -31,13 +35,13 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
 
     try {
       // Get queue entry using the internal customer ID - no client-side date filter
-      // Use status 'waiting' or 'called' to find active entries
+      // Use status 'waiting', 'called', or 'in_service' to find active entries
       const { data: queueEntry, error } = await supabase
         .from('queue_entries')
         .select('*')
         .eq('salon_id', salonId)
         .eq('customer_id', customerId)
-        .in('status', ['waiting', 'called'])
+        .in('status', ['waiting', 'called', 'in_service'])
         .order('check_in_time', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -54,7 +58,9 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
           estimatedWaitMinutes: 0,
           queuePosition: 0,
           actualWaitTime: 0,
-          timeRemaining: 0
+          timeRemaining: 0,
+          status: 'waiting',
+          hasInService: false
         });
         setIsLoading(false);
         return;
@@ -68,6 +74,15 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
         .single();
 
       const avgServiceTime = salonData?.avg_service_time || 30;
+
+      // Check if there is anyone currently in service at this salon today
+      const { data: inServiceData } = await supabase
+        .from('queue_entries')
+        .select('id')
+        .eq('salon_id', salonId)
+        .eq('status', 'in_service')
+        .limit(1);
+      const hasInService = inServiceData && inServiceData.length > 0;
 
       // Calculate people ahead by position (position - 1 = people ahead since positions start at 1)
       const queuePosition = queueEntry.position;
@@ -85,7 +100,9 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
         estimatedWaitMinutes,
         queuePosition,
         actualWaitTime,
-        timeRemaining
+        timeRemaining,
+        status: queueEntry.status,
+        hasInService
       });
     } catch (error) {
       console.error('Error fetching queue data:', error);
@@ -107,14 +124,18 @@ export const useQueueTimer = (salonId: string | null, customerId: string | null)
   };
 
   const getStatusMessage = (): string => {
-    if (timerData.queuePosition <= 1) return "You're next!";
+    if (timerData.status === 'in_service') return "You're in the chair!";
+    const isNext = timerData.queuePosition <= (timerData.hasInService ? 2 : 1);
+    if (isNext) return "You're next!";
     if (timerData.timeRemaining <= 5) return "Almost ready!";
     if (timerData.timeRemaining <= 20) return "Get ready soon";
     return "Please wait";
   };
 
   const getStatusColor = (): string => {
-    if (timerData.queuePosition <= 1) return "text-green-600";
+    if (timerData.status === 'in_service') return "text-green-600 font-bold";
+    const isNext = timerData.queuePosition <= (timerData.hasInService ? 2 : 1);
+    if (isNext) return "text-green-600";
     if (timerData.timeRemaining <= 5) return "text-yellow-600"; 
     if (timerData.timeRemaining <= 20) return "text-orange-600";
     return "text-blue-600";

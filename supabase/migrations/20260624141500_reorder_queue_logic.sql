@@ -3,6 +3,7 @@ DROP FUNCTION IF EXISTS public.add_walkin_first_position(uuid, uuid, text, text)
 DROP FUNCTION IF EXISTS public.recalculate_queue_positions();
 DROP FUNCTION IF EXISTS public.move_queue_entry(uuid, text);
 DROP FUNCTION IF EXISTS public.reorder_queue_entry(uuid, timestamptz);
+DROP FUNCTION IF EXISTS public.handle_queue_position_change();
 
 -- 2. Recreate recalculate_queue_positions.
 -- - Customers currently 'in_service' get position 0.
@@ -136,3 +137,31 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.reorder_queue_entry(uuid, timestamptz) TO authenticated;
+
+-- 5. Create trigger to send notification when a customer's queue position changes.
+CREATE OR REPLACE FUNCTION public.handle_queue_position_change()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+BEGIN
+  -- If position changes, and status is waiting/called, and customer_id is not null (online customer)
+  IF (OLD.position IS NULL OR NEW.position != OLD.position)
+     AND NEW.status IN ('waiting', 'called')
+     AND NEW.customer_id IS NOT NULL THEN
+     
+    INSERT INTO public.notifications (user_id, title, message, type, related_id)
+    VALUES (
+      NEW.customer_id,
+      'Queue Position Updated ⏱️',
+      'Your position in the queue has changed to #' || NEW.position || '.',
+      'queue_update',
+      NEW.booking_id
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_queue_position_change ON public.queue_entries;
+CREATE TRIGGER trigger_queue_position_change
+  BEFORE UPDATE OF position ON public.queue_entries
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_queue_position_change();
