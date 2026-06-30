@@ -17,6 +17,16 @@ export default function Home() {
   const handleLogout = async () => {
     await signOut();
   };
+
+  React.useEffect(() => {
+    if (user) {
+      const returnUrl = sessionStorage.getItem('returnUrl');
+      if (returnUrl) {
+        sessionStorage.removeItem('returnUrl');
+        navigate(returnUrl);
+      }
+    }
+  }, [user, navigate]);
   const customerFeatures = [{
     icon: Clock,
     title: "Real-time Queue Tracking",

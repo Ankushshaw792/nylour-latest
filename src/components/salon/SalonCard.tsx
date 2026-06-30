@@ -2,6 +2,7 @@ import { MapPin, Clock, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { SalonStatusBadge } from "@/components/salon/SalonStatusBadge";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
@@ -20,6 +21,12 @@ interface SalonData {
   distanceText: string;
   distance?: number | null;
   isWithinRange?: boolean;
+  stylists?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    queueCount: number;
+  }[];
 }
 
 interface SalonCardProps {
@@ -148,6 +155,7 @@ export const SalonCard = ({ salon, user, onNavigate, onAuthRequired }: SalonCard
               <span>Outside {MAX_BOOKING_DISTANCE_KM} km booking range</span>
             </div>
           )}
+
 
           <div className="flex items-center justify-between">
             <div>

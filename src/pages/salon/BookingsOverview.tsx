@@ -11,6 +11,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isToday, isFuture } from "date-fns";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -42,10 +43,101 @@ const BookingsOverview = () => {
   const [isAddingWalkIn, setIsAddingWalkIn] = useState(false);
   const [isAddingWalkInFirst, setIsAddingWalkInFirst] = useState(false);
   
-  // Drag and drop states for queue reordering
+  // New Walk-in Dialog states
+  const [isWalkInDialogOpen, setIsWalkInDialogOpen] = useState(false);
+  const [isFirstPosition, setIsFirstPosition] = useState(false);
+  const [walkInName, setWalkInName] = useState("Walk-in");
+  const [walkInPhone, setWalkInPhone] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [selectedStylistId, setSelectedStylistId] = useState("any");
   const [draggedBookingId, setDraggedBookingId] = useState<string | null>(null);
   const [draggedOverBookingId, setDraggedOverBookingId] = useState<string | null>(null);
   
+  // Lists for dropdowns
+  const [salonServices, setSalonServices] = useState<any[]>([]);
+  const [activeStylists, setActiveStylists] = useState<any[]>([]);
+
+  // Fetch services and stylists on salon load
+  useEffect(() => {
+    if (!salon?.id) return;
+    
+    const fetchServicesAndStylists = async () => {
+      // Fetch services
+      const { data: servicesData } = await supabase
+        .from('salon_services')
+        .select(`
+          id,
+          price,
+          services (
+            id,
+            name
+          )
+        `)
+        .eq('salon_id', salon.id);
+        
+      if (servicesData) {
+        setSalonServices(servicesData);
+        if (servicesData.length > 0) {
+          setSelectedServiceId(servicesData[0].id);
+        }
+      }
+      
+      // Fetch stylists
+      const { data: staffData } = await supabase
+        .from('salon_staff')
+        .select('id, name, avatar_url')
+        .eq('salon_id', salon.id)
+        .eq('is_active', true);
+        
+      if (staffData) {
+        setActiveStylists(staffData);
+      }
+    };
+    
+    fetchServicesAndStylists();
+  }, [salon?.id]);
+
+  // Open walk-in dialog
+  const openWalkInDialog = (firstPos: boolean) => {
+    setIsFirstPosition(firstPos);
+    setWalkInName("Walk-in");
+    setWalkInPhone("");
+    if (salonServices.length > 0) {
+      setSelectedServiceId(salonServices[0].id);
+    }
+    setSelectedStylistId("any");
+    setIsWalkInDialogOpen(true);
+  };
+
+  // Submit walk-in customer
+  const handleAddWalkInSubmit = async () => {
+    if (!selectedServiceId) {
+      toast.error("Please select a service");
+      return;
+    }
+    
+    setIsAddingWalkIn(true);
+    try {
+      const payload = {
+        name: walkInName.trim() || "Walk-in",
+        phone: walkInPhone.trim(),
+        service_id: (salonServices.find(s => s.id === selectedServiceId) as any)?.services?.id || selectedServiceId,
+        staff_id: selectedStylistId === "any" ? null : selectedStylistId
+      };
+
+      if (isFirstPosition) {
+        await addWalkInCustomerFirst(payload);
+      } else {
+        await addWalkInCustomer(payload);
+      }
+      setIsWalkInDialogOpen(false);
+    } catch (err) {
+      console.error("Error adding walk-in customer:", err);
+    } finally {
+      setIsAddingWalkIn(false);
+    }
+  };
+
   // Cancellation dialog state
   const [cancellationDialog, setCancellationDialog] = useState<{
     isOpen: boolean;
@@ -65,36 +157,6 @@ const BookingsOverview = () => {
       </SalonDashboardLayout>
     );
   }
-
-  const handleInstantAddWalkIn = async () => {
-    setIsAddingWalkIn(true);
-    try {
-      await addWalkInCustomer({
-        name: "Walk-in",
-        phone: "",
-        service_id: null as any
-      });
-    } catch (err) {
-      console.error("Error adding walk-in customer:", err);
-    } finally {
-      setIsAddingWalkIn(false);
-    }
-  };
-
-  const handleInstantAddWalkInFirst = async () => {
-    setIsAddingWalkInFirst(true);
-    try {
-      await addWalkInCustomerFirst({
-        name: "Walk-in",
-        phone: "",
-        service_id: null as any
-      });
-    } catch (err) {
-      console.error("Error adding walk-in to first position:", err);
-    } finally {
-      setIsAddingWalkInFirst(false);
-    }
-  };
 
   // Check if there's an online customer with arrival deadline at position 1
   const hasOnlineCustomerWaiting = bookings.some(b => 
@@ -210,11 +272,10 @@ const BookingsOverview = () => {
         <Button 
           className="w-full mb-4" 
           variant="outline"
-          disabled={isAddingWalkIn}
-          onClick={handleInstantAddWalkIn}
+          onClick={() => openWalkInDialog(false)}
         >
           <Plus className="h-4 w-4 mr-2" />
-          {isAddingWalkIn ? "Adding Walk-in..." : "Add Walk-in Customer"}
+          Add Walk-in Customer
         </Button>
 
         {/* Custom Message Dialog */}
@@ -276,18 +337,17 @@ const BookingsOverview = () => {
             )}
           </TabsContent>
 
-          {/* Queue Bookings (Confirmed/In Progress) */}
+          {/* Queue Bookings (Confirmed/In Progress) - VIEW ONLY OVERVIEW */}
           <TabsContent value="queue" className="space-y-4">
             {/* Add Walk-in First Button - Only show when online customer is waiting */}
             {hasOnlineCustomerWaiting && (
               <Button 
                 className="w-full mb-2" 
                 variant="default"
-                disabled={isAddingWalkInFirst}
-                onClick={handleInstantAddWalkInFirst}
+                onClick={() => openWalkInDialog(true)}
               >
                 <Timer className="h-4 w-4 mr-2" />
-                {isAddingWalkInFirst ? "Adding..." : "Add Walk-in to First Position"}
+                Add Walk-in to First Position
               </Button>
             )}
             
@@ -297,19 +357,7 @@ const BookingsOverview = () => {
                   <BookingCard
                     key={booking.id}
                     booking={booking}
-                    onStart={startService}
-                    onComplete={completeService}
-                    onNoShow={openNoShowDialog}
-                    onSendReminder={sendReminder}
-                    onSendMessage={openMessageDialog}
-                    onDragStart={() => handleDragStart(booking.id)}
-                    onDragOver={(e) => handleDragOver(e, booking.id)}
-                    onDragEnd={handleDragEnd}
-                    onDrop={() => handleDrop(booking.id)}
-                    isDragged={draggedBookingId === booking.id}
-                    isDraggedOver={draggedOverBookingId === booking.id}
-                    draggedBookingId={draggedBookingId}
-                    showActions="queue"
+                    showActions="none"
                   />
                 );
               })
@@ -342,6 +390,58 @@ const BookingsOverview = () => {
           type={cancellationDialog.type}
           onConfirm={handleCancellationConfirm}
         />
+
+        {/* Add Walk-in Dialog */}
+        <Dialog open={isWalkInDialogOpen} onOpenChange={setIsWalkInDialogOpen}>
+          <DialogContent className="max-w-md p-6 rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <Plus className="h-5 w-5 text-primary" />
+                {isFirstPosition ? "Add Walk-in to First Position" : "Add Walk-in Customer"}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                Enter details to add an offline walk-in customer to the queue.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-3">
+
+              <div className="space-y-1.5">
+                <Label htmlFor="walkin-stylist" className="text-sm font-semibold">Select Stylist/Staff</Label>
+                <Select value={selectedStylistId} onValueChange={setSelectedStylistId}>
+                  <SelectTrigger id="walkin-stylist" className="rounded-xl">
+                    <SelectValue placeholder="Select stylist" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any Stylist (Fastest Choice)</SelectItem>
+                    {activeStylists.map((stylist) => (
+                      <SelectItem key={stylist.id} value={stylist.id}>
+                        {stylist.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsWalkInDialogOpen(false)}
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddWalkInSubmit}
+                disabled={isAddingWalkIn}
+                className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                {isAddingWalkIn ? "Adding..." : "Add to Queue"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </SalonDashboardLayout>
   );
@@ -430,18 +530,35 @@ const BookingCard = ({ booking, onAccept, onReject, onStart, onComplete, onNoSho
                 <GripVertical className="h-5 w-5" />
               </div>
             )}
-            {/* Customer Avatar */}
-            <Avatar className="w-12 h-12">
-              <AvatarImage
-                src={booking.customers?.avatar_url ?? undefined}
-                alt={isWalkIn ? "Walk-in customer" : `${customerName} avatar`}
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-              />
-              <AvatarFallback className={isWalkIn ? 'bg-amber-100' : 'bg-primary/20'}>
-                <User className={`h-6 w-6 ${isWalkIn ? 'text-amber-600' : 'text-primary'}`} />
-              </AvatarFallback>
-            </Avatar>
+            {/* Customer Avatar & Stylist Stack */}
+            <div className="flex flex-col items-center">
+              <Avatar className="w-12 h-12 z-10 border border-border/50">
+                <AvatarImage
+                  src={booking.customers?.avatar_url ?? undefined}
+                  alt={isWalkIn ? "Walk-in customer" : `${customerName} avatar`}
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                />
+                <AvatarFallback className={isWalkIn ? 'bg-amber-100' : 'bg-primary/20'}>
+                  <User className={`h-6 w-6 ${isWalkIn ? 'text-amber-600' : 'text-primary'}`} />
+                </AvatarFallback>
+              </Avatar>
+              
+              {booking.salon_staff && (
+                <>
+                  <div className="h-4 w-[2px] bg-border my-0.5 z-0"></div>
+                  <Avatar 
+                    className="w-12 h-12 z-10 ring-2 ring-background border border-border/50 shadow-sm"
+                    title={`Selected Stylist: ${booking.salon_staff.name}`}
+                  >
+                    {booking.salon_staff.avatar_url && <AvatarImage src={booking.salon_staff.avatar_url} />}
+                    <AvatarFallback className="text-sm font-bold bg-secondary text-secondary-foreground">
+                      {booking.salon_staff.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </>
+              )}
+            </div>
 
             {/* Booking Details */}
             <div className="flex-1">

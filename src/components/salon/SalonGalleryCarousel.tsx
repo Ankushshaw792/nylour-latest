@@ -65,7 +65,7 @@ const SalonGalleryCarousel = ({ images, fallbackImage, salonName, salonCity }: S
   }, [showGallery, lightboxOpen]);
 
   // If no gallery images, show fallback
-  const displayImages: GalleryImage[] = images.length > 0 
+  const initialImages: GalleryImage[] = images.length > 0 
     ? images 
     : [{ 
         id: 'fallback', 
@@ -74,18 +74,13 @@ const SalonGalleryCarousel = ({ images, fallbackImage, salonName, salonCity }: S
         is_primary: true 
       }];
 
-  // Split images into Venue and Team Portfolio categories dynamically
-  const rawVenueImages = displayImages.filter(img => {
-    if (!img.caption) return true;
-    const captionLower = img.caption.toLowerCase();
-    return !['portfolio', 'team', 'staff', 'cut', 'trim', 'wash', 'work', 'staff', 'model', 'nails'].some(kw => captionLower.includes(kw));
-  });
+  const rawVenueImages = initialImages.filter(img => !img.caption?.includes('[TYPE:PORTFOLIO]'))
+    .map(img => ({ ...img, caption: img.caption?.replace('[TYPE:PORTFOLIO]', '').trim() || null }));
 
-  const rawPortfolioImages = displayImages.filter(img => {
-    if (!img.caption) return false;
-    const captionLower = img.caption.toLowerCase();
-    return ['portfolio', 'team', 'staff', 'cut', 'trim', 'wash', 'work', 'staff', 'model', 'nails'].some(kw => captionLower.includes(kw));
-  });
+  const rawPortfolioImages = initialImages.filter(img => img.caption?.includes('[TYPE:PORTFOLIO]'))
+    .map(img => ({ ...img, caption: img.caption?.replace('[TYPE:PORTFOLIO]', '').trim() || null }));
+
+  const displayImages = initialImages.map(img => ({ ...img, caption: img.caption?.replace('[TYPE:PORTFOLIO]', '').trim() || null }));
 
   // Use local fallback portfolio images if there are none in the database
   const venueImages = rawVenueImages.length > 0 ? rawVenueImages : displayImages;

@@ -24,6 +24,13 @@ import { calculateDistance, formatDistance } from "@/lib/locationUtils";
 import { MAX_BOOKING_DISTANCE_KM, NEARBY_FILTER_DISTANCE_KM } from "@/lib/locationConfig";
 import { cn } from "@/lib/utils";
 
+interface StylistQueueData {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  queueCount: number;
+}
+
 interface SalonData {
   id: string;
   name: string;
@@ -37,6 +44,7 @@ interface SalonData {
   rating: number;
   latitude: number | null;
   longitude: number | null;
+  stylists?: StylistQueueData[];
 }
 
 interface SalonWithDistance extends SalonData {
@@ -67,103 +75,132 @@ const NearbySalons = () => {
   const filterTabs = ["All", "Open Now", "Nearby", "Quick Service"];
 
   // Fetch salons from database
-  useEffect(() => {
-    const fetchSalons = async () => {
-      try {
-        setLoadingSalons(true);
-        
-        // Query salons with their services and queue information
-        const { data: salonsData, error: salonsError } = await supabase
-          .from('salons')
-          .select(`
+  const fetchSalons = async () => {
+    try {
+      setLoadingSalons(true);
+      
+      // Query salons with their services, queue information, and staff
+      const { data: salonsData, error: salonsError } = await supabase
+        .from('salons')
+        .select(`
+          id,
+          name,
+          address,
+          image_url,
+          phone,
+          latitude,
+          longitude,
+          salon_services(
+            price,
+            duration,
+            services(
+              name
+            )
+          ),
+          salon_images(
+            image_url,
+            is_primary
+          ),
+          salon_staff(
             id,
             name,
-            address,
-            image_url,
-            phone,
-            latitude,
-            longitude,
-            salon_services(
-              price,
-              duration,
-              services(
-                name
-              )
-            ),
-            salon_images(
-              image_url,
-              is_primary
-            )
-          `)
-          .order('created_at', { ascending: false });
+            avatar_url,
+            is_active
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-        if (salonsError) {
-          console.error('Error fetching salons:', salonsError);
-          console.error('Error details:', { 
-            message: salonsError.message, 
-            code: salonsError.code,
-            details: salonsError.details 
-          });
-          toast.error('Failed to load salons: ' + salonsError.message);
-          return;
-        }
-
-        console.log('Fetched salons data:', salonsData);
-
-        // Get queue counts for each salon (today only)
-        const salonIds = salonsData?.map(salon => salon.id) || [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStart = today.toISOString();
-        
-        const { data: queueData } = await supabase
-          .from('queue_entries')
-          .select('salon_id, status')
-          .in('salon_id', salonIds)
-          .eq('status', 'waiting')
-          .gte('check_in_time', todayStart);
-
-        // Process salon data with queue counts and service info
-        const processedSalons: SalonData[] = salonsData?.map((salon: any) => {
-          const queueCount = queueData?.filter(q => q.salon_id === salon.id).length || 0;
-          const avgWaitTime = Math.max(15, queueCount * 20);
-          const waitTimeRange = `${avgWaitTime}-${avgWaitTime + 10} mins`;
-          
-          const primarySalonService = salon.salon_services?.[0];
-          const primaryService = primarySalonService?.services?.name || "Haircut";
-          const servicePrice = `₹${primarySalonService?.price || 200}`;
-          
-          // Get primary image from salon_images or fallback to image_url
-          const primaryImage = salon.salon_images?.find((img: any) => img.is_primary)?.image_url 
-            || salon.salon_images?.[0]?.image_url 
-            || salon.image_url;
-          
-          return {
-            id: salon.id,
-            name: salon.name,
-            address: salon.address,
-            image_url: primaryImage,
-            phone: 'Contact salon for phone number',
-            queueCount,
-            waitTime: waitTimeRange,
-            primaryService,
-            servicePrice,
-            rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10,
-            latitude: salon.latitude || null,
-            longitude: salon.longitude || null,
-          };
-        }) || [];
-
-        setSalons(processedSalons);
-      } catch (error) {
-        console.error('Error:', error);
-        toast.error('Failed to load salons');
-      } finally {
-        setLoadingSalons(false);
+      if (salonsError) {
+        console.error('Error fetching salons:', salonsError);
+        toast.error('Failed to load salons: ' + salonsError.message);
+        return;
       }
-    };
 
+      // Get active queue counts for each salon (today only, waiting/called/in_service)
+      const salonIds = salonsData?.map(salon => salon.id) || [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStart = today.toISOString();
+      
+      const { data: queueData } = await supabase
+        .from('queue_entries')
+        .select('salon_id, status, staff_id')
+        .in('salon_id', salonIds)
+        .in('status', ['waiting', 'called', 'in_service'])
+        .gte('check_in_time', todayStart);
+
+      // Process salon data with queue counts and service info
+      const processedSalons: SalonData[] = salonsData?.map((salon: any) => {
+        const queueCount = queueData?.filter(q => q.salon_id === salon.id).length || 0;
+        const avgWaitTime = Math.max(15, queueCount * 20);
+        const waitTimeRange = `${avgWaitTime}-${avgWaitTime + 10} mins`;
+        
+        const primarySalonService = salon.salon_services?.[0];
+        const primaryService = primarySalonService?.services?.name || "Haircut";
+        const servicePrice = `₹${primarySalonService?.price || 200}`;
+        
+        // Get primary image from salon_images or fallback to image_url
+        const primaryImage = salon.salon_images?.find((img: any) => img.is_primary)?.image_url 
+          || salon.salon_images?.[0]?.image_url 
+          || salon.image_url;
+        
+        // Calculate queue count per stylist
+        const activeStaff = salon.salon_staff?.filter((s: any) => s.is_active) || [];
+        const stylists: StylistQueueData[] = activeStaff.map((s: any) => {
+          const stylistQueueCount = queueData?.filter(q => q.salon_id === salon.id && q.staff_id === s.id).length || 0;
+          return {
+            id: s.id,
+            name: s.name,
+            avatar_url: s.avatar_url,
+            queueCount: stylistQueueCount
+          };
+        });
+        
+        return {
+          id: salon.id,
+          name: salon.name,
+          address: salon.address,
+          image_url: primaryImage,
+          phone: 'Contact salon for phone number',
+          queueCount,
+          waitTime: waitTimeRange,
+          primaryService,
+          servicePrice,
+          rating: Math.round((4.5 + Math.random() * 0.8) * 10) / 10,
+          latitude: salon.latitude || null,
+          longitude: salon.longitude || null,
+          stylists
+        };
+      }) || [];
+
+      setSalons(processedSalons);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to load salons');
+    } finally {
+      setLoadingSalons(false);
+    }
+  };
+
+  useEffect(() => {
     fetchSalons();
+
+    // Set up real-time subscription for queue updates on home page
+    const channel = supabase
+      .channel('home-queue-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'queue_entries' },
+        () => {
+          // Refetch to update all queue numbers instantly
+          fetchSalons();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleProfileClick = () => {

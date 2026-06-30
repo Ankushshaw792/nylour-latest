@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { SalonDashboardLayout } from "@/components/layout/SalonDashboardLayout";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 interface ProfileMenuItem {
   icon: React.ElementType;
   label: string;
@@ -102,10 +103,7 @@ const SalonProfilePage = () => {
     </button>;
   if (loading) {
     return <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+        <SalonLoader size="lg" text="Loading profile..." />
       </div>;
   }
   return <SalonDashboardLayout>

@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Upload, 
   Trash2, 
@@ -35,7 +36,8 @@ interface GalleryImage {
   display_order: number;
 }
 
-const MAX_IMAGES = 10;
+const MAX_VENUE_IMAGES = 10;
+const MAX_PORTFOLIO_IMAGES = 15;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -50,6 +52,7 @@ const GalleryManagement = () => {
   const [deleteImage, setDeleteImage] = useState<GalleryImage | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'venue' | 'portfolio'>('venue');
 
   useEffect(() => {
     const fetchSalonAndImages = async () => {
@@ -82,12 +85,18 @@ const GalleryManagement = () => {
     fetchSalonAndImages();
   }, [user, navigate]);
 
+  const venueImages = images.filter(img => !img.caption?.includes('[TYPE:PORTFOLIO]'));
+  const portfolioImages = images.filter(img => img.caption?.includes('[TYPE:PORTFOLIO]'));
+  
+  const activeImages = activeTab === 'venue' ? venueImages : portfolioImages;
+  const currentMax = activeTab === 'venue' ? MAX_VENUE_IMAGES : MAX_PORTFOLIO_IMAGES;
+
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files || !salonId) return;
 
-    const remainingSlots = MAX_IMAGES - images.length;
+    const remainingSlots = currentMax - activeImages.length;
     if (remainingSlots <= 0) {
-      toast({ title: "Gallery full", description: `Maximum ${MAX_IMAGES} images allowed`, variant: "destructive" });
+      toast({ title: "Gallery full", description: `Maximum ${currentMax} images allowed in this section`, variant: "destructive" });
       return;
     }
 
@@ -126,7 +135,8 @@ const GalleryManagement = () => {
         .getPublicUrl(filePath);
 
       const nextOrder = images.length > 0 ? Math.max(...images.map(i => i.display_order)) + 1 : 0;
-      const isPrimary = images.length === 0;
+      const isPrimary = activeTab === 'venue' && venueImages.length === 0;
+      const initialCaption = activeTab === 'portfolio' ? '[TYPE:PORTFOLIO]' : '';
 
       const { data: newImage, error: insertError } = await supabase
         .from('salon_images')
@@ -135,6 +145,7 @@ const GalleryManagement = () => {
           image_url: urlData.publicUrl,
           is_primary: isPrimary,
           display_order: nextOrder,
+          caption: initialCaption
         })
         .select()
         .single();
@@ -149,12 +160,11 @@ const GalleryManagement = () => {
 
     setUploading(false);
     toast({ title: "Upload complete", description: `${validFiles.length} image(s) added` });
-  }, [salonId, images]);
+  }, [salonId, images, activeTab, activeImages, currentMax, venueImages.length]);
 
   const handleFileDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only handle file drags in the upload area
     if (e.dataTransfer.types.includes('Files')) {
       setIsDraggingFile(e.type === 'dragenter' || e.type === 'dragover');
     }
@@ -169,7 +179,6 @@ const GalleryManagement = () => {
     }
   };
 
-  // Image reordering drag-and-drop handlers
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
   };
@@ -183,17 +192,27 @@ const GalleryManagement = () => {
 
   const handleDragEnd = async () => {
     if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
-      const newImages = [...images];
-      const [draggedItem] = newImages.splice(draggedIndex, 1);
-      newImages.splice(dragOverIndex, 0, draggedItem);
+      const newActiveImages = [...activeImages];
+      const [draggedItem] = newActiveImages.splice(draggedIndex, 1);
+      newActiveImages.splice(dragOverIndex, 0, draggedItem);
 
-      // Update local state immediately
-      setImages(newImages.map((img, i) => ({ ...img, display_order: i })));
+      const sortedOrders = [...activeImages].map(img => img.display_order).sort((a, b) => a - b);
+      
+      const updatedActiveImages = newActiveImages.map((img, i) => ({
+        ...img,
+        display_order: sortedOrders[i]
+      }));
 
-      // Update database
+      const newImages = images.map(img => {
+        const updated = updatedActiveImages.find(u => u.id === img.id);
+        return updated || img;
+      });
+      
+      setImages(newImages);
+
       await Promise.all(
-        newImages.map((img, i) =>
-          supabase.from('salon_images').update({ display_order: i }).eq('id', img.id)
+        updatedActiveImages.map((img) =>
+          supabase.from('salon_images').update({ display_order: img.display_order }).eq('id', img.id)
         )
       );
 
@@ -206,7 +225,6 @@ const GalleryManagement = () => {
   const confirmDelete = async () => {
     if (!deleteImage) return;
 
-    // Extract file path from URL
     const urlParts = deleteImage.image_url.split('/salon-images/');
     if (urlParts.length > 1) {
       await supabase.storage.from('salon-images').remove([urlParts[1]]);
@@ -220,13 +238,11 @@ const GalleryManagement = () => {
   };
 
   const setPrimary = async (imageId: string) => {
-    // First, unset all as primary
     await supabase
       .from('salon_images')
       .update({ is_primary: false })
       .eq('salon_id', salonId);
 
-    // Then set the selected one as primary
     await supabase
       .from('salon_images')
       .update({ is_primary: true })
@@ -240,14 +256,17 @@ const GalleryManagement = () => {
     toast({ title: "Cover photo updated" });
   };
 
-  const updateCaption = async (imageId: string, caption: string) => {
+  const updateCaption = async (imageId: string, displayCaption: string) => {
+    const isPortfolio = activeTab === 'portfolio';
+    const finalCaption = isPortfolio ? `[TYPE:PORTFOLIO] ${displayCaption}` : displayCaption;
+
     await supabase
       .from('salon_images')
-      .update({ caption })
+      .update({ caption: finalCaption })
       .eq('id', imageId);
 
     setImages(prev => prev.map(img => 
-      img.id === imageId ? { ...img, caption } : img
+      img.id === imageId ? { ...img, caption: finalCaption } : img
     ));
   };
 
@@ -264,53 +283,55 @@ const GalleryManagement = () => {
     );
   }
 
-  return (
-    <SalonDashboardLayout title="Manage Gallery">
-      <div className="p-4 space-y-6 pb-24">
-        {/* Upload Area */}
-        <div
-          onDragEnter={handleFileDrag}
-          onDragLeave={handleFileDrag}
-          onDragOver={handleFileDrag}
-          onDrop={handleFileDrop}
-          className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-            isDraggingFile ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'
-          } ${images.length >= MAX_IMAGES ? 'opacity-50 pointer-events-none' : ''}`}
-        >
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            multiple
-            onChange={(e) => handleFiles(e.target.files)}
-            className="hidden"
-            id="gallery-upload"
-            disabled={images.length >= MAX_IMAGES || uploading}
-          />
-          <label htmlFor="gallery-upload" className="cursor-pointer">
-            <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-            <p className="font-medium">
-              {uploading ? 'Uploading...' : 'Drop images here or tap to upload'}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {images.length}/{MAX_IMAGES} images • JPG, PNG, WebP up to 5MB
-            </p>
-          </label>
-        </div>
+  const renderUploadArea = () => (
+    <div
+      onDragEnter={handleFileDrag}
+      onDragLeave={handleFileDrag}
+      onDragOver={handleFileDrag}
+      onDrop={handleFileDrop}
+      className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+        isDraggingFile ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'
+      } ${activeImages.length >= currentMax ? 'opacity-50 pointer-events-none' : ''}`}
+    >
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        onChange={(e) => handleFiles(e.target.files)}
+        className="hidden"
+        id="gallery-upload"
+        disabled={activeImages.length >= currentMax || uploading}
+      />
+      <label htmlFor="gallery-upload" className="cursor-pointer">
+        <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+        <p className="font-medium">
+          {uploading ? 'Uploading...' : 'Drop images here or tap to upload'}
+        </p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {activeImages.length}/{currentMax} images • JPG, PNG, WebP up to 5MB
+        </p>
+      </label>
+    </div>
+  );
 
-        {/* Image Grid */}
-        {images.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <ImageIcon className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-              <p className="font-medium">No gallery images yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Upload images to showcase your salon
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            {images.map((image, index) => (
+  const renderImageGrid = () => (
+    <>
+      {activeImages.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <ImageIcon className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+            <p className="font-medium">No images in this section yet</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Upload images to showcase your {activeTab === 'venue' ? 'salon' : 'work'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          {activeImages.map((image, index) => {
+            const displayCaption = (image.caption || '').replace('[TYPE:PORTFOLIO]', '').trim();
+            
+            return (
               <Card 
                 key={image.id} 
                 className={`overflow-hidden cursor-grab active:cursor-grabbing transition-all ${
@@ -324,10 +345,10 @@ const GalleryManagement = () => {
                 <div className="relative aspect-square">
                   <img
                     src={image.image_url}
-                    alt={image.caption || 'Gallery image'}
+                    alt={displayCaption || 'Gallery image'}
                     className="w-full h-full object-cover pointer-events-none"
                   />
-                  {image.is_primary && (
+                  {image.is_primary && activeTab === 'venue' && (
                     <Badge className="absolute top-2 left-2 bg-primary">
                       Cover
                     </Badge>
@@ -345,7 +366,7 @@ const GalleryManagement = () => {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  {!image.is_primary && (
+                  {!image.is_primary && activeTab === 'venue' && (
                     <div className="absolute bottom-2 right-2">
                       <Button
                         size="icon"
@@ -362,18 +383,42 @@ const GalleryManagement = () => {
                 <CardContent className="p-3">
                   <Input
                     placeholder="Add caption..."
-                    value={image.caption || ''}
+                    value={displayCaption}
                     onChange={(e) => updateCaption(image.id, e.target.value)}
                     className="text-sm"
                   />
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <SalonDashboardLayout title="Manage Gallery">
+      <div className="p-4 space-y-6 pb-24">
+        
+        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'venue' | 'portfolio')} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="venue">Salon Venue ({venueImages.length})</TabsTrigger>
+            <TabsTrigger value="portfolio">Team Portfolio ({portfolioImages.length})</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="venue" className="space-y-6">
+            {renderUploadArea()}
+            {renderImageGrid()}
+          </TabsContent>
+
+          <TabsContent value="portfolio" className="space-y-6">
+            {renderUploadArea()}
+            {renderImageGrid()}
+          </TabsContent>
+        </Tabs>
+
       </div>
 
-      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteImage} onOpenChange={() => setDeleteImage(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

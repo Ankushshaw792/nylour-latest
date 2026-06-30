@@ -12,6 +12,7 @@ interface Booking {
   id: string;
   customer_id: string | null;
   service_id: string;
+  staff_id?: string | null;
   booking_date: string;
   booking_time: string;
   status: BookingStatus;
@@ -32,6 +33,11 @@ interface Booking {
       name: string;
       default_duration: number;
     } | null;
+  } | null;
+  salon_staff?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
   } | null;
 }
 
@@ -107,6 +113,7 @@ export const useSalonRealtimeData = () => {
           customer_id,
           salon_id,
           service_id,
+          staff_id,
           booking_date,
           booking_time,
           status,
@@ -114,7 +121,8 @@ export const useSalonRealtimeData = () => {
           notes,
           arrival_deadline,
           customers(first_name, last_name, phone, avatar_url),
-          salon_services(price, duration, services(name, default_duration))
+          salon_services(price, duration, services(name, default_duration)),
+          salon_staff(id, name, avatar_url)
         `)
         .eq('salon_id', salonData.id)
         .eq('booking_date', today)
@@ -240,10 +248,10 @@ export const useSalonRealtimeData = () => {
   // Accept booking
   const acceptBooking = useCallback(async (bookingId: string) => {
     try {
-      // Get booking details for notification
+      // Get booking details for notification and queue entry
       const { data: bookingData, error: fetchError } = await supabase
         .from('bookings')
-        .select('customer_id, salon_id')
+        .select('customer_id, salon_id, staff_id')
         .eq('id', bookingId)
         .single();
 
@@ -251,6 +259,78 @@ export const useSalonRealtimeData = () => {
         console.error('Error fetching booking:', fetchError);
       }
 
+      // Explicitly handle queue entry creation to ensure reliability
+      if (bookingData) {
+        const { data: existingQueue } = await supabase
+          .from('queue_entries')
+          .select('id')
+          .eq('booking_id', bookingId)
+          .maybeSingle();
+
+        if (!existingQueue) {
+          let assignedStaffId = bookingData.staff_id;
+
+          // Auto-assign staff if 'Any Stylist' was selected
+          if (!assignedStaffId) {
+            const { data: staffCounts } = await supabase
+              .from('salon_staff')
+              .select(`
+                id,
+                queue_entries (id)
+              `)
+              .eq('salon_id', bookingData.salon_id)
+              .eq('is_active', true);
+
+            if (staffCounts && staffCounts.length > 0) {
+              // Find the staff with the minimum active queue entries
+              const staffWithQueueLengths = staffCounts.map(s => ({
+                id: s.id,
+                count: (s.queue_entries as any[])?.length || 0
+              }));
+              staffWithQueueLengths.sort((a, b) => a.count - b.count);
+              assignedStaffId = staffWithQueueLengths[0].id;
+
+              // Update booking with the assigned staff
+              await supabase
+                .from('bookings')
+                .update({ staff_id: assignedStaffId })
+                .eq('id', bookingId);
+            }
+          }
+
+          // Calculate next position for the assigned staff
+          let nextPosition = 1;
+          if (assignedStaffId) {
+            const { data: maxPosData } = await supabase
+              .from('queue_entries')
+              .select('position')
+              .eq('salon_id', bookingData.salon_id)
+              .eq('staff_id', assignedStaffId)
+              .in('status', ['waiting', 'called', 'in_service'])
+              .order('position', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+              
+            if (maxPosData && maxPosData.position) {
+              nextPosition = maxPosData.position + 1;
+            }
+
+            // Insert the queue entry directly
+            await supabase.from('queue_entries').insert({
+              booking_id: bookingId,
+              salon_id: bookingData.salon_id,
+              customer_id: bookingData.customer_id,
+              staff_id: assignedStaffId,
+              position: nextPosition,
+              status: 'waiting',
+              check_in_time: new Date().toISOString(),
+              estimated_wait_time: 0
+            });
+          }
+        }
+      }
+
+      // Set booking status to confirmed
       const { error } = await supabase
         .from('bookings')
         .update({ status: 'confirmed' })
@@ -607,6 +687,7 @@ export const useSalonRealtimeData = () => {
     name: string;
     phone: string;
     service_id: string;
+    staff_id: string | null;
   }) => {
     if (!salon) return;
 
@@ -632,6 +713,7 @@ export const useSalonRealtimeData = () => {
           customer_id: null, // Always null for walk-ins
           salon_id: salon.id,
           service_id: salonServiceId, // Use salon_services.id, not services.id
+          staff_id: customerData.staff_id,
           booking_date: format(new Date(), 'yyyy-MM-dd'), // Local date, not UTC
           booking_time: new Date().toTimeString().split(' ')[0],
           status: 'confirmed' as BookingStatus,
@@ -756,9 +838,26 @@ export const useSalonRealtimeData = () => {
       )
       .subscribe();
 
+    const staffChannel = supabase
+      .channel(`salon-staff-${salon.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'salon_staff',
+          filter: `salon_id=eq.${salon.id}`
+        },
+        () => {
+          fetchSalonData();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(bookingsChannel);
-      supabase.removeChannel(queueChannel);
+      bookingsChannel.unsubscribe();
+      queueChannel.unsubscribe();
+      staffChannel.unsubscribe();
     };
   }, [salon?.id, fetchSalonData]);
 
@@ -788,6 +887,7 @@ export const useSalonRealtimeData = () => {
     name: string;
     phone: string;
     service_id: string;
+    staff_id: string | null;
   }) => {
     if (!salon) return;
 
@@ -807,7 +907,8 @@ export const useSalonRealtimeData = () => {
         p_salon_id: salon.id,
         p_service_id: salonServiceId,
         p_customer_name: customerData.name,
-        p_phone: customerData.phone
+        p_phone: customerData.phone,
+        p_staff_id: customerData.staff_id
       });
 
       if (error) throw error;

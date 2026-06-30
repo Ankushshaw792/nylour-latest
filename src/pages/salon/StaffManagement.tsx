@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit2, Trash2, Users, AlertCircle, Sparkles, Clock, Check, Power } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, AlertCircle, Sparkles, Clock, Check, Power, GripVertical, Play, UserX, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 interface StaffMember {
@@ -26,19 +26,17 @@ interface ActiveQueueEntry {
   status: string;
   position: number;
   staff_id: string | null;
+  check_in_time: string;
   bookings: {
+    id: string;
     notes: string | null;
     customer_id: string | null;
     customers: {
       first_name: string | null;
       last_name: string | null;
     } | null;
-    salon_services?: {
-      services?: {
-        name: string;
-      } | null;
-    } | null;
     service_name?: string;
+    queue_check_in_time?: string;
   } | null;
 }
 
@@ -68,6 +66,7 @@ export default function StaffManagement() {
   const [name, setName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState(PRESET_AVATARS[0].url);
   const [isActive, setIsActive] = useState(true);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchStaffData = useCallback(async (salonId: string) => {
@@ -90,6 +89,7 @@ export default function StaffManagement() {
           status,
           position,
           staff_id,
+          check_in_time,
           bookings (
             id,
             notes,
@@ -129,11 +129,14 @@ export default function StaffManagement() {
             status: entry.status || "waiting",
             position: entry.position,
             staff_id: entry.staff_id,
+            check_in_time: entry.check_in_time,
             bookings: booking ? {
+              id: booking.id,
               notes: booking.notes,
               customer_id: booking.customer_id,
               customers: booking.customers,
-              service_name: serviceName
+              service_name: serviceName,
+              queue_check_in_time: entry.check_in_time
             } : null
           });
         }
@@ -197,6 +200,40 @@ export default function StaffManagement() {
     };
   }, [salon?.id, fetchStaffData]);
 
+  const uploadAvatar = async (file: File): Promise<string> => {
+    if (!salon?.id) throw new Error("No salon ID");
+    const fileExt = file.name.split('.').pop();
+    const fileName = `staff_${crypto.randomUUID()}.${fileExt}`;
+    const filePath = `${salon.id}/${fileName}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('salon-images')
+      .upload(filePath, file);
+      
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      throw uploadError;
+    }
+    
+    const { data } = supabase.storage
+      .from('salon-images')
+      .getPublicUrl(filePath);
+      
+    return data.publicUrl;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image must be less than 5MB");
+        return;
+      }
+      setSelectedFile(file);
+      setAvatarUrl(URL.createObjectURL(file));
+    }
+  };
+
   const handleAddStaff = async () => {
     if (!name.trim()) {
       toast.error("Please enter stylist name");
@@ -205,10 +242,15 @@ export default function StaffManagement() {
 
     setIsSubmitting(true);
     try {
+      let finalAvatarUrl = avatarUrl;
+      if (selectedFile) {
+        finalAvatarUrl = await uploadAvatar(selectedFile);
+      }
+
       const { error } = await supabase.from("salon_staff").insert({
         salon_id: salon.id,
         name: name.trim(),
-        avatar_url: avatarUrl,
+        avatar_url: finalAvatarUrl,
         is_active: isActive
       });
 
@@ -218,6 +260,7 @@ export default function StaffManagement() {
       setIsAddOpen(false);
       setName("");
       setAvatarUrl(PRESET_AVATARS[0].url);
+      setSelectedFile(null);
       setIsActive(true);
       await fetchStaffData(salon.id);
     } catch (error) {
@@ -233,11 +276,16 @@ export default function StaffManagement() {
 
     setIsSubmitting(true);
     try {
+      let finalAvatarUrl = avatarUrl;
+      if (selectedFile) {
+        finalAvatarUrl = await uploadAvatar(selectedFile);
+      }
+
       const { error } = await supabase
         .from("salon_staff")
         .update({
           name: name.trim(),
-          avatar_url: avatarUrl,
+          avatar_url: finalAvatarUrl,
           is_active: isActive
         })
         .eq("id", selectedStaff.id);
@@ -246,6 +294,7 @@ export default function StaffManagement() {
 
       toast.success("Stylist updated successfully");
       setIsEditOpen(false);
+      setSelectedFile(null);
       await fetchStaffData(salon.id);
     } catch (error) {
       console.error("Error editing staff:", error);
@@ -306,6 +355,181 @@ export default function StaffManagement() {
     return "Customer";
   };
 
+  // Drag and drop states for queue reordering
+  const [draggedBookingId, setDraggedBookingId] = useState<string | null>(null);
+  const [draggedOverBookingId, setDraggedOverBookingId] = useState<string | null>(null);
+
+  // Drag and drop handlers
+  const handleDragStart = (bookingId: string) => {
+    setDraggedBookingId(bookingId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, bookingId: string) => {
+    e.preventDefault();
+    if (draggedBookingId !== bookingId) {
+      setDraggedOverBookingId(bookingId);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedBookingId(null);
+    setDraggedOverBookingId(null);
+  };
+
+  const handleDrop = async (targetBookingId: string, memberQueue: any[]) => {
+    if (!draggedBookingId || draggedBookingId === targetBookingId) return;
+    
+    const waitingBookings = memberQueue.filter(q => q.status === 'waiting' || q.status === 'called');
+    const targetIdx = waitingBookings.findIndex(q => q.bookings?.id === targetBookingId);
+    if (targetIdx === -1) return;
+    
+    await handleReorderQueue(draggedBookingId, targetIdx, memberQueue);
+    handleDragEnd();
+  };
+
+  // Reorder queue at stylist level
+  const handleReorderQueue = async (bookingId: string, targetIdx: number, memberQueue: any[]) => {
+    const waitingBookings = memberQueue.filter(q => q.status === 'waiting' || q.status === 'called');
+    
+    if (waitingBookings.length <= 1) return;
+    
+    const currentIdx = waitingBookings.findIndex(q => q.bookings?.id === bookingId);
+    if (currentIdx === -1 || currentIdx === targetIdx) return;
+    
+    // Rearrange the list temporarily to determine new neighbors
+    const updatedList = [...waitingBookings];
+    const [draggedItem] = updatedList.splice(currentIdx, 1);
+    updatedList.splice(targetIdx, 0, draggedItem);
+    
+    let newTime: Date;
+    if (targetIdx === 0) {
+      // Moved to the very top
+      const baseTime = updatedList[1]?.bookings?.queue_check_in_time 
+        ? new Date(updatedList[1].bookings.queue_check_in_time) 
+        : new Date();
+      baseTime.setSeconds(baseTime.getSeconds() - 1);
+      newTime = baseTime;
+    } else if (targetIdx === updatedList.length - 1) {
+      // Moved to the very bottom
+      const baseTime = updatedList[updatedList.length - 2]?.bookings?.queue_check_in_time 
+        ? new Date(updatedList[updatedList.length - 2].bookings.queue_check_in_time) 
+        : new Date();
+      baseTime.setSeconds(baseTime.getSeconds() + 1);
+      newTime = baseTime;
+    } else {
+      // Moved in between two entries
+      const prevTimeStr = updatedList[targetIdx - 1]?.bookings?.queue_check_in_time;
+      const nextTimeStr = updatedList[targetIdx + 1]?.bookings?.queue_check_in_time;
+      const prevTime = prevTimeStr ? new Date(prevTimeStr).getTime() : new Date().getTime();
+      const nextTime = nextTimeStr ? new Date(nextTimeStr).getTime() : new Date().getTime();
+      newTime = new Date(prevTime + (nextTime - prevTime) / 2);
+    }
+    
+    try {
+      // Direct table update to trigger positions recalculation
+      const { data: qeData } = await supabase
+        .from('queue_entries')
+        .select('id, status')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+        
+      if (qeData) {
+        const { error } = await supabase
+          .from('queue_entries')
+          .update({
+            check_in_time: newTime.toISOString(),
+            status: qeData.status
+          })
+          .eq('id', qeData.id);
+          
+        if (error) throw error;
+        toast.success("Position updated smoothly");
+        await fetchStaffData(salon.id);
+      }
+    } catch (error) {
+      console.error("Error reordering:", error);
+      toast.error("Failed to update position");
+    }
+  };
+
+  // Start service
+  const handleStartService = async (bookingId: string) => {
+    try {
+      const { error: bookingError } = await supabase
+        .from('bookings')
+        .update({ status: 'in_progress' })
+        .eq('id', bookingId);
+        
+      if (bookingError) throw bookingError;
+      
+      const { error: queueError } = await supabase
+        .from('queue_entries')
+        .update({ 
+          status: 'in_service',
+          service_start_time: new Date().toISOString()
+        })
+        .eq('booking_id', bookingId);
+        
+      if (queueError) throw queueError;
+      toast.success("Service started");
+      await fetchStaffData(salon.id);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to start service");
+    }
+  };
+
+  // Complete service
+  const handleCompleteService = async (bookingId: string) => {
+    try {
+      const { error: bookingError } = await supabase
+        .from('bookings')
+        .update({ status: 'completed' })
+        .eq('id', bookingId);
+        
+      if (bookingError) throw bookingError;
+      
+      const { error: queueError } = await supabase
+        .from('queue_entries')
+        .update({ status: 'completed' })
+        .eq('booking_id', bookingId);
+        
+      if (queueError) throw queueError;
+      toast.success("Service completed");
+      await fetchStaffData(salon.id);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to complete service");
+    }
+  };
+
+  // Mark No-Show
+  const handleMarkNoShow = async (bookingId: string) => {
+    try {
+      const { error: bookingError } = await supabase
+        .from('bookings')
+        .update({ 
+          status: 'cancelled',
+          notes: 'Marked as no-show'
+        })
+        .eq('id', bookingId);
+        
+      if (bookingError) throw bookingError;
+      
+      const { error: queueError } = await supabase
+        .from('queue_entries')
+        .update({ status: 'completed' })
+        .eq('booking_id', bookingId);
+        
+      if (queueError) throw queueError;
+      toast.success("Customer marked as no-show");
+      await fetchStaffData(salon.id);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to mark no-show");
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -337,6 +561,7 @@ export default function StaffManagement() {
             onClick={() => {
               setName("");
               setAvatarUrl(PRESET_AVATARS[0].url);
+              setSelectedFile(null);
               setIsActive(true);
               setIsAddOpen(true);
             }} 
@@ -420,6 +645,7 @@ export default function StaffManagement() {
                             setSelectedStaff(member);
                             setName(member.name);
                             setAvatarUrl(member.avatar_url || PRESET_AVATARS[0].url);
+                            setSelectedFile(null);
                             setIsActive(member.is_active);
                             setIsEditOpen(true);
                           }}
@@ -440,57 +666,149 @@ export default function StaffManagement() {
                       </div>
                     </div>
 
-                    {/* Bottom Row: Live Queue Operations Tracker */}
+                    {/* Bottom Row: Stylist Queue Control Panel */}
                     {member.is_active && (
-                      <div className="pt-3 border-t border-border space-y-2">
-                        {/* Currently Serving */}
-                        {inServiceEntry ? (
-                          <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-green-50/50 dark:bg-green-950/10 border border-green-100 dark:border-green-900">
-                            <span className="text-green-600 dark:text-green-400 font-semibold flex items-center gap-1.5">
-                              <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                              Serving Now
-                            </span>
-                            <span className="font-bold text-foreground max-w-[180px] truncate">
-                              {getCustomerName(inServiceEntry.bookings)} ({inServiceEntry.bookings?.service_name})
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-muted/30 border border-border">
-                            <span className="text-muted-foreground font-semibold flex items-center gap-1.5">
-                              <Power className="h-3.5 w-3.5" />
-                              Status
-                            </span>
-                            <span className="font-semibold text-muted-foreground">
-                              Idle (No active service)
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Waiting List in Queue */}
-                        {waitingQueue.length > 0 ? (
-                          <div className="flex items-start gap-2 p-2 rounded-lg border border-border bg-muted/20 text-xs">
-                            <span className="text-muted-foreground font-semibold mt-0.5 shrink-0">
-                              Waiting:
-                            </span>
-                            <div className="flex flex-wrap gap-1.5">
-                              {waitingQueue.map((entry, idx) => (
-                                <span 
-                                  key={entry.id}
-                                  className="font-medium bg-background border border-border px-2 py-0.5 rounded text-foreground inline-flex items-center gap-1"
-                                >
-                                  <span className="text-[9px] text-muted-foreground">#{idx + 1}</span>
-                                  {getCustomerName(entry.bookings)}
-                                </span>
-                              ))}
+                      <div className="pt-4 border-t border-border space-y-4">
+                        {/* Currently Serving Section */}
+                        <div>
+                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Currently Serving</p>
+                          {inServiceEntry ? (
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-green-50 dark:bg-green-950/10 border border-green-200 dark:border-green-900 shadow-sm">
+                              <div className="flex items-center gap-2.5">
+                                <Sparkles className="h-4 w-4 text-green-600 dark:text-green-400 animate-pulse" />
+                                <div>
+                                  <p className="text-sm font-bold text-foreground">
+                                    {getCustomerName(inServiceEntry.bookings)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {inServiceEntry.bookings?.service_name || "Service"}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-green-200 hover:bg-green-100 dark:hover:bg-green-950/30 text-green-600 font-semibold rounded-lg text-xs flex items-center gap-1"
+                                onClick={() => handleCompleteService(inServiceEntry.bookings?.id || "")}
+                              >
+                                <Check className="h-3 w-3" /> Complete
+                              </Button>
                             </div>
-                          </div>
-                        ) : (
-                          memberQueue.length > 0 && !inServiceEntry && (
-                            <p className="text-[11px] text-muted-foreground text-center italic">
-                              Queue calculations processing...
-                            </p>
-                          )
-                        )}
+                          ) : (
+                            <div className="flex items-center justify-center p-4 rounded-xl bg-muted/20 border border-dashed border-border/60">
+                              <p className="text-xs text-muted-foreground italic">Idle • No active service</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Waiting List Queue Control Section */}
+                        <div>
+                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center justify-between">
+                            <span>Waiting Queue ({waitingQueue.length})</span>
+                            {waitingQueue.length > 0 && <span className="text-[10px] lowercase text-muted-foreground font-normal">drag or use wheel to reorder</span>}
+                          </p>
+                          
+                          {waitingQueue.length === 0 ? (
+                            <div className="text-center py-6 bg-muted/10 rounded-xl border border-border/40">
+                              <p className="text-xs text-muted-foreground italic">Queue is empty</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2.5">
+                              {(() => {
+                                // Sort waiting queue strictly by position to render correctly
+                                const sortedWaiting = [...waitingQueue].sort((a, b) => a.position - b.position);
+                                
+                                return sortedWaiting.map((entry, idx) => {
+                                  const bookingId = entry.bookings?.id || "";
+                                  const isCurrentDragged = draggedBookingId === bookingId;
+                                  const isCurrentDraggedOver = draggedOverBookingId === bookingId;
+                                  
+                                  return (
+                                    <div
+                                      key={entry.id}
+                                      className={`p-3 rounded-xl border-2 transition-all bg-background/50 flex flex-col gap-3 ${
+                                        isCurrentDragged ? 'opacity-40 select-none' : ''
+                                      } ${
+                                        isCurrentDraggedOver ? 'ring-2 ring-primary ring-dashed bg-primary/5' : 'border-border/60'
+                                      }`}
+                                      draggable={true}
+                                      onDragStart={() => handleDragStart(bookingId)}
+                                      onDragOver={(e) => handleDragOver(e, bookingId)}
+                                      onDragEnd={handleDragEnd}
+                                      onDrop={() => handleDrop(bookingId, sortedWaiting)}
+                                    >
+                                      {/* Row 1: Details, Drag Handle, Action Buttons */}
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <div 
+                                            className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground p-0.5"
+                                            title="Drag to reorder"
+                                          >
+                                            <GripVertical className="h-4 w-4" />
+                                          </div>
+                                          <div className="min-w-0">
+                                            <p className="text-sm font-bold text-foreground truncate">
+                                              #{idx + 1} {getCustomerName(entry.bookings)}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground truncate">
+                                              {entry.bookings?.service_name || "Service"}
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-7 w-7 text-destructive hover:bg-destructive/10 rounded-lg"
+                                            title="Mark as no-show"
+                                            onClick={() => handleMarkNoShow(bookingId)}
+                                          >
+                                            <UserX className="h-3.5 w-3.5" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="h-7 px-2.5 text-xs font-semibold rounded-lg flex items-center gap-1 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50"
+                                            onClick={() => handleStartService(bookingId)}
+                                            disabled={!!inServiceEntry}
+                                            title={inServiceEntry ? "Please complete current service first" : "Start Service"}
+                                          >
+                                            <Play className="h-3 w-3 fill-current" /> Start
+                                          </Button>
+                                        </div>
+                                      </div>
+
+                                      {/* Row 2: Tactile Smooth Position Drag Wheel */}
+                                      <div className="pt-2 border-t border-border/30 flex items-center gap-2">
+                                        <span className="text-[10px] font-semibold text-muted-foreground uppercase shrink-0">Position Wheel:</span>
+                                        <div className="flex-1 flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin scroll-smooth">
+                                          {sortedWaiting.map((_, pIdx) => {
+                                            const isSelected = pIdx === idx;
+                                            return (
+                                              <button
+                                                key={pIdx}
+                                                type="button"
+                                                onClick={() => handleReorderQueue(bookingId, pIdx, sortedWaiting)}
+                                                className={`h-6 min-w-[24px] px-1.5 rounded-md text-[11px] font-bold transition-all shrink-0 border ${
+                                                  isSelected
+                                                    ? "bg-primary text-primary-foreground border-primary shadow-sm scale-110"
+                                                    : "bg-background border-border/80 text-muted-foreground hover:border-primary/45 hover:text-foreground"
+                                                }`}
+                                              >
+                                                {pIdx + 1}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                });
+                              })()}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -569,6 +887,21 @@ export default function StaffManagement() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Custom Image Upload */}
+              <div className="space-y-1.5">
+                <Label htmlFor="custom-avatar" className="text-sm font-semibold">Or Upload Custom Image</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="custom-avatar"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="rounded-xl file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">Recommended: Square image, max 5MB</p>
               </div>
 
               {/* Availability Switch */}

@@ -100,6 +100,11 @@ const QueueStatus = () => {
             address,
             phone,
             avg_service_time
+          ),
+          salon_staff (
+            id,
+            name,
+            avatar_url
           )
         `)
         .eq("id", activeQueueData.booking_id)
@@ -146,15 +151,16 @@ const QueueStatus = () => {
           service_price: servicePrice,
           service_duration: serviceDuration,
           arrival_deadline: bookingData.arrival_deadline
-        } : null
+        } : null,
+        stylist: bookingData?.salon_staff || null
       };
 
       setQueueEntry(combinedData);
 
       // Step 5: Fetch all queue members using the RPC function (no client date - let server use CURRENT_DATE)
       const { data: queueDisplayData, error: queueDisplayError } = await supabase.rpc('get_queue_display', {
-        p_salon_id: activeQueueData.salon_id
-        // p_date omitted - server will use CURRENT_DATE default
+        p_salon_id: activeQueueData.salon_id,
+        p_staff_id: activeQueueData.staff_id
       });
 
       if (queueDisplayError) {
@@ -476,6 +482,23 @@ const QueueStatus = () => {
                 <span className="text-muted-foreground">Service Price</span>
                 <span className="font-medium">₹{booking.service_price}</span>
               </div>
+              {queueEntry.stylist && (
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-muted-foreground">Stylist</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{queueEntry.stylist.name}</span>
+                    <Avatar className="h-6 w-6">
+                      {queueEntry.stylist.avatar_url ? (
+                        <AvatarImage src={queueEntry.stylist.avatar_url} />
+                      ) : (
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                          {queueEntry.stylist.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -658,14 +681,22 @@ const QueueStatus = () => {
           <CardContent className="p-4">
             <h3 className="font-semibold mb-3">Need Help?</h3>
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <a 
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(salon.address)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+              >
                 <MapPin className="h-4 w-4" />
                 <span className="text-sm">{salon.address}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
+              </a>
+              <a 
+                href={`tel:${salon.phone}`}
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+              >
                 <Phone className="h-4 w-4" />
                 <span className="text-sm">{salon.phone}</span>
-              </div>
+              </a>
             </div>
           </CardContent>
         </Card>

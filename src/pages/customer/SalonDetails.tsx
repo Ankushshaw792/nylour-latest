@@ -1,19 +1,20 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle, ExternalLink, ChevronRight, MapPinOff, Navigation } from "lucide-react";
+import { MapPin, Phone, Scissors, Sparkles, Plus, Minus, Share, Loader2, AlertCircle, ExternalLink, ChevronRight, MapPinOff, Navigation, ShieldCheck, Star, Award } from "lucide-react";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
 import { useActiveBooking } from "@/hooks/useActiveBooking";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import SalonGalleryCarousel from "@/components/salon/SalonGalleryCarousel";
+import { SalonLoader } from "@/components/ui/SalonLoader";
 import { LiveQueueDialog } from "@/components/queue/LiveQueueDialog";
 import { SelectStylistDialog } from "@/components/queue/SelectStylistDialog";
 import { calculateDistance, formatDistance } from "@/lib/locationUtils";
@@ -59,7 +60,7 @@ interface SalonDetails {
 const SalonDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, loading } = useRequireAuth();
+  const { user, loading } = useAuth();
   const { addItem, removeItem, updateQuantity, items, totalPrice, totalItems } = useCart();
   const { isOpen, isLoading: statusLoading, nextOpenInfo, closingTime } = useSalonOpenStatus(id);
   const { hasActiveBooking, activeBooking, isLoading: bookingCheckLoading } = useActiveBooking(user?.id || null);
@@ -69,6 +70,17 @@ const SalonDetails = () => {
   const [showQueueDialog, setShowQueueDialog] = useState(false);
   const [isSelectStylistOpen, setIsSelectStylistOpen] = useState(false);
   const [avgServiceTime, setAvgServiceTime] = useState(30);
+
+  // Wrapper for actions that require auth
+  const requireAuthAction = (action: () => void) => {
+    if (!user) {
+      sessionStorage.setItem('returnUrl', window.location.pathname);
+      toast.error('Please sign in to continue');
+      navigate('/');
+      return;
+    }
+    action();
+  };
 
   // Calculate distance to salon
   const { distance, distanceText, isOutOfRange } = useMemo(() => {
@@ -328,13 +340,14 @@ const SalonDetails = () => {
   if (loading || loadingSalon || bookingCheckLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading salon details...</span>
-        </div>
+        <SalonLoader size="lg" text="Loading salon details..." />
       </div>
     );
   }
+
+  const ownerImageObj = salon?.galleryImages?.find(img => img.caption?.includes('[TYPE:OWNER]'));
+  const ownerName = ownerImageObj ? (ownerImageObj.caption || "").replace('[TYPE:OWNER]', '').trim() : null;
+  const ownerAvatar = ownerImageObj ? ownerImageObj.image_url : null;
 
   if (!salon) {
     return (
@@ -374,7 +387,7 @@ const SalonDetails = () => {
       }}
       bottomButtonProps={totalItems > 0 && canBook ? {
         text: "Book Now",
-        onClick: () => setIsSelectStylistOpen(true),
+        onClick: () => requireAuthAction(() => setIsSelectStylistOpen(true)),
         disabled: totalItems === 0 || !canBook,
         price: totalPrice,
         itemCount: totalItems
@@ -430,7 +443,7 @@ const SalonDetails = () => {
               </div>
               <div 
                 className="text-center flex-1 cursor-pointer hover:bg-muted/50 rounded-lg py-2 transition-colors active:bg-muted"
-                onClick={() => setShowQueueDialog(true)}
+                onClick={() => requireAuthAction(() => setShowQueueDialog(true))}
               >
                 <div className="flex items-center justify-center gap-1">
                   <p className="text-2xl font-bold">{salon.queueCount}</p>
@@ -518,9 +531,11 @@ const SalonDetails = () => {
           </CardContent>
         </Card>
 
+
+
         {/* Services Available Section */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Services Available</h3>
+        <div className="pt-2">
+          <h3 className="text-xl font-bold mb-4">Services Available</h3>
           <div className="space-y-4">
             {salon.services.map((service) => {
               const quantity = getItemQuantity(service.id);
@@ -586,6 +601,34 @@ const SalonDetails = () => {
             })}
           </div>
         </div>
+
+        {/* Meet the owner Section */}
+        {ownerAvatar && ownerName && (
+          <div className="pt-6 pb-2">
+            <h3 className="text-2xl font-bold mb-4">Meet the owner</h3>
+            <Card className="border shadow-lg rounded-[2rem] overflow-hidden">
+              <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+                <div className="relative mb-4">
+                  <div className="w-32 h-32 rounded-full overflow-hidden">
+                    <img 
+                      src={ownerAvatar} 
+                      alt={ownerName} 
+                      className="w-full h-full object-cover shadow-md border-2 border-white"
+                    />
+                  </div>
+                  <div className="absolute bottom-1 right-1 bg-[#E31C5F] text-white rounded-full p-2 shadow-lg">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                </div>
+                <h4 className="text-3xl font-bold">{ownerName}</h4>
+                <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground mt-2">
+                  <Award className="w-4 h-4" />
+                  <span className="font-medium">Verified Owner</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Book Now Button */}
         <div className="pb-6">
