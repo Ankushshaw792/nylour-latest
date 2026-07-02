@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface SignUpFormProps {
   onSuccess: () => void;
@@ -46,6 +47,7 @@ export const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => 
     );
     
     if (!error) {
+      toast.success("Account created! Please check your email to verify your account.");
       onSwitchToSignIn();
     }
     

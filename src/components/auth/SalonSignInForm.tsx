@@ -55,14 +55,14 @@ export const SalonSignInForm = ({ onSuccess }: SalonSignInFormProps) => {
       const { error } = await signInWithGoogle('salon_owner');
       if (error) {
         toast.error(error.message || "Failed to sign in with Google");
-      } else {
-        toast.success("Successfully signed in with Google!");
-        onSuccess();
+        setLoading(false);
       }
+      // Bug 3 Fix: Do NOT show success toast here.
+      // Google OAuth will redirect the user — no success callback fires here.
+      // Loading stays true until the redirect happens (which is correct UX).
     } catch (error) {
       toast.error("An unexpected error occurred");
       console.error("Google signin error:", error);
-    } finally {
       setLoading(false);
     }
   };

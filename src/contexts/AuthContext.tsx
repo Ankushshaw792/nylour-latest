@@ -27,6 +27,20 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Helper: write the salon_owner role into user_roles after Google OAuth
+const ensureSalonOwnerRole = async (userId: string) => {
+  try {
+    const { error } = await supabase
+      .from('user_roles')
+      .upsert({ user_id: userId, role: 'salon_owner' }, { onConflict: 'user_id,role', ignoreDuplicates: true });
+    if (error) {
+      console.error("Error setting salon_owner role:", error);
+    }
+  } catch (err) {
+    console.error("Error in ensureSalonOwnerRole:", err);
+  }
+};
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -35,23 +49,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        // Handle sign out event explicitly
+      async (event, session) => {
         if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
         } else {
           setSession(session);
           setUser(session?.user ?? null);
+
+          // Bug 2 Fix: After Google OAuth callback, check if we need to assign salon_owner role
+          if (event === 'SIGNED_IN' && session?.user) {
+            const pendingUserType = sessionStorage.getItem('pending_user_type');
+            if (pendingUserType === 'salon_owner') {
+              sessionStorage.removeItem('pending_user_type');
+              // Use setTimeout to avoid Supabase auth deadlock
+              setTimeout(() => {
+                ensureSalonOwnerRole(session.user.id);
+              }, 0);
+            }
+          }
         }
-        setLoading(false);
+        // Bug 4 Fix: Only set loading to false here, NOT in getSession below
+        // This is the single source of truth for loading state
       }
     );
 
     // THEN check for existing session and validate it
+    // Bug 4 Fix: This is the only place we set loading to false
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error || !session) {
-        // Clear any stale local data if session is invalid
         setUser(null);
         setSession(null);
       } else {
@@ -71,10 +97,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         password,
       });
 
+      // Bug 1 Fix: Removed duplicate toast — the form handles this
       if (error) {
         toast.error(error.message);
-      } else {
-        toast.success("Welcome back!");
       }
 
       return { error };
@@ -102,10 +127,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         },
       });
 
+      // Bug 1 Fix: Removed duplicate toast — the form handles this
       if (error) {
         toast.error(error.message);
-      } else {
-        toast.success("Account created successfully! Please check your email to verify your account.");
       }
 
       return { error };
@@ -118,24 +142,39 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signInWithGoogle = async (userType?: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      
+      // Bug 2 Fix: Store the intended user_type in sessionStorage BEFORE the OAuth redirect.
+      // After the Google callback, onAuthStateChange will read this and assign the correct role.
+      if (userType) {
+        sessionStorage.setItem('pending_user_type', userType);
+      } else {
+        sessionStorage.removeItem('pending_user_type');
+      }
+
+      // Bug 5 Fix: Use a smarter redirect URL based on user type
+      const redirectPath = userType === 'salon_owner' ? '/salon-register' : '/customer';
+      const redirectUrl = `${window.location.origin}${redirectPath}`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: redirectUrl,
           queryParams: {
-            user_type: userType || '',
+            // These are valid Google OAuth params (not custom ones)
+            access_type: 'offline',
+            prompt: 'select_account',
           },
         },
       });
 
       if (error) {
+        // Clean up on error
+        sessionStorage.removeItem('pending_user_type');
         toast.error(error.message);
       }
 
       return { error };
     } catch (error) {
+      sessionStorage.removeItem('pending_user_type');
       const errorMessage = error instanceof Error ? error.message : "An error occurred";
       toast.error(errorMessage);
       return { error };
@@ -150,9 +189,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(null);
       setSession(null);
       
-      // Treat "session not found" or similar as successful logout
       if (error) {
-        // If session doesn't exist on server, user is already effectively logged out
+        // Session already gone — treat as success
         if (error.message?.toLowerCase().includes('session') || 
             error.message?.toLowerCase().includes('missing') ||
             error.status === 403 || 
@@ -160,7 +198,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           toast.success("Signed out successfully");
           return;
         }
-        // For other errors, still show success since local state is cleared
         console.warn("Sign out server warning:", error.message);
         toast.success("Signed out successfully");
       } else {
@@ -171,14 +208,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(null);
       setSession(null);
       
-      // Try to clear local storage as fallback
       try {
         await supabase.auth.signOut({ scope: 'local' });
       } catch {
         // Ignore errors from local signout
       }
       
-      // Still show success since the user is effectively logged out locally
       toast.success("Signed out successfully");
     }
   };
