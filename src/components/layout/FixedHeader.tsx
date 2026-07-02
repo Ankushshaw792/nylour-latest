@@ -57,7 +57,13 @@ export const FixedHeader = ({
   };
 
   const handleBackClick = () => {
-    navigate(-1);
+    // Smart back: if user came from outside the app (e.g., shared link),
+    // navigate(-1) would exit the app. Instead, go to the customer home.
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/customer');
+    }
   };
 
   return (
