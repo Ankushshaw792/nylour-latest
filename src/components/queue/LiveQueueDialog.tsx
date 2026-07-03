@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Users, Clock, Loader2, ArrowLeft, Sparkles, User, Scissors } from "lucide-react";
 import {
   Dialog,
@@ -126,7 +126,12 @@ export const LiveQueueDialog = ({
     }
   }, [salonId, avgServiceTime]);
 
-  // Main coordinator effect
+  const selectedStaffRef = useRef<StaffMember | null>(selectedStaff);
+  useEffect(() => {
+    selectedStaffRef.current = selectedStaff;
+  }, [selectedStaff]);
+
+  // Main coordinator effect for initial fetch and selection changes
   useEffect(() => {
     if (!isOpen || !salonId) return;
 
@@ -137,8 +142,12 @@ export const LiveQueueDialog = ({
     if (selectedStaff) {
       fetchStylistQueue(selectedStaff.id);
     }
+  }, [isOpen, salonId, selectedStaff, fetchStaffAndCounts, fetchStylistQueue]);
 
-    // 3. Set up real-time Postgres channel to listen for queue changes
+  // Real-time Postgres channel to listen for queue changes (subscribes once)
+  useEffect(() => {
+    if (!isOpen || !salonId) return;
+
     const channel = supabase
       .channel(`live-queue-dialog-${salonId}`)
       .on(
@@ -147,8 +156,9 @@ export const LiveQueueDialog = ({
         () => {
           // Refetch both counts and specific queue on any update
           fetchStaffAndCounts();
-          if (selectedStaff) {
-            fetchStylistQueue(selectedStaff.id);
+          const currentStaff = selectedStaffRef.current;
+          if (currentStaff) {
+            fetchStylistQueue(currentStaff.id);
           }
         }
       )
@@ -157,7 +167,7 @@ export const LiveQueueDialog = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOpen, salonId, selectedStaff, fetchStaffAndCounts, fetchStylistQueue]);
+  }, [isOpen, salonId, fetchStaffAndCounts, fetchStylistQueue]);
 
   // Reset stage when dialog closes
   const handleClose = () => {

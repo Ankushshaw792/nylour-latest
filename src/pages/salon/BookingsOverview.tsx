@@ -405,6 +405,43 @@ const BookingsOverview = () => {
             </DialogHeader>
 
             <div className="space-y-4 py-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="walkin-name" className="text-sm font-semibold">Customer Name</Label>
+                <Input
+                  id="walkin-name"
+                  value={walkInName}
+                  onChange={(e) => setWalkInName(e.target.value)}
+                  placeholder="Enter customer name"
+                  className="rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="walkin-phone" className="text-sm font-semibold">Phone Number (Optional)</Label>
+                <Input
+                  id="walkin-phone"
+                  value={walkInPhone}
+                  onChange={(e) => setWalkInPhone(e.target.value)}
+                  placeholder="Enter phone number"
+                  className="rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="walkin-service" className="text-sm font-semibold">Select Service</Label>
+                <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+                  <SelectTrigger id="walkin-service" className="rounded-xl">
+                    <SelectValue placeholder="Select service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {salonServices.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.services?.name} - ₹{service.price}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="walkin-stylist" className="text-sm font-semibold">Select Stylist/Staff</Label>

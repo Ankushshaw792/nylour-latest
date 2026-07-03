@@ -160,12 +160,72 @@ const QueueStatus = () => {
       // Step 5: Fetch all queue members using the RPC function (no client date - let server use CURRENT_DATE)
       const { data: queueDisplayData, error: queueDisplayError } = await supabase.rpc('get_queue_display', {
         p_salon_id: activeQueueData.salon_id,
-        p_staff_id: activeQueueData.staff_id
+        p_staff_id: null // Pass null to see all stylists and walk-ins in the queue
       });
 
       if (queueDisplayError) {
-        console.error("Step 5 - Queue display RPC error:", queueDisplayError);
-        setQueueMembers([]);
+        console.error("Step 5 - Queue display RPC error, using fallback direct query:", queueDisplayError);
+        
+        // Fallback: Query queue_entries table directly today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const { data: directQueue, error: directError } = await supabase
+          .from('queue_entries')
+          .select(`
+            id,
+            booking_id,
+            position,
+            status,
+            check_in_time,
+            customer_id,
+            estimated_wait_time,
+            customers (
+              first_name,
+              last_name,
+              avatar_url
+            ),
+            bookings (
+              notes,
+              party_size
+            )
+          `)
+          .eq('salon_id', activeQueueData.salon_id)
+          .in('status', ['waiting', 'called', 'in_service'])
+          .gte('check_in_time', today.toISOString())
+          .order('position', { ascending: true });
+
+        if (directError) {
+          console.error("Fallback query failed:", directError);
+          setQueueMembers([]);
+        } else {
+          const mappedMembers = (directQueue || []).map((entry: any) => {
+            const isWalkIn = !entry.customer_id || (entry.bookings?.notes && entry.bookings.notes.startsWith('Walk-in:'));
+            let displayName = "Customer";
+            if (isWalkIn && entry.bookings?.notes) {
+              displayName = entry.bookings.notes.split('Walk-in:')[1]?.split(' - ')[0] || "Walk-in";
+            } else if (entry.customers) {
+              displayName = `${entry.customers.first_name || ''} ${entry.customers.last_name ? entry.customers.last_name[0] + '.' : ''}`.trim() || "Customer";
+            }
+            
+            return {
+              id: entry.id,
+              booking_id: entry.booking_id,
+              customer_id: entry.customer_id,
+              position: entry.position,
+              display_name: displayName,
+              avatar_url: entry.customers?.avatar_url || null,
+              service_name: "Service",
+              service_duration: null,
+              isWalkIn: isWalkIn,
+              party_size: entry.bookings?.party_size || 1,
+              queue_status: entry.status,
+              estimated_wait: entry.estimated_wait_time || 0,
+              isCurrentUser: entry.booking_id === activeQueueData.booking_id
+            };
+          });
+          setQueueMembers(mappedMembers);
+        }
       } else {
         // Map RPC results to queue member format and sort by position
         const enrichedMembers = (queueDisplayData || [])

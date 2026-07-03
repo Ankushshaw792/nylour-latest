@@ -26,12 +26,17 @@ export const useActiveBooking = (userId: string | null) => {
         if (error) {
           console.error('Error fetching customer ID:', error);
           setCustomerId(null);
+          setIsLoading(false);
         } else {
           setCustomerId(data?.id || null);
+          if (!data?.id) {
+            setIsLoading(false);
+          }
         }
       } catch (error) {
         console.error('Error fetching customer ID:', error);
         setCustomerId(null);
+        setIsLoading(false);
       }
     };
 
@@ -90,9 +95,7 @@ export const useActiveBooking = (userId: string | null) => {
 
   // Check active booking when customerId changes
   useEffect(() => {
-    if (customerId) {
-      checkActiveBooking();
-    }
+    checkActiveBooking();
   }, [customerId, checkActiveBooking]);
 
   // Set up real-time subscription for bookings changes

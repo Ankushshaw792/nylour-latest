@@ -150,7 +150,7 @@ const ServicesManagement = () => {
     if (deleteService.image_url) {
       const fileName = deleteService.image_url.split('/').pop();
       if (fileName) {
-        await supabase.storage.from('salon-images').remove([`services/${fileName}`]);
+        await supabase.storage.from('service-images').remove([`services/${fileName}`]);
       }
     }
 
@@ -342,7 +342,7 @@ const ServicesManagement = () => {
     const filePath = `services/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('salon-images')
+      .from('service-images')
       .upload(filePath, file);
 
     if (uploadError) {
@@ -353,7 +353,7 @@ const ServicesManagement = () => {
     }
 
     const { data: { publicUrl } } = supabase.storage
-      .from('salon-images')
+      .from('service-images')
       .getPublicUrl(filePath);
 
     const { error: updateError } = await supabase
@@ -377,7 +377,7 @@ const ServicesManagement = () => {
 
     const fileName = service.image_url.split('/').pop();
     if (fileName) {
-      await supabase.storage.from('salon-images').remove([`services/${fileName}`]);
+      await supabase.storage.from('service-images').remove([`services/${fileName}`]);
     }
 
     const { error } = await supabase
