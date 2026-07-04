@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { SalonLoader } from "@/components/ui/SalonLoader";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Clock, Mic, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Search, MapPin, Clock, Mic, SlidersHorizontal, Loader2, Sparkles, X, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,8 @@ import { CustomerTutorial } from "@/components/onboarding/CustomerTutorial";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { useSalonOpenStatus } from "@/hooks/useSalonOpenStatus";
+import { useCustomer } from "@/contexts/CustomerContext";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateDistance, formatDistance } from "@/lib/locationUtils";
@@ -63,6 +65,29 @@ const NearbySalons = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { latitude: userLat, longitude: userLng, hasLocation } = useUserLocation();
+  const { customerProfile } = useCustomer();
+  const [isBannerDismissed, setIsBannerDismissed] = useState(() => {
+    return sessionStorage.getItem("profile_banner_dismissed") === "true";
+  });
+
+  // Calculate profile completeness
+  const completeness = useMemo(() => {
+    if (!user || !customerProfile) return 0;
+    let score = 0;
+    if (customerProfile.first_name?.trim()) score += 20;
+    if (customerProfile.last_name?.trim()) score += 20;
+    if (customerProfile.phone?.trim()) score += 20;
+    if (customerProfile.address?.trim()) score += 20;
+    if (customerProfile.avatar_url?.trim()) score += 20;
+    return score;
+  }, [user, customerProfile]);
+
+  const showCompletenessBanner = user && completeness < 100 && !isBannerDismissed;
+
+  const handleDismissBanner = () => {
+    setIsBannerDismissed(true);
+    sessionStorage.setItem("profile_banner_dismissed", "true");
+  };
 
   // Show location dialog on mount if no location is set
   useEffect(() => {
@@ -284,6 +309,52 @@ const NearbySalons = () => {
     >
       {/* Customer Tutorial */}
       <CustomerTutorial />
+
+      {/* Profile Completeness Banner */}
+      {showCompletenessBanner && (
+        <div className="mx-4 mt-4 relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-r from-violet-600/10 via-indigo-600/10 to-blue-600/10 p-4 shadow-sm backdrop-blur-md">
+          {/* Subtle background glow decorator */}
+          <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-indigo-500/20 blur-xl pointer-events-none" />
+          
+          <div className="flex items-start gap-3">
+            {/* Sparkles icon representing improvement */}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/20">
+              <Sparkles className="h-4.5 w-4.5 animate-pulse" />
+            </div>
+
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-foreground tracking-tight">
+                  Unlock faster check-ins!
+                </h4>
+                <button 
+                  onClick={handleDismissBanner}
+                  className="rounded-full p-1 text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed pr-6">
+                Your profile is only <span className="font-bold text-indigo-600">{completeness}%</span> complete. Set up your details to secure instant queue spots.
+              </p>
+
+              {/* Progress and CTA action block */}
+              <div className="pt-2 flex items-center gap-4">
+                <Progress value={completeness} className="h-1.5 flex-1 bg-muted/60" />
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => navigate("/profile/edit")}
+                  className="h-7 px-2.5 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-semibold gap-0.5 rounded-lg border border-indigo-100 bg-white shadow-sm"
+                >
+                  Complete Setup
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search & Filters Section */}
       <div className="bg-card border-b border-border p-4">
