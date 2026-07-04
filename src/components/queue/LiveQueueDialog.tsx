@@ -71,9 +71,14 @@ export const LiveQueueDialog = ({
 
       if (staffError) throw staffError;
 
-      // 2. Fetch active queue entries to compute sizes securely bypassing RLS
-      const { data: queueData, error: queueError } = await supabase.rpc('get_queue_display', {
-        p_salon_id: salonId
+      // 2. Fetch active queue entries to compute sizes securely bypassing RLS (timezone safe)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStart = today.toISOString();
+
+      const { data: queueData, error: queueError } = await supabase.rpc('get_active_queue_entries', {
+        p_salon_id: salonId,
+        p_date_start: todayStart
       });
 
       if (queueError) throw queueError;

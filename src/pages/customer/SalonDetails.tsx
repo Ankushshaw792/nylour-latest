@@ -251,8 +251,13 @@ const SalonDetails = () => {
           .order('display_order', { ascending: true });
 
         // Get current queue count securely bypassing RLS
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStart = today.toISOString();
+
         const { data: queueData, error: queueError } = await supabase.rpc('get_active_salon_queues', {
-          p_salon_ids: [id]
+          p_salon_ids: [id],
+          p_date_start: todayStart
         });
 
         if (queueError) {

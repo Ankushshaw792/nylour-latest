@@ -118,9 +118,13 @@ const NearbySalons = () => {
 
       // Get active queue counts for each salon securely bypassing RLS
       const salonIds = salonsData?.map(salon => salon.id) || [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStart = today.toISOString();
       
       const { data: queueData, error: queueError } = await supabase.rpc('get_active_salon_queues', {
-        p_salon_ids: salonIds
+        p_salon_ids: salonIds,
+        p_date_start: todayStart
       });
 
       if (queueError) {

@@ -50,9 +50,14 @@ export const SelectStylistDialog: React.FC<SelectStylistDialogProps> = ({
 
         if (staffError) throw staffError;
 
-        // Fetch active queue entries to calculate stylist queue sizes securely bypassing RLS
-        const { data: queueData, error: queueError } = await supabase.rpc('get_queue_display', {
-          p_salon_id: salonId
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStart = today.toISOString();
+
+        // Fetch active queue entries to calculate stylist queue sizes securely bypassing RLS (timezone safe)
+        const { data: queueData, error: queueError } = await supabase.rpc('get_active_queue_entries', {
+          p_salon_id: salonId,
+          p_date_start: todayStart
         });
 
         if (queueError) throw queueError;
