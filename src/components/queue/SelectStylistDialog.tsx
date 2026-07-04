@@ -50,19 +50,17 @@ export const SelectStylistDialog: React.FC<SelectStylistDialogProps> = ({
 
         if (staffError) throw staffError;
 
-        // Fetch active queue entries to calculate stylist queue sizes
-        const { data: queueData, error: queueError } = await supabase
-          .from("queue_entries")
-          .select("id, staff_id")
-          .eq("salon_id", salonId)
-          .in("status", ["waiting", "called", "in_service"]);
+        // Fetch active queue entries to calculate stylist queue sizes securely bypassing RLS
+        const { data: queueData, error: queueError } = await supabase.rpc('get_queue_display', {
+          p_salon_id: salonId
+        });
 
         if (queueError) throw queueError;
 
         // Map queue counts
         const counts: Record<string, number> = {};
         staffData?.forEach((s) => {
-          counts[s.id] = (queueData || []).filter((q) => q.staff_id === s.id).length;
+          counts[s.id] = (queueData || []).filter((q: any) => q.staff_id === s.id).length;
         });
 
         setStaff(staffData || []);

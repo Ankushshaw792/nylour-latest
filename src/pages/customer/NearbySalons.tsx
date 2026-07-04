@@ -116,18 +116,16 @@ const NearbySalons = () => {
         return;
       }
 
-      // Get active queue counts for each salon (today only, waiting/called/in_service)
+      // Get active queue counts for each salon securely bypassing RLS
       const salonIds = salonsData?.map(salon => salon.id) || [];
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStart = today.toISOString();
       
-      const { data: queueData } = await supabase
-        .from('queue_entries')
-        .select('salon_id, status, staff_id')
-        .in('salon_id', salonIds)
-        .in('status', ['waiting', 'called', 'in_service'])
-        .gte('check_in_time', todayStart);
+      const { data: queueData, error: queueError } = await supabase.rpc('get_active_salon_queues', {
+        p_salon_ids: salonIds
+      });
+
+      if (queueError) {
+        console.error('Error fetching active salon queues:', queueError);
+      }
 
       // Process salon data with queue counts and service info
       const processedSalons: SalonData[] = salonsData?.map((salon: any) => {

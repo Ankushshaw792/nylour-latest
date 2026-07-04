@@ -250,17 +250,14 @@ const SalonDetails = () => {
           .order('is_primary', { ascending: false })
           .order('display_order', { ascending: true });
 
-        // Get current queue count (today only)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStart = today.toISOString();
-        
-        const { data: queueData } = await supabase
-          .from('queue_entries')
-          .select('id')
-          .eq('salon_id', id)
-          .in('status', ['waiting', 'called', 'in_service'])
-          .gte('check_in_time', todayStart);
+        // Get current queue count securely bypassing RLS
+        const { data: queueData, error: queueError } = await supabase.rpc('get_active_salon_queues', {
+          p_salon_ids: [id]
+        });
+
+        if (queueError) {
+          console.error('Error fetching active salon queues:', queueError);
+        }
 
         const queueCount = queueData?.length || 0;
         // Use salon's avg_service_time (default 30 mins) for wait calculation

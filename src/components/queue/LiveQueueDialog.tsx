@@ -71,18 +71,16 @@ export const LiveQueueDialog = ({
 
       if (staffError) throw staffError;
 
-      // 2. Fetch active queue entries to compute sizes
-      const { data: queueData, error: queueError } = await supabase
-        .from("queue_entries")
-        .select("id, staff_id")
-        .eq("salon_id", salonId)
-        .in("status", ["waiting", "called", "in_service"]);
+      // 2. Fetch active queue entries to compute sizes securely bypassing RLS
+      const { data: queueData, error: queueError } = await supabase.rpc('get_queue_display', {
+        p_salon_id: salonId
+      });
 
       if (queueError) throw queueError;
 
       const counts: Record<string, number> = {};
       staffData?.forEach((s) => {
-        counts[s.id] = (queueData || []).filter((q) => q.staff_id === s.id).length;
+        counts[s.id] = (queueData || []).filter((q: any) => q.staff_id === s.id).length;
       });
 
       setStaffList(staffData || []);
